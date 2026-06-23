@@ -7,6 +7,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:google_sign_in/google_sign_in.dart';
+
 import 'app.dart';
 import 'core/api/app_status.dart';
 import 'core/flavor/flavor_config.dart';
@@ -21,6 +23,11 @@ Future<void> bootstrap(FlavorConfig config, FirebaseOptions options) async {
   FlavorConfig.instance = config;
 
   await Firebase.initializeApp(options: options);
+
+  // Google Sign In v7.x mandatory initialization
+  try {
+    await GoogleSignIn.instance.initialize();
+  } catch (_) {}
 
   // Crashlytics: captura errores de Flutter y de la zona raíz.
   try {

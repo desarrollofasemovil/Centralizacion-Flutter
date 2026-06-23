@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/app_status.dart';
 import '../models/app_global_config_dto.dart';
+import '../models/welcome_carousel_image_dto.dart';
 
 /// Número de build actual de la app, usado por `force_update`.
 /// TODO(fase-1): leer de `package_info_plus` en vez de esta constante. Se deja
@@ -41,6 +42,16 @@ class RemoteConfigService {
 
   bool shouldSendToWelcome() => _rc.getBool(keySendToWelcome);
 
+  CarouselConfigDTO welcomeCarouselConfig() {
+    final raw = _rc.getString(keyWelcomeCarousel);
+    if (raw.isEmpty) return CarouselConfigDTO(images: []);
+    try {
+      return CarouselConfigDTO.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (_) {
+      return CarouselConfigDTO(images: []);
+    }
+  }
+
   AppGlobalConfigDTO appGlobalConfig() {
     final raw = _rc.getString(keyAppStatus);
     if (raw.isEmpty) return AppGlobalConfigDTO();
@@ -50,6 +61,7 @@ class RemoteConfigService {
       return AppGlobalConfigDTO();
     }
   }
+
 
   /// Traduce el config remoto a un [AppStatus]. Regla de oro (§6.1): primero
   /// `force_update` por versión, luego `maintenance`/`server_error`.

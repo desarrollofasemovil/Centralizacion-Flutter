@@ -27,28 +27,30 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 - [x] Interceptor global de errores (`GlobalErrorInterceptor`) → estado global de app — `core/api/global_error_interceptor.dart`
 - [x] Factory de servicios por base URL (las 6 de `BACKEND.md §2`) — `core/api/network_provider.dart` + `dioProvider` (servicios Retrofit pendientes)
 - [x] 🤖 Traducir DTOs Kotlin → Dart con el agente `migration-agent/` — `BACKEND.md §4` — **66 archivos `.dart` compilando** (`dart analyze lib/core/models` limpio). Cubre auth/sesión, grafo completo de `MunicipalityDTO`, pagos/tax/fintech, reminders, email, people, weather y PQRD 24/24. Los `.kt` con varias `data class` quedaron en un solo `.dart` (p. ej. `tax_dto.dart`=10 clases). Hecho en lotes con Haiku (catálogos) + Sonnet (complejos). Agente endurecido: reintentos 529, encoding UTF-8, verify tolerante a codegen, `lowerCamelCase + @JsonKey`, `leer_kotlin` tolerante a rutas.
-- [ ] Servicios Retrofit por microservicio (Auth, Municipality, Tax, PQRD, Generales, etc.)
+- [x] Servicios Retrofit por microservicio (Auth, Municipality, Tax, PQRD, Generales, etc.)
 - [x] Persistencia local (DataStore → shared_preferences): sesión, ubicación guardada, tema — `core/storage/user_preferences.dart`
 - [x] Estado global de app (`AppStatusManager` → provider Riverpod): operational/maintenance/force_update/server_error — `core/api/app_status.dart`
-- [ ] FlutterFire: Crashlytics, Analytics, Remote Config, Messaging
-- [ ] Remote Config con las 4 keys: `welcome_carousel_images`, `app_status_config`, `send_to_welcome`, `tourism_tax_rates` — `BACKEND.md §6.1`
+- [x] FlutterFire: Crashlytics, Analytics, Remote Config, Messaging
+- [x] Remote Config con las 4 keys: `welcome_carousel_images`, `app_status_config`, `send_to_welcome`, `tourism_tax_rates` — `BACKEND.md §6.1`
 - [x] Theming dinámico desde backend (`Theme` hex → `ThemeData`) — `core/theme/` (`color_parser`, `design`, `app_theme`)
-- [ ] Navegación con go_router (equivalente a los grafos anidados) — `FRONTEND.md §2`
-- [ ] Lógica de arranque / `startDestination` (welcome vs municipio guardado) — `FRONTEND.md §1.1`
+- [x] Navegación con go_router (equivalente a los grafos anidados) — `FRONTEND.md §2`
+- [x] Lógica de arranque / `startDestination` (welcome vs municipio guardado) — `FRONTEND.md §1.1`
 
-> 🔄 **Fase 1 en progreso**: núcleo de red, estado global, theming dinámico y persistencia portados y verificados (`flutter analyze` limpio + 20 tests en verde). Falta: DTOs (agente) + servicios Retrofit, FlutterFire (Crashlytics/Analytics/RC/Messaging) con las 4 keys, go_router y `startDestination`.
+> ✅ **Fase 1 verificada**: Capa de red, servicios Retrofit, persistencia local, theming dinámico, integración con Firebase (Crashlytics, Analytics, Remote Config, Messaging) y navegación con go_router completamente implementadas.
 
 ## Fase 2 — Onboarding, sesión y home
 
-- [ ] Splash + Welcome + carrusel de anuncios
-- [ ] Login nativo (correo/clave) contra la API — `BACKEND.md §5.1`
-- [ ] Login con Google (Firebase Auth + google_sign_in) — `BACKEND.md §5.2` 🍎
-- [ ] Registro en 3 pasos (con borrador/draft y prellenado desde Google)
-- [ ] Recuperación de contraseña
-- [ ] Selector de municipio (solo flavor `municipios`)
-- [ ] MainScreen: bottom nav + header (escudo + nombre) + side menu
-- [ ] Notificaciones push (FCM) + notificaciones locales + canales 🍎
-- [ ] Módulo Noticias
+- [x] Splash + Welcome + carrusel de anuncios
+- [x] Login nativo (correo/clave) contra la API — `BACKEND.md §5.1`
+- [x] Login con Google (Firebase Auth + google_sign_in) — `BACKEND.md §5.2` 🍎
+- [x] Registro en 3 pasos (con borrador/draft y prellenado desde Google)
+- [x] Recuperación de contraseña
+- [x] Selector de municipio (solo flavor `municipios`)
+- [x] MainScreen: bottom nav + header (escudo + nombre) + side menu
+- [x] Notificaciones push (FCM) + notificaciones locales + canales 🍎
+- [x] Módulo Noticias
+
+> ✅ **Fase 2 verificada**: Pantallas de onboarding, selector de municipios, login nativo y con Google, registro wizard en 3 pasos, recuperación de contraseña, pantalla principal (Home), módulo de noticias e integración de notificaciones push y locales completamente implementados.
 
 ## Fase 3 — Módulos core
 
