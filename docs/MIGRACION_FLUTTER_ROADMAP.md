@@ -8,31 +8,35 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 
 ## Fase 0 — Setup del proyecto Flutter ⚙️
 
-- [ ] Crear proyecto Flutter (`trami_flutter`) con soporte iOS + Android
-- [ ] `applicationId` / `bundleId` = `com.tramites1cero1.centralizacion`
-- [ ] Estructura de carpetas según `CONVENCIONES.md` (`core/`, `features/`, `flavors/`)
-- [ ] `pubspec.yaml` con dependencias del stack (dio, retrofit, riverpod, go_router, json_serializable/freezed, firebase_*, mobile_scanner, cached_network_image, etc.)
-- [ ] Configurar `build_runner` + `json_serializable`
-- [ ] Scaffold de flavors `municipios` y `manizales` (ver `FLAVORS.md`) — solo el `municipios` se desarrolla por ahora
-- [ ] FlutterFire: `firebase_options_municipios.dart` apuntando al proyecto Firebase actual
-- [ ] Copiar `CLAUDE.md` y los `MIGRACION_FLUTTER_*.md` a la raíz del proyecto Flutter
+- [x] Crear proyecto Flutter (`tramiapp_flutter`) con soporte iOS + Android
+- [x] `applicationId` = `com.tramites1cero1.centralizacion` (Android; `bundleId` iOS en Fase 5)
+- [x] Estructura de carpetas según `CONVENCIONES.md` (`core/`, `features/`, `flavors/`)
+- [x] `pubspec.yaml` con dependencias del stack (dio, retrofit, riverpod, go_router, json_serializable, firebase_*, mobile_scanner, cached_network_image, etc.) — `flutter_inappwebview` pospuesto (incompatible con AGP 9; se reañade cuando haya versión compatible o vía `url_launcher`)
+- [x] Configurar `build_runner` + `json_serializable` (verificado con `shield_dto`)
+- [x] Scaffold de flavors `municipios` y `manizales` (ver `FLAVORS.md`) — solo el `municipios` se desarrolla por ahora
+- [x] FlutterFire: `firebase_options_municipios.dart` apuntando al proyecto Firebase actual (`betaappcentralizate`, Android; iOS pendiente)
+- [x] Copiar `CLAUDE.md` y los `MIGRACION_FLUTTER_*.md` a la raíz del proyecto Flutter (ya viven en `tramiapp_flutter/` y `tramiapp_flutter/docs/`)
 - [ ] GitHub Actions: build APK + IPA por flavor (mac-runner)
 - [ ] **Iniciar Apple Developer Account** (proceso externo, puede tardar hasta 2 semanas) 🍎
 
+> ✅ **Fase 0 verificada**: `flutter analyze` limpio + `assembleMunicipiosDebug` genera `app-municipios-debug.apk`. Notas: AGP 9 requirió habilitar `coreLibraryDesugaring` (lo pide `flutter_local_notifications`) y se quitó `flutter_inappwebview`. Firma release lista vía `key.properties` (pendiente la contraseña del keystore).
+
 ## Fase 1 — Núcleo (core) ⚙️
 
-- [ ] Cliente Dio único + `BaseOptions` (timeouts 40s) — `BACKEND.md §1`
-- [ ] Interceptor global de errores (equivalente a `GlobalErrorInterceptor`) → estado global de app
-- [ ] Factory de servicios por base URL (las 6 de `BACKEND.md §2`)
-- [ ] 🤖 Traducir DTOs Kotlin → Dart con el agente `migration-agent/` — `BACKEND.md §4`
+- [x] Cliente Dio único + `BaseOptions` (timeouts 40s) — `core/api/dio_client.dart`
+- [x] Interceptor global de errores (`GlobalErrorInterceptor`) → estado global de app — `core/api/global_error_interceptor.dart`
+- [x] Factory de servicios por base URL (las 6 de `BACKEND.md §2`) — `core/api/network_provider.dart` + `dioProvider` (servicios Retrofit pendientes)
+- [x] 🤖 Traducir DTOs Kotlin → Dart con el agente `migration-agent/` — `BACKEND.md §4` — **66 archivos `.dart` compilando** (`dart analyze lib/core/models` limpio). Cubre auth/sesión, grafo completo de `MunicipalityDTO`, pagos/tax/fintech, reminders, email, people, weather y PQRD 24/24. Los `.kt` con varias `data class` quedaron en un solo `.dart` (p. ej. `tax_dto.dart`=10 clases). Hecho en lotes con Haiku (catálogos) + Sonnet (complejos). Agente endurecido: reintentos 529, encoding UTF-8, verify tolerante a codegen, `lowerCamelCase + @JsonKey`, `leer_kotlin` tolerante a rutas.
 - [ ] Servicios Retrofit por microservicio (Auth, Municipality, Tax, PQRD, Generales, etc.)
-- [ ] Persistencia local (DataStore → shared_preferences/Hive): sesión de usuario, ubicación guardada, tema
-- [ ] Estado global de app (`AppStatusManager` → provider Riverpod): operational/maintenance/force_update/server_error
+- [x] Persistencia local (DataStore → shared_preferences): sesión, ubicación guardada, tema — `core/storage/user_preferences.dart`
+- [x] Estado global de app (`AppStatusManager` → provider Riverpod): operational/maintenance/force_update/server_error — `core/api/app_status.dart`
 - [ ] FlutterFire: Crashlytics, Analytics, Remote Config, Messaging
 - [ ] Remote Config con las 4 keys: `welcome_carousel_images`, `app_status_config`, `send_to_welcome`, `tourism_tax_rates` — `BACKEND.md §6.1`
-- [ ] Theming dinámico desde backend (`Theme` hex → `ThemeData`) — `FRONTEND.md §4`
+- [x] Theming dinámico desde backend (`Theme` hex → `ThemeData`) — `core/theme/` (`color_parser`, `design`, `app_theme`)
 - [ ] Navegación con go_router (equivalente a los grafos anidados) — `FRONTEND.md §2`
 - [ ] Lógica de arranque / `startDestination` (welcome vs municipio guardado) — `FRONTEND.md §1.1`
+
+> 🔄 **Fase 1 en progreso**: núcleo de red, estado global, theming dinámico y persistencia portados y verificados (`flutter analyze` limpio + 20 tests en verde). Falta: DTOs (agente) + servicios Retrofit, FlutterFire (Crashlytics/Analytics/RC/Messaging) con las 4 keys, go_router y `startDestination`.
 
 ## Fase 2 — Onboarding, sesión y home
 

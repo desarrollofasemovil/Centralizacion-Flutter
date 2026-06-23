@@ -1,0 +1,11 @@
+# Plantilla de firma release. Copia este archivo a `android/key.properties`
+# (gitignored) y rellena con las credenciales reales del keystore.
+#
+#   cp android/key.properties.template android/key.properties
+#
+# storeFile es la ruta al keystore relativa a la carpeta android/.
+# El keystore actual está en ../keys/keystorepach.jks (desde android/).
+storePassword=CAMBIAR
+keyPassword=CAMBIAR
+keyAlias=CAMBIAR
+storeFile=../keys/keystorepach.jks

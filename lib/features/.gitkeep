@@ -1,0 +1,4 @@
+# Un directorio por módulo del catálogo (FRONTEND §5): tramites, pqrd,
+# impuestos, certificados, servicios_publicos, pagos, cursos, escenarios,
+# noticias, recordatorios, soporte, auth, perfil.
+# Cada feature: data/ domain/ application/ presentation/ (CONVENCIONES §10).

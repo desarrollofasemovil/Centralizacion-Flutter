@@ -43,3 +43,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/google-services.json
+/keys
+/codebase
+
+# Firma release: credenciales del keystore (NUNCA commitear)
+key.properties
+/android/key.properties
+
+# google-services.json por flavor (contiene claves de proyecto; mantener fuera de VCS)
+/android/app/src/municipios/google-services.json
+/android/app/src/manizales/google-services.json
+
+# agents claude
+*.env

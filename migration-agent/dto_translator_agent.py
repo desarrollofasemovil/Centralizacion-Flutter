@@ -31,7 +31,7 @@ from anthropic import beta_tool
 
 # Modelo. Por defecto el más capaz. Para abaratar el consumo del crédito puedes
 # cambiarlo a "claude-sonnet-4-6" (más barato) o "claude-haiku-4-5" (el más barato).
-MODEL = "claude-opus-4-8"
+MODEL = "claude-haiku-4-5"
 
 # Raíz del proyecto Kotlin actual (de donde leemos los DTOs).
 KOTLIN_ROOT = Path(
@@ -41,7 +41,7 @@ KOTLIN_ROOT = Path(
 
 # Raíz del proyecto Flutter nuevo (donde escribimos los .dart y donde corremos
 # `dart analyze`). Ajusta cuando Claude Code haya creado el proyecto Flutter.
-FLUTTER_ROOT = Path(r"D:\AndroidStudioProjects\trami_flutter")
+FLUTTER_ROOT = Path(r"D:\AndroidStudioProjects\tramiapp_flutter")
 
 # Carpeta destino de los modelos Dart, relativa a FLUTTER_ROOT.
 DART_MODELS_SUBDIR = Path("lib/core/models")
