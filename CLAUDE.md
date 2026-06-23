@@ -1,8 +1,8 @@
 # CLAUDE.md — Centro de mando de la migración a Flutter
 
 > Este archivo dirige el trabajo de migración de **Trami App Municipios** (Kotlin/Compose) a **Flutter**. Está pensado para cargarse al inicio de cada sesión de Claude Code y enrutar a la documentación y tareas correctas.
->
-> **Destino:** cuando se cree el proyecto Flutter (`tramiapp_flutter/`), copiar este `CLAUDE.md` y los `MIGRACION_FLUTTER_*.md` a su raíz. Por ahora viven en el repo de Centralización junto al código fuente original.
+> Leer los archivos MIGRACION_FLUTTER que esten en la carpeta /docs.
+> > IMPORTANTE: La base del proyecto anterior en Kotlin, se encuentra en la carpeta raiz del proyecto llamada /codebase.
 
 ---
 
