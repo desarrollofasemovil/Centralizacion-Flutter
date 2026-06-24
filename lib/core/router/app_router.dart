@@ -60,7 +60,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.selectMunicipality,
-        builder: (_, _) => const SelectMunicipalityScreen(),
+        builder: (context, state) {
+          final departmentId =
+              int.tryParse(state.pathParameters['departmentId'] ?? '') ?? 0;
+          return SelectMunicipalityScreen(departmentId: departmentId);
+        },
       ),
       GoRoute(
         path: AppRoutes.loginOptions,
