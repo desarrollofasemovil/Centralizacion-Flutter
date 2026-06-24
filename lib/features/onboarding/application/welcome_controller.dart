@@ -24,7 +24,7 @@ class WelcomeState {
   /// Departamentos filtrados sin acentos + case-insensitive, ordenados por
   /// nombre (equivalente a `filteredDepartments`).
   List<Department> get filteredDepartments {
-    final all = departments.valueOrNull ?? const <Department>[];
+    final all = departments.value ?? const <Department>[];
     final q = _normalize(query.trim());
     final list = q.isEmpty
         ? [...all]

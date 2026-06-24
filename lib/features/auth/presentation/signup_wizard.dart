@@ -246,7 +246,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               labelText: 'Tipo de Documento',
                               border: OutlineInputBorder(),
                             ),
-                            value: _selectedDocType,
+                            initialValue: _selectedDocType,
                             items: _docTypes.map((type) {
                               return DropdownMenuItem(
                                 value: type,

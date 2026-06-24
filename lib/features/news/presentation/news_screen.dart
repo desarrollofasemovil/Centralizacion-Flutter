@@ -65,7 +65,7 @@ class NewsScreen extends ConsumerWidget {
                           child: ListTile(
                             contentPadding: const EdgeInsets.all(16),
                             leading: CircleAvatar(
-                              backgroundColor: scheme.primary.withOpacity(0.1),
+                              backgroundColor: scheme.primary.withValues(alpha: 0.1),
                               child: Icon(Icons.newspaper, color: scheme.primary),
                             ),
                             title: Text(
