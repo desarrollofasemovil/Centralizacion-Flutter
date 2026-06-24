@@ -4,6 +4,8 @@
 >
 > Documento hermano: `MIGRACION_FLUTTER_BACKEND.md` (servicios que consume).
 >
+> ⭐ **Fuente de verdad = el código original, no este documento.** El proyecto Kotlin/Compose completo está espejado en **`tramiapp_flutter/codebase/`**; el código de las pantallas vive en `codebase/app/src/main/java/com/tramites1cero1/centralizacion/ui/screen/<feature>/`. Este documento resume el comportamiento, pero **el diseño visual y la lógica fieles se leen del código en `codebase/`**. Antes de migrar una pantalla, abre su `*Screen.kt` original; **no reinterpretes ni rediseñes la UI** — cada módulo migrado debe verse igual que el original. (`codebase/` está en `.gitignore`, es un espejo local: si no la tienes, clónala con `git clone https://github.com/desarrollofasemovil/Centralizacion.git tramiapp_flutter/codebase`.)
+>
 > **Decisión confirmada:** proyecto Flutter nuevo desde cero, Android actual se mantiene en paralelo. Prioridad: **Trami App Manizales** (iOS + Android), luego escalar a apps individuales por municipio y, a largo plazo, Trami App Municipios en iOS.
 
 ---
@@ -153,7 +155,7 @@ data class Design(
 
 ## 5. Catálogo de módulos / pantallas
 
-Ruta de paquetes: `ui/screen/<feature>/`. Cada feature: `*Screen` (Compose) + `*ViewModel`.
+Ruta de paquetes: `ui/screen/<feature>/`, con raíz en disco en `tramiapp_flutter/codebase/app/src/main/java/com/tramites1cero1/centralizacion/`. Cada feature: `*Screen` (Compose) + `*ViewModel`. **Abre estos archivos en `codebase/` para ver el diseño y el comportamiento reales antes de portar** — este catálogo es solo un índice, no la fuente de verdad.
 
 ### 5.1 Onboarding / sesión
 - **SplashScreen** (`ui/screen/splash`) — Activity de launcher (tema `SplashTheme`).
@@ -343,4 +345,4 @@ Otros del manifest: orientación **portrait** forzada en las activities; `usesCl
 
 ---
 
-*Generado a partir del código de la rama `main` (Trami App Municipios, Android/Kotlin + Compose). Versión base: 1.4.4 (versionCode 46). Migración a Flutter desde cero, prioridad Trami App Manizales (iOS + Android).*
+*Generado a partir del código de la rama `main` (Trami App Municipios, Android/Kotlin + Compose), espejado en `tramiapp_flutter/codebase/` (origen: `https://github.com/desarrollofasemovil/Centralizacion.git`). Versión base: 1.4.4 (versionCode 46). Migración a Flutter desde cero, prioridad Trami App Manizales (iOS + Android).*

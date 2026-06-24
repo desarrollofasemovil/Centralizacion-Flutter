@@ -1,203 +1,374 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/api/services/api_providers.dart';
-import '../../../core/models/department.dart';
 import '../../../core/models/municipality.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
 
+/// Selección de municipio — puerto fiel de `selectmunicipality/SelectMunScreen.kt`
+/// + `components/SelectMunicipality.kt` (fuente de verdad en `codebase/`). Paso 2
+/// del onboarding: recibe el `departmentId` elegido en Welcome, carga sus
+/// municipios y los presenta con un buscador de autocompletar sobre fondo de
+/// marca, con botones "Cancelar / Continuar".
 class SelectMunicipalityScreen extends ConsumerStatefulWidget {
-  const SelectMunicipalityScreen({super.key});
+  const SelectMunicipalityScreen({super.key, required this.departmentId});
+
+  final int departmentId;
 
   @override
   ConsumerState<SelectMunicipalityScreen> createState() =>
       _SelectMunicipalityScreenState();
 }
 
-class _SelectMunicipalityScreenState extends ConsumerState<SelectMunicipalityScreen> {
-  List<Department> _departments = [];
+// Colores de acento (de ui/theme/Color.kt).
+const _kContinue = Color(0xFF2196F3);
+const _kCheckbox = Color(0xFF1E88E5); // Blue
+
+class _SelectMunicipalityScreenState
+    extends ConsumerState<SelectMunicipalityScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+
   List<Municipality> _municipalities = [];
-  Department? _selectedDepartment;
   Municipality? _selectedMunicipality;
+  String _query = '';
+  bool _searchFocused = false;
+  bool _isLoading = false;
+  bool _animate = false;
   bool _savePreference = true;
-  bool _isLoadingDeps = false;
-  bool _isLoadingMuns = false;
-  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadDepartments();
+    _searchFocus.addListener(() {
+      setState(() => _searchFocused = _searchFocus.hasFocus);
+    });
+    _loadMunicipalities();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) setState(() => _animate = true);
+      });
+    });
   }
 
-  Future<void> _loadDepartments() async {
-    setState(() {
-      _isLoadingDeps = true;
-      _errorMessage = null;
-    });
-    try {
-      final deps = await ref.read(municipalityApiServiceProvider).getDepartments();
-      setState(() {
-        _departments = deps;
-        _isLoadingDeps = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'No se pudieron cargar los departamentos.';
-        _isLoadingDeps = false;
-      });
-    }
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocus.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadMunicipalities(int departmentId) async {
-    setState(() {
-      _isLoadingMuns = true;
-      _municipalities = [];
-      _selectedMunicipality = null;
-    });
+  Future<void> _loadMunicipalities() async {
+    setState(() => _isLoading = true);
     try {
       final muns = await ref
           .read(municipalityApiServiceProvider)
-          .byDepartment(departmentId);
+          .byDepartment(widget.departmentId);
+      if (!mounted) return;
       setState(() {
         _municipalities = muns.where((m) => m.isActive).toList();
-        _isLoadingMuns = false;
+        _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'No se pudieron cargar los municipios.';
-        _isLoadingMuns = false;
-      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _confirmSelection() async {
-    if (_selectedDepartment == null || _selectedMunicipality == null) return;
+  /// Filtro sin acentos + case-insensitive, ordenado por nombre (replica
+  /// `filteredMunicipalities` del SelectMunViewModel).
+  List<Municipality> get _filteredMunicipalities {
+    final list = _query.trim().isEmpty
+        ? [..._municipalities]
+        : _municipalities
+            .where((m) =>
+                _removeAccents(m.name).contains(_removeAccents(_query)))
+            .toList();
+    list.sort((a, b) => a.name.compareTo(b.name));
+    return list;
+  }
 
+  void _onMunicipalitySelected(Municipality mun) {
+    setState(() {
+      _selectedMunicipality = mun;
+      _searchController.text = mun.name;
+      _query = mun.name;
+    });
+    _searchFocus.unfocus();
+  }
+
+  Future<void> _confirmSelection() async {
+    final mun = _selectedMunicipality;
+    if (mun == null) return;
     final prefs = ref.read(userPreferencesProvider);
     await prefs.saveLocation(
-      departmentId: _selectedDepartment!.id,
-      municipalityId: _selectedMunicipality!.id,
-      municipio: _selectedMunicipality!.name,
+      departmentId: widget.departmentId,
+      municipalityId: mun.id,
+      municipio: mun.name,
       guardar: _savePreference,
     );
+    if (mounted) context.go(AppRoutes.municipalityPath(mun.id));
+  }
 
-    if (mounted) {
-      context.go(AppRoutes.municipalityPath(_selectedMunicipality!.id));
+  void _cancel() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.welcome);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final filtered = _filteredMunicipalities;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Seleccionar Municipio'),
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Selecciona tu ubicación para acceder a los trámites y servicios de tu alcaldía.',
-              style: TextStyle(fontSize: 16, color: Colors.black54),
-            ),
-            const SizedBox(height: 32),
-            if (_errorMessage != null) ...[
-              Text(
-                _errorMessage!,
-                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-            ],
-            // Departamento dropdown
-            _isLoadingDeps
-                ? const Center(child: CircularProgressIndicator())
-                : DropdownButtonFormField<Department>(
-                    decoration: InputDecoration(
-                      labelText: 'Departamento',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(Icons.map),
+      backgroundColor: scheme.primary,
+      body: SafeArea(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _searchFocus.unfocus(),
+          child: Column(
+            children: [
+              Expanded(
+                child: AnimatedOpacity(
+                  opacity: _animate ? 1 : 0,
+                  duration: const Duration(milliseconds: 500),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        SvgPicture.asset(
+                          'assets/images/newtramiapp.svg',
+                          width: 100,
+                          height: 50,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(height: 30),
+                        Text(
+                          'Ahora, elige tu municipio de\nresidencia',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: scheme.onPrimary,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        _MunicipalitySearch(
+                          controller: _searchController,
+                          focusNode: _searchFocus,
+                          onChanged: (v) => setState(() => _query = v),
+                          isLoading: _isLoading,
+                          showDropdown:
+                              _searchFocused && filtered.isNotEmpty,
+                          municipalities: filtered,
+                          onSelected: _onMunicipalitySelected,
+                          textColor: scheme.onSurface,
+                        ),
+                        const SizedBox(height: 16),
+                        _SaveCheckbox(
+                          value: _savePreference,
+                          onChanged: (v) =>
+                              setState(() => _savePreference = v),
+                          color: scheme.onPrimary,
+                        ),
+                      ],
                     ),
-                    value: _selectedDepartment,
-                    items: _departments.map((dep) {
-                      return DropdownMenuItem<Department>(
-                        value: dep,
-                        child: Text(dep.name),
-                      );
-                    }).toList(),
-                    onChanged: (dep) {
-                      setState(() {
-                        _selectedDepartment = dep;
-                      });
-                      if (dep != null) {
-                        _loadMunicipalities(dep.id);
-                      }
-                    },
                   ),
-            const SizedBox(height: 20),
-            // Municipio dropdown
-            _isLoadingMuns
-                ? const Center(child: CircularProgressIndicator())
-                : DropdownButtonFormField<Municipality>(
-                    decoration: InputDecoration(
-                      labelText: 'Municipio',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(Icons.location_city),
-                    ),
-                    value: _selectedMunicipality,
-                    disabledHint: const Text('Selecciona primero un departamento'),
-                    items: _municipalities.isEmpty
-                        ? null
-                        : _municipalities.map((mun) {
-                            return DropdownMenuItem<Municipality>(
-                              value: mun,
-                              child: Text(mun.name),
-                            );
-                          }).toList(),
-                    onChanged: _selectedDepartment == null
-                        ? null
-                        : (mun) {
-                            setState(() {
-                              _selectedMunicipality = mun;
-                            });
-                          },
-                  ),
-            const SizedBox(height: 24),
-            // Save checkbox
-            CheckboxListTile(
-              title: const Text('Recordar selección para siguientes inicios'),
-              value: _savePreference,
-              onChanged: (val) {
-                setState(() {
-                  _savePreference = val ?? true;
-                });
-              },
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-            ),
-            const Spacer(),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: _selectedMunicipality == null ? null : _confirmSelection,
-              child: const Text(
-                'Ingresar',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              // ── Barra inferior: Cancelar / Continuar ───────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(26, 8, 26, 24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _cancel,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF212121),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          child: const Text('Cancelar',
+                              style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _selectedMunicipality == null
+                              ? null
+                              : _confirmSelection,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _kContinue,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor:
+                                _kContinue.withValues(alpha: 0.4),
+                            disabledForegroundColor:
+                                Colors.white.withValues(alpha: 0.7),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          child: const Text('Continuar',
+                              style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _removeAccents(String input) {
+    const withAccents = 'áàäâãéèëêíìïîóòöôõúùüûñ';
+    const without = 'aaaaaeeeeiiiiooooouuuun';
+    var s = input.toLowerCase();
+    for (var i = 0; i < withAccents.length; i++) {
+      s = s.replaceAll(withAccents[i], without[i]);
+    }
+    return s;
+  }
+}
+
+/// Tarjeta blanca con buscador + dropdown inline (replica `SelectMunicipio`).
+class _MunicipalitySearch extends StatelessWidget {
+  const _MunicipalitySearch({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+    required this.isLoading,
+    required this.showDropdown,
+    required this.municipalities,
+    required this.onSelected,
+    required this.textColor,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onChanged;
+  final bool isLoading;
+  final bool showDropdown;
+  final List<Municipality> municipalities;
+  final ValueChanged<Municipality> onSelected;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: controller,
+            focusNode: focusNode,
+            onChanged: onChanged,
+            style: TextStyle(color: textColor, fontSize: 15),
+            decoration: const InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: Colors.white,
+              hintText: 'Buscar municipio...',
+              hintStyle: TextStyle(color: Color(0xFF7E7E7E)),
+              prefixIcon: Icon(Icons.search, color: Color(0xFF7E7E7E)),
+              contentPadding:
+                  EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              border: OutlineInputBorder(borderSide: BorderSide.none),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(borderSide: BorderSide.none),
+            ),
+          ),
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: CircularProgressIndicator(),
+            )
+          else if (showDropdown)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 180),
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: municipalities.length,
+                itemBuilder: (context, i) {
+                  final mun = municipalities[i];
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      mun.name,
+                      style: TextStyle(color: textColor, fontSize: 15),
+                    ),
+                    onTap: () => onSelected(mun),
+                  );
+                },
               ),
             ),
-            const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+/// Checkbox "Guardar selección" — puerto de `CheckboxSaveSelection.kt`.
+class _SaveCheckbox extends StatelessWidget {
+  const _SaveCheckbox({
+    required this.value,
+    required this.onChanged,
+    required this.color,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: [
+            Checkbox(
+              value: value,
+              onChanged: (v) => onChanged(v ?? true),
+              activeColor: _kCheckbox,
+              checkColor: Colors.white,
+              side: BorderSide(color: color.withValues(alpha: 0.7)),
+            ),
+            Expanded(
+              child: Text(
+                'Guardar selección para futuros accesos.',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ],
         ),
       ),

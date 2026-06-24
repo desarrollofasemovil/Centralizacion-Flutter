@@ -5,7 +5,7 @@ class AppRoutes {
 
   static const splash = '/';
   static const welcome = '/welcome';
-  static const selectMunicipality = '/select-municipality';
+  static const selectMunicipality = '/select-municipality/:departmentId';
   static const loginOptions = '/login-options';
   static const login = '/login';
   static const signup = '/signup';
@@ -18,6 +18,9 @@ class AppRoutes {
   static const news = '/municipality/:id/news';
   static const taxes = '/municipality/:id/taxes';
   static const pqrd = '/municipality/:id/pqrd';
+
+  static String selectMunicipalityPath(int departmentId) =>
+      '/select-municipality/$departmentId';
 
   static String municipalityPath(int id) => '/municipality/$id';
   static String newsPath(int id) => '/municipality/$id/news';
