@@ -6,8 +6,6 @@ class AppRoutes {
   static const splash = '/';
   static const welcome = '/welcome';
   static const selectMunicipality = '/select-municipality/:departmentId';
-  static const loginOptions = '/login-options';
-  static const login = '/login';
   static const signup = '/signup';
   static const recoverPassword = '/recover-password';
 

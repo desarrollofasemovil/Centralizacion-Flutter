@@ -9,6 +9,8 @@ import '../../../core/municipality/municipality_repository.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../auth/application/registration_draft.dart';
+import '../../auth/presentation/login_bottom_sheet.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({required this.municipality, super.key});
@@ -21,12 +23,40 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
+  bool _loginSheetShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-show del bottom sheet de login cuando no hay sesión (paridad con la
+    // orquestación de MainScreen.kt).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowLogin());
+  }
+
+  void _maybeShowLogin() {
+    if (!mounted || _loginSheetShown) return;
+    if (ref.read(sessionProvider) == null) {
+      _loginSheetShown = true;
+      showLoginBottomSheet(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final design = designFromMunicipality(widget.municipality);
     final scheme = Theme.of(context).colorScheme;
     final user = ref.watch(sessionProvider);
+
+    // Al volver del registro sin sesión, reabrir el sheet (flag del base).
+    ref.listen<bool>(registrationSuccessProvider, (prev, next) {
+      if (next) {
+        ref.read(registrationSuccessProvider.notifier).state = false;
+        _loginSheetShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) showLoginBottomSheet(context);
+        });
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -131,7 +161,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 leading: const Icon(Icons.login),
                 title: const Text('Iniciar Sesión'),
                 onTap: () {
-                  context.go(AppRoutes.loginOptions);
+                  Navigator.pop(context);
+                  showLoginBottomSheet(context);
                 },
               ),
             const Divider(),

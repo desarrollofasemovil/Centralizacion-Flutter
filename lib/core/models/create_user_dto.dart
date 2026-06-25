@@ -15,7 +15,10 @@ class CreateUserDTO {
   final String password;
   final String address;
   final String phoneNumber;
-  final String birthDate;
+
+  /// Fecha de nacimiento en formato `YYYY-MM-DD` (el backend la deserializa como
+  /// `DateOnly`). Nullable: se envía `null` si el usuario no la selecciona.
+  final String? birthDate;
   final int? loginStatus;
   final int? fixedMunicipality;
   final int? lastMunicipality;
@@ -32,7 +35,7 @@ class CreateUserDTO {
     this.password = "",
     this.address = "",
     this.phoneNumber = "",
-    this.birthDate = "",
+    this.birthDate,
     this.loginStatus,
     this.fixedMunicipality = 0,
     this.lastMunicipality = 0,
