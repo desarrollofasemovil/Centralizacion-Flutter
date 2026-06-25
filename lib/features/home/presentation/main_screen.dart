@@ -88,7 +88,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     'Trámites y Servicios',
                     style: TextStyle(
                       fontSize: 12,
-                      color: scheme.onPrimary.withOpacity(0.8),
+                      color: scheme.onPrimary.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
@@ -151,7 +151,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 title: const Text('Cerrar Sesión'),
                 onTap: () async {
                   await ref.read(sessionProvider.notifier).logout();
-                  if (mounted) {
+                  if (context.mounted) {
                     context.go(AppRoutes.welcome);
                   }
                 },
@@ -172,7 +172,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               onTap: () async {
                 final prefs = ref.read(userPreferencesProvider);
                 await prefs.clearCurrentMunicipality();
-                if (mounted) {
+                if (context.mounted) {
                   context.go(AppRoutes.welcome);
                 }
               },
@@ -217,7 +217,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           // Banner or Welcome Message
           Container(
             padding: const EdgeInsets.all(20),
-            color: scheme.primary.withOpacity(0.05),
+            color: scheme.primary.withValues(alpha: 0.05),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
