@@ -25,14 +25,39 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 const _kDotsActive = Color(0xFF4364CD); // buttoncolorslogin
 const _kDotInactive = Color(0xFFE0E0E0); // Gray300
 
-class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
+// Duración total de la coreografía de entrada (la animación más tardía del
+// original es el carrusel: slideInVertically con delayMillis=800 + tween(800)
+// => termina en 1600ms). El resto de Interval()s de abajo son proporciones de
+// esos mismos delays/duraciones sobre esta ventana (WelcomeScreen.kt §header/
+// búsqueda/anuncios).
+const _kChoreographyDuration = Duration(milliseconds: 1600);
+
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
+    with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
   int _currentPage = 0;
   Timer? _timer;
   bool _searchFocused = false;
-  bool _animate = false;
+
+  late final AnimationController _entrance;
+
+  // Header (HeaderWelcome): fadeIn(tween(900)) + slideInVertically(900),
+  // sin delay — entra primero.
+  late final Animation<double> _headerFade;
+  late final Animation<Offset> _headerSlide;
+
+  // Buscador de departamento: fadeIn(tween(800, delay=600)) +
+  // slideInVertically(800, delay=600, initialOffsetY={ it }) — entra desde abajo.
+  late final Animation<double> _searchFade;
+  late final Animation<Offset> _searchSlide;
+
+  // Carrusel de anuncios: fadeIn(tween(800, delay=100)) + scaleIn(800, delay=100)
+  // + slideInVertically(800, delay=800, initialOffsetY={ -it }) — entra desde arriba.
+  late final Animation<double> _carouselFade;
+  late final Animation<double> _carouselScale;
+  late final Animation<Offset> _carouselSlide;
 
   @override
   void initState() {
@@ -41,9 +66,48 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       setState(() => _searchFocused = _searchFocus.hasFocus);
     });
     _startCarouselTimer();
+
+    _entrance = AnimationController(
+      vsync: this,
+      duration: _kChoreographyDuration,
+    );
+
+    _headerFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0, 900 / 1600, curve: Curves.easeOut),
+    );
+    _headerSlide = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(_headerFade);
+
+    _searchFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(600 / 1600, 1400 / 1600, curve: Curves.easeOut),
+    );
+    _searchSlide = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(_searchFade);
+
+    _carouselFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(100 / 1600, 900 / 1600, curve: Curves.easeOut),
+    );
+    _carouselScale = Tween<double>(begin: 0.85, end: 1.0).animate(_carouselFade);
+    _carouselSlide = Tween<Offset>(
+      begin: const Offset(0, -0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(800 / 1600, 1.0, curve: Curves.easeOut),
+    ));
+
+    // Port de triggerAnimations() en WelcomeViewModel: delay antes de
+    // arrancar la coreografía.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) setState(() => _animate = true);
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _entrance.forward();
       });
     });
   }
@@ -51,6 +115,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _entrance.dispose();
     _pageController.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
@@ -90,20 +155,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => _searchFocus.unfocus(),
-          child: AnimatedOpacity(
-            opacity: _animate ? 1 : 0,
-            duration: const Duration(milliseconds: 500),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 56),
-                  // ── Header ───────────────────────────────────────────────
-                  AnimatedSlide(
-                    offset: _animate ? Offset.zero : const Offset(0, 0.15),
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOut,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 56),
+                // ── Header (HeaderWelcome: fadeIn + slideInVertically, sin delay) ──
+                FadeTransition(
+                  opacity: _headerFade,
+                  child: SlideTransition(
+                    position: _headerSlide,
                     child: Column(
                       children: [
                         Text(
@@ -142,46 +204,65 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // ── Buscador de departamento + dropdown inline ───────────
-                  _DepartmentSearch(
-                    controller: _searchController,
-                    focusNode: _searchFocus,
-                    onChanged:
-                        ref.read(welcomeControllerProvider.notifier).onQueryChanged,
-                    showDropdown: _searchFocused && filtered.isNotEmpty,
-                    departments: filtered,
-                    onSelected: _onDepartmentSelected,
-                    textColor: scheme.onSurface,
+                ),
+                const SizedBox(height: 20),
+                // ── Buscador de departamento + dropdown inline ───────────
+                // fadeIn + slideInVertically(delay=600), entra desde abajo.
+                FadeTransition(
+                  opacity: _searchFade,
+                  child: SlideTransition(
+                    position: _searchSlide,
+                    child: _DepartmentSearch(
+                      controller: _searchController,
+                      focusNode: _searchFocus,
+                      onChanged: ref
+                          .read(welcomeControllerProvider.notifier)
+                          .onQueryChanged,
+                      showDropdown: _searchFocused && filtered.isNotEmpty,
+                      departments: filtered,
+                      onSelected: _onDepartmentSelected,
+                      textColor: scheme.onSurface,
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  // ── Carrusel de anuncios ─────────────────────────────────
-                  _Carousel(
-                    items: welcome.carouselImages,
-                    height: carouselHeight,
-                    controller: _pageController,
-                    currentPage: _currentPage,
-                    onPageChanged: (p) => setState(() => _currentPage = p),
-                  ),
-                  const SizedBox(height: 24),
-                  // ── Footer patrocinadores ────────────────────────────────
-                  FooterSponsors(color: scheme.onPrimary),
-                  const SizedBox(height: 8),
-                  // ── Enlace discreto de login ─────────────────────────────
-                  TextButton(
-                    onPressed: () => showLoginBottomSheet(context),
-                    child: Text(
-                      'Iniciar sesión',
-                      style: TextStyle(
-                        color: scheme.onPrimary,
-                        decoration: TextDecoration.underline,
-                        decorationColor: scheme.onPrimary,
+                ),
+                const SizedBox(height: 24),
+                // ── Carrusel de anuncios ─────────────────────────────────
+                // fadeIn(delay=100) + scaleIn(delay=100) + slideInVertically
+                // (delay=800), entra desde arriba.
+                FadeTransition(
+                  opacity: _carouselFade,
+                  child: SlideTransition(
+                    position: _carouselSlide,
+                    child: ScaleTransition(
+                      scale: _carouselScale,
+                      child: _Carousel(
+                        items: welcome.carouselImages,
+                        height: carouselHeight,
+                        controller: _pageController,
+                        currentPage: _currentPage,
+                        onPageChanged: (p) => setState(() => _currentPage = p),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+                // ── Footer patrocinadores ────────────────────────────────
+                FooterSponsors(color: scheme.onPrimary),
+                const SizedBox(height: 8),
+                // ── Enlace discreto de login ─────────────────────────────
+                TextButton(
+                  onPressed: () => showLoginBottomSheet(context),
+                  child: Text(
+                    'Iniciar sesión',
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      decoration: TextDecoration.underline,
+                      decorationColor: scheme.onPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
         ),

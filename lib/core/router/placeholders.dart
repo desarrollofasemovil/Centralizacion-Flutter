@@ -8,11 +8,19 @@ import '../theme/app_theme.dart';
 // Pantallas placeholder de la Fase 1. Se reemplazan por las reales en la Fase 2
 // (ver FRONTEND §5). Aquí solo validan navegación, arranque y theming dinámico.
 
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
+/// Loader genérico mientras se resuelve la config del municipio (FRONTEND §1.1:
+/// "state.isLoading muestra un CircularProgressIndicator sobre primarycolor").
+/// No confundir con el SplashScreen real (onboarding/presentation/splash_screen.dart),
+/// que es la pantalla de arranque con el GIF de carga.
+class LoadingScreen extends StatelessWidget {
+  const LoadingScreen({super.key});
   @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        body: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
 }
 
 
@@ -33,7 +41,7 @@ class AlcaldiasScope extends ConsumerWidget {
     return async.when(
       loading: () => Theme(
         data: buildInicialTheme(dark: dark),
-        child: const SplashScreen(),
+        child: const LoadingScreen(),
       ),
       error: (e, _) => Theme(
         data: buildInicialTheme(dark: dark),
