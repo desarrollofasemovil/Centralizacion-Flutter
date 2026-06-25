@@ -6,8 +6,7 @@ import '../models/municipality_dto.dart';
 import '../theme/design.dart';
 
 /// Repositorio de configuración del municipio. Cachea el [MunicipalityDTO] en
-/// memoria por `id` (equivalente al `ConcurrentHashMap<Int, MunicipalityModel>`
-/// del proyecto Android, BACKEND §8) → no re-pide `GetInfoBy` en la sesión.
+/// memoria por `id` 
 class MunicipalityRepository {
   MunicipalityRepository(this._api);
 

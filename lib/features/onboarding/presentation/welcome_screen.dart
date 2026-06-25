@@ -6,16 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/api/services/api_providers.dart';
 import '../../../core/models/department.dart';
-import '../../../core/remote_config/remote_config_service.dart';
 import '../../../core/router/app_routes.dart';
+import '../../auth/application/auth_providers.dart';
+import '../../auth/presentation/login_bottom_sheet.dart';
+import '../../auth/presentation/widgets/footer_sponsors.dart';
+import '../application/welcome_controller.dart';
 
-/// Pantalla de bienvenida — puerto fiel de `ui/screen/welcome/WelcomeScreen.kt`
-/// + `AdvertisementSection.kt` (fuente de verdad en `codebase/`). Fondo de marca
-/// (`colorScheme.primary` = primarycolor navy), buscador de departamento con
-/// autocompletar que navega a la selección de municipio, carrusel de anuncios
-/// (Remote Config) y footer de patrocinadores.
+
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -33,10 +31,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   final FocusNode _searchFocus = FocusNode();
   int _currentPage = 0;
   Timer? _timer;
-
-  String _query = '';
   bool _searchFocused = false;
-  List<Department> _departments = [];
   bool _animate = false;
 
   @override
@@ -45,7 +40,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     _searchFocus.addListener(() {
       setState(() => _searchFocused = _searchFocus.hasFocus);
     });
-    _loadDepartments();
     _startCarouselTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -63,20 +57,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadDepartments() async {
-    try {
-      final deps = await ref.read(municipalityApiServiceProvider).getDepartments();
-      if (mounted) setState(() => _departments = deps);
-    } catch (_) {
-      // Silencioso: si falla, el buscador no muestra resultados (el original
-      // muestra una tarjeta de error que aún no portamos).
-    }
-  }
-
   void _startCarouselTimer() {
     _timer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
-      final images =
-          ref.read(remoteConfigServiceProvider).welcomeCarouselConfig().images;
+      final images = ref.read(welcomeControllerProvider).carouselImages;
       if (images.isEmpty || !_pageController.hasClients) return;
       final next = (_currentPage + 1) % images.length;
       _pageController.animateToPage(
@@ -85,19 +68,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         curve: Curves.easeInOutCubic,
       );
     });
-  }
-
-  /// Filtro sin acentos + case-insensitive, ordenado por nombre (replica
-  /// `filteredDepartments` del WelcomeViewModel).
-  List<Department> get _filteredDepartments {
-    final list = _query.trim().isEmpty
-        ? [..._departments]
-        : _departments
-            .where((d) =>
-                _removeAccents(d.name).contains(_removeAccents(_query)))
-            .toList();
-    list.sort((a, b) => a.name.compareTo(b.name));
-    return list;
   }
 
   void _onDepartmentSelected(Department dep) {
@@ -109,12 +79,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final images =
-        ref.watch(remoteConfigServiceProvider).welcomeCarouselConfig().images;
-    final carouselItems = images
-        .map((e) => (imageUrl: e.imageUrl, clickUrl: e.clickUrl))
-        .toList();
-    final filtered = _filteredDepartments;
+    final welcome = ref.watch(welcomeControllerProvider);
+    final user = ref.watch(sessionProvider);
+    final filtered = welcome.filteredDepartments;
     final carouselHeight = MediaQuery.of(context).size.width - 44;
 
     return Scaffold(
@@ -148,6 +115,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        // Si hay sesión, mostrar el nombre del usuario (port del
+                        // header de WelcomeScreen.kt).
+                        if (user != null) ...[
+                          const SizedBox(height: 5),
+                          Text(
+                            '${user.firstName} ${user.lastName}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: scheme.onPrimary,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         Text(
                           'Vamos a configurar tu aplicación\nElige tu departamento',
@@ -166,7 +147,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   _DepartmentSearch(
                     controller: _searchController,
                     focusNode: _searchFocus,
-                    onChanged: (v) => setState(() => _query = v),
+                    onChanged:
+                        ref.read(welcomeControllerProvider.notifier).onQueryChanged,
                     showDropdown: _searchFocused && filtered.isNotEmpty,
                     departments: filtered,
                     onSelected: _onDepartmentSelected,
@@ -175,7 +157,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   const SizedBox(height: 24),
                   // ── Carrusel de anuncios ─────────────────────────────────
                   _Carousel(
-                    items: carouselItems,
+                    items: welcome.carouselImages,
                     height: carouselHeight,
                     controller: _pageController,
                     currentPage: _currentPage,
@@ -183,11 +165,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   ),
                   const SizedBox(height: 24),
                   // ── Footer patrocinadores ────────────────────────────────
-                  _FooterSponsors(color: scheme.onPrimary),
+                  FooterSponsors(color: scheme.onPrimary),
                   const SizedBox(height: 8),
                   // ── Enlace discreto de login ─────────────────────────────
                   TextButton(
-                    onPressed: () => context.go(AppRoutes.loginOptions),
+                    onPressed: () => showLoginBottomSheet(context),
                     child: Text(
                       'Iniciar sesión',
                       style: TextStyle(
@@ -206,20 +188,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       ),
     );
   }
-
-  static String _removeAccents(String input) {
-    const withAccents = 'áàäâãéèëêíìïîóòöôõúùüûñ';
-    const without = 'aaaaaeeeeiiiiooooouuuun';
-    var s = input.toLowerCase();
-    for (var i = 0; i < withAccents.length; i++) {
-      s = s.replaceAll(withAccents[i], without[i]);
-    }
-    return s;
-  }
 }
 
-/// Campo de búsqueda blanco + lista desplegable inline (replica el `TextField` +
-/// `LazyColumn` animado del WelcomeScreen original).
+
 class _DepartmentSearch extends StatelessWidget {
   const _DepartmentSearch({
     required this.controller,
@@ -293,8 +264,7 @@ class _DepartmentSearch extends StatelessWidget {
   }
 }
 
-/// Carrusel de anuncios — puerto de `AdvertisementSection.kt`: tarjetas cuadradas
-/// con escala/opacidad de las páginas vecinas, dots y "Aplican T&C".
+/// Carrusel de anuncios
 class _Carousel extends StatelessWidget {
   const _Carousel({
     required this.items,
@@ -315,7 +285,8 @@ class _Carousel extends StatelessWidget {
     if (items.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        child:
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
     return Column(
@@ -408,38 +379,3 @@ class _Carousel extends StatelessWidget {
   }
 }
 
-/// Footer de patrocinadores — puerto de `FooterSponsors.kt`. Bancolombia no tiene
-/// PNG raster en el proyecto original (solo vector), se muestra como texto.
-class _FooterSponsors extends StatelessWidget {
-  const _FooterSponsors({required this.color});
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          'Bancolombia',
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        Container(
-          width: 1,
-          height: 24,
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          color: color.withValues(alpha: 0.5),
-        ),
-        Image.asset(
-          'assets/images/logo_101software.png',
-          width: 100,
-          fit: BoxFit.contain,
-        ),
-      ],
-    );
-  }
-}
