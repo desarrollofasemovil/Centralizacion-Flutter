@@ -5,8 +5,7 @@ import '../../../core/api/services/municipality_api_service.dart';
 import '../../../core/models/department.dart';
 
 /// Capa de datos del feature onboarding: departamentos para el selector.
-/// Envuelve [MunicipalityApiService] — equivalente al `DepartmentRepository`
-/// del proyecto Kotlin (CONVENCIONES §4, §10).
+/// Envuelve [MunicipalityApiService] 
 class DepartmentRepository {
   DepartmentRepository(this._api);
 

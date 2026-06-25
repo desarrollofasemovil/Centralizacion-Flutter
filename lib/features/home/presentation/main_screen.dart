@@ -8,16 +8,8 @@ import '../../../core/models/user_dto.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
 import '../../auth/application/auth_providers.dart';
-import '../../tramites/application/tramite_mappers.dart';
-import '../../tramites/domain/info_tramite.dart';
-import '../application/main_viewmodel.dart';
-import 'widgets/main_bottom_nav_bar.dart';
-import 'widgets/main_header.dart';
-import 'widgets/main_side_menu_options.dart';
-import 'widgets/main_top_bar.dart';
-import 'widgets/modal_form.dart';
-import 'widgets/panic_countdown_dialog.dart';
-import 'widgets/tramites_section.dart';
+import '../../auth/application/registration_draft.dart';
+import '../../auth/presentation/login_bottom_sheet.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({required this.municipality, super.key});
@@ -29,57 +21,22 @@ class MainScreen extends ConsumerStatefulWidget {
 }
 
 class _MainScreenState extends ConsumerState<MainScreen> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _currentIndex = 0;
+  bool _loginSheetShown = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkPostLoginModalForm();
-    });
+    // Auto-show del bottom sheet de login cuando no hay sesión (paridad con la
+    // orquestación de MainScreen.kt).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowLogin());
   }
 
-  void _checkPostLoginModalForm() {
-    final loggedInUser = ref.read(sessionProvider);
-    final prefs = ref.read(userPreferencesProvider);
-    final isCompleted = prefs.modalFormCompleted();
-
-    if (loggedInUser != null && !isCompleted) {
-      ref.read(mainViewModelProvider(widget.municipality.id).notifier)
-          .showModalForm(ModalFormMode.generic);
-    }
-  }
-
-  void _handleNavigation(InfoTramite tramite) {
-    final name = tramite.nombre;
-    final action = tramite.accion;
-
-    if (action is ShowPqrds) {
-      context.go(AppRoutes.pqrdPath(widget.municipality.id));
-    } else if (action is NavegarANativo) {
-      context.go(action.ruta);
-    } else if (action is NavegarAPagoSinValidacion) {
-      context.go(
-        AppRoutes.pagosPsvPath(widget.municipality.id),
-        extra: {
-          'taxId': action.taxId,
-          'taxName': action.taxName,
-          'entityCode': action.entityCode,
-          'dataPolicyUrl': action.dataPolicyUrl,
-          'privacyPolicyUrl': action.privacyPolicyUrl,
-        },
-      );
-    } else if (action is NavegarAConsultaImpuesto) {
-      context.go(
-        AppRoutes.taxesPath(widget.municipality.id),
-        extra: {
-          'taxId': action.taxId,
-          'title': name,
-        },
-      );
-    } else {
-      // Si es un trámite no mapeado (Cursos, Reservas, etc.), mostrar diálogo de próximamente
-      ref.read(mainViewModelProvider(widget.municipality.id).notifier).showInDevelopment();
+  void _maybeShowLogin() {
+    if (!mounted || _loginSheetShown) return;
+    if (ref.read(sessionProvider) == null) {
+      _loginSheetShown = true;
+      showLoginBottomSheet(context);
     }
   }
 
@@ -90,40 +47,83 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final theme = Theme.of(context);
     final domainModel = widget.municipality.toDomainModel();
 
-    // Escuchar si hay alguna URL pendiente para abrir
-    ref.listen<String?>(
-      mainViewModelProvider(widget.municipality.id).select((s) => s.urlToOpen),
-      (prev, next) async {
-        if (next != null && next.isNotEmpty) {
-          final uri = Uri.parse(next);
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
-          notifier.clearUrlToOpen();
-        }
-      },
-    );
-
-    // Escuchar si el usuario inicia sesión para activar el modal
-    ref.listen<UserDTO?>(sessionProvider, (prev, next) {
-      if (next != null) {
-        final isCompleted = ref.read(userPreferencesProvider).modalFormCompleted();
-        if (!isCompleted) {
-          notifier.showModalForm(ModalFormMode.generic);
-        }
+    // Al volver del registro sin sesión, reabrir el sheet (flag del base).
+    ref.listen<bool>(registrationSuccessProvider, (prev, next) {
+      if (next) {
+        ref.read(registrationSuccessProvider.notifier).state = false;
+        _loginSheetShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) showLoginBottomSheet(context);
+        });
       }
     });
 
-    // Escuchar cambios en la visibilidad del modal de formulario
-    ref.listen<ModalFormMode?>(
-      mainViewModelProvider(widget.municipality.id).select((s) => s.modalMode),
-      (prev, next) {
-        if (next != null) {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        title: Row(
+          children: [
+            if (design.escudoUrl.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: design.escudoUrl,
+                width: 36,
+                height: 36,
+                errorWidget: (_, _, _) => const Icon(Icons.location_city),
+              ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    design.nombreAlcaldia,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'Trámites y Servicios',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onPrimary.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Notificaciones (Fase 2)')),
+              );
+            },
+          ),
+        ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            UserAccountsDrawerHeader(
+              decoration: BoxDecoration(color: scheme.primary),
+              currentAccountPicture: const CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person, size: 40, color: Colors.blue),
+              ),
+              accountName: Text(
+                user != null
+                    ? '${user.firstName} ${user.lastName}'
+                    : 'Usuario Invitado',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              accountEmail: Text(user?.email ?? 'invitado@tramiapp.gov.co'),
             ),
             builder: (ctx) => ModalForm(
               mode: next,
@@ -137,34 +137,36 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 notifier.onModalConfirmed(guestUser);
               },
             ),
-          ).then((_) {
-            final currentMode = ref.read(mainViewModelProvider(widget.municipality.id)).modalMode;
-            if (currentMode == next) {
-              notifier.onModalDismissed();
-            }
-          });
-        }
-      },
-    );
-
-    // Escuchar cambios en la visibilidad del contador de pánico
-    ref.listen<bool>(
-      mainViewModelProvider(widget.municipality.id).select((s) => s.showPanicCountdownDialog),
-      (prev, next) {
-        if (next) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) => PanicCountdownDialog(
-              onDismiss: () {
-                Navigator.of(ctx).pop();
-                notifier.cancelPanicAlert();
-              },
-              onConfirm: () {
-                Navigator.of(ctx).pop();
-                final lat = widget.municipality.latitude != null ? double.tryParse(widget.municipality.latitude!) : null;
-                final lng = widget.municipality.longitude != null ? double.tryParse(widget.municipality.longitude!) : null;
-                notifier.confirmAndSendPanicAlert(lat, lng);
+            if (user != null)
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Cerrar Sesión'),
+                onTap: () async {
+                  await ref.read(sessionProvider.notifier).logout();
+                  if (mounted) {
+                    context.go(AppRoutes.welcome);
+                  }
+                },
+              ),
+            if (user == null)
+              ListTile(
+                leading: const Icon(Icons.login),
+                title: const Text('Iniciar Sesión'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showLoginBottomSheet(context);
+                },
+              ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Cambiar Municipio'),
+              onTap: () async {
+                final prefs = ref.read(userPreferencesProvider);
+                await prefs.clearCurrentMunicipality();
+                if (mounted) {
+                  context.go(AppRoutes.welcome);
+                }
               },
             ),
           );

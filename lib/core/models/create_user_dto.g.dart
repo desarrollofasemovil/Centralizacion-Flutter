@@ -19,7 +19,7 @@ CreateUserDTO _$CreateUserDTOFromJson(Map<String, dynamic> json) =>
       password: json['password'] as String? ?? "",
       address: json['address'] as String? ?? "",
       phoneNumber: json['phoneNumber'] as String? ?? "",
-      birthDate: json['birthDate'] as String? ?? "",
+      birthDate: json['birthDate'] as String?,
       loginStatus: (json['loginStatus'] as num?)?.toInt(),
       fixedMunicipality: (json['fixedMunicipality'] as num?)?.toInt() ?? 0,
       lastMunicipality: (json['lastMunicipality'] as num?)?.toInt() ?? 0,

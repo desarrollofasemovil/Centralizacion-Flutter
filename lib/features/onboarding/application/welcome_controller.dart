@@ -7,9 +7,7 @@ import '../data/department_repository.dart';
 /// Imagen de anuncio del carrusel lista para UI (desacoplada del DTO de RC).
 typedef CarouselItem = ({String imageUrl, String clickUrl});
 
-/// Estado de la pantalla Welcome — equivalente a `WelcomeScreenState`
-/// (`WelcomeViewModel` del proyecto Kotlin). La pantalla es "tonta": toda la
-/// carga/filtrado vive aquí (CONVENCIONES §3).
+/// Estado de la pantalla Welcome
 class WelcomeState {
   const WelcomeState({
     this.departments = const AsyncValue<List<Department>>.loading(),

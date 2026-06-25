@@ -3,16 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../flavor/flavor_config.dart';
-import '../remote_config/remote_config_service.dart';
 import '../storage/user_preferences.dart';
 import '../municipality/municipality_repository.dart';
 import 'app_routes.dart';
 import 'placeholders.dart';
 
 import '../../features/onboarding/presentation/welcome_screen.dart';
+import '../../features/onboarding/presentation/splash_screen.dart';
 import '../../features/municipality/presentation/select_municipality_screen.dart';
-import '../../features/auth/presentation/login_options_screen.dart';
-import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_wizard.dart';
 import '../../features/auth/presentation/recovery_password_screen.dart';
 import '../../features/home/presentation/main_screen.dart';
@@ -74,12 +72,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        redirect: (context, state) => state.matchedLocation == AppRoutes.splash
-            ? computeStartDestination(
-                sendToWelcome: ref.read(sendToWelcomeProvider),
-                prefs: ref.read(userPreferencesProvider),
-              )
-            : null,
         builder: (_, _) => const SplashScreen(),
       ),
       GoRoute(
@@ -93,14 +85,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               int.tryParse(state.pathParameters['departmentId'] ?? '') ?? 0;
           return SelectMunicipalityScreen(departmentId: departmentId);
         },
-      ),
-      GoRoute(
-        path: AppRoutes.loginOptions,
-        builder: (_, _) => const LoginOptionsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.login,
-        builder: (_, _) => const LoginScreen(),
       ),
       GoRoute(
         path: AppRoutes.signup,
@@ -316,7 +300,7 @@ class _MainScreenContainer extends ConsumerWidget {
     final async = ref.watch(municipalityProvider(municipalityId));
     return async.maybeWhen(
       data: (dto) => MainScreen(municipality: dto),
-      orElse: () => const SplashScreen(),
+      orElse: () => const LoadingScreen(),
     );
   }
 }
@@ -330,7 +314,7 @@ class _NewsScreenContainer extends ConsumerWidget {
     final async = ref.watch(municipalityProvider(municipalityId));
     return async.maybeWhen(
       data: (dto) => NewsScreen(municipality: dto),
-      orElse: () => const SplashScreen(),
+      orElse: () => const LoadingScreen(),
     );
   }
 }

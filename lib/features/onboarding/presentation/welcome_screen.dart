@@ -6,16 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/api/services/api_providers.dart';
 import '../../../core/models/department.dart';
-import '../../../core/remote_config/remote_config_service.dart';
 import '../../../core/router/app_routes.dart';
+import '../../auth/application/auth_providers.dart';
+import '../../auth/presentation/login_bottom_sheet.dart';
+import '../../auth/presentation/widgets/footer_sponsors.dart';
+import '../application/welcome_controller.dart';
 
-/// Pantalla de bienvenida — puerto fiel de `ui/screen/welcome/WelcomeScreen.kt`
-/// + `AdvertisementSection.kt` (fuente de verdad en `codebase/`). Fondo de marca
-/// (`colorScheme.primary` = primarycolor navy), buscador de departamento con
-/// autocompletar que navega a la selección de municipio, carrusel de anuncios
-/// (Remote Config) y footer de patrocinadores.
+
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -27,17 +25,39 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 const _kDotsActive = Color(0xFF4364CD); // buttoncolorslogin
 const _kDotInactive = Color(0xFFE0E0E0); // Gray300
 
-class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
+// Duración total de la coreografía de entrada (la animación más tardía del
+// original es el carrusel: slideInVertically con delayMillis=800 + tween(800)
+// => termina en 1600ms). El resto de Interval()s de abajo son proporciones de
+// esos mismos delays/duraciones sobre esta ventana (WelcomeScreen.kt §header/
+// búsqueda/anuncios).
+const _kChoreographyDuration = Duration(milliseconds: 1600);
+
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
+    with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
   int _currentPage = 0;
   Timer? _timer;
-
-  String _query = '';
   bool _searchFocused = false;
-  List<Department> _departments = [];
-  bool _animate = false;
+
+  late final AnimationController _entrance;
+
+  // Header (HeaderWelcome): fadeIn(tween(900)) + slideInVertically(900),
+  // sin delay — entra primero.
+  late final Animation<double> _headerFade;
+  late final Animation<Offset> _headerSlide;
+
+  // Buscador de departamento: fadeIn(tween(800, delay=600)) +
+  // slideInVertically(800, delay=600, initialOffsetY={ it }) — entra desde abajo.
+  late final Animation<double> _searchFade;
+  late final Animation<Offset> _searchSlide;
+
+  // Carrusel de anuncios: fadeIn(tween(800, delay=100)) + scaleIn(800, delay=100)
+  // + slideInVertically(800, delay=800, initialOffsetY={ -it }) — entra desde arriba.
+  late final Animation<double> _carouselFade;
+  late final Animation<double> _carouselScale;
+  late final Animation<Offset> _carouselSlide;
 
   @override
   void initState() {
@@ -45,11 +65,49 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     _searchFocus.addListener(() {
       setState(() => _searchFocused = _searchFocus.hasFocus);
     });
-    _loadDepartments();
     _startCarouselTimer();
+
+    _entrance = AnimationController(
+      vsync: this,
+      duration: _kChoreographyDuration,
+    );
+
+    _headerFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0, 900 / 1600, curve: Curves.easeOut),
+    );
+    _headerSlide = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(_headerFade);
+
+    _searchFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(600 / 1600, 1400 / 1600, curve: Curves.easeOut),
+    );
+    _searchSlide = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(_searchFade);
+
+    _carouselFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(100 / 1600, 900 / 1600, curve: Curves.easeOut),
+    );
+    _carouselScale = Tween<double>(begin: 0.85, end: 1.0).animate(_carouselFade);
+    _carouselSlide = Tween<Offset>(
+      begin: const Offset(0, -0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(800 / 1600, 1.0, curve: Curves.easeOut),
+    ));
+
+    // Port de triggerAnimations() en WelcomeViewModel: delay antes de
+    // arrancar la coreografía.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) setState(() => _animate = true);
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _entrance.forward();
       });
     });
   }
@@ -57,26 +115,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _entrance.dispose();
     _pageController.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
   }
 
-  Future<void> _loadDepartments() async {
-    try {
-      final deps = await ref.read(municipalityApiServiceProvider).getDepartments();
-      if (mounted) setState(() => _departments = deps);
-    } catch (_) {
-      // Silencioso: si falla, el buscador no muestra resultados (el original
-      // muestra una tarjeta de error que aún no portamos).
-    }
-  }
-
   void _startCarouselTimer() {
     _timer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
-      final images =
-          ref.read(remoteConfigServiceProvider).welcomeCarouselConfig().images;
+      final images = ref.read(welcomeControllerProvider).carouselImages;
       if (images.isEmpty || !_pageController.hasClients) return;
       final next = (_currentPage + 1) % images.length;
       _pageController.animateToPage(
@@ -85,19 +133,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         curve: Curves.easeInOutCubic,
       );
     });
-  }
-
-  /// Filtro sin acentos + case-insensitive, ordenado por nombre (replica
-  /// `filteredDepartments` del WelcomeViewModel).
-  List<Department> get _filteredDepartments {
-    final list = _query.trim().isEmpty
-        ? [..._departments]
-        : _departments
-            .where((d) =>
-                _removeAccents(d.name).contains(_removeAccents(_query)))
-            .toList();
-    list.sort((a, b) => a.name.compareTo(b.name));
-    return list;
   }
 
   void _onDepartmentSelected(Department dep) {
@@ -109,12 +144,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final images =
-        ref.watch(remoteConfigServiceProvider).welcomeCarouselConfig().images;
-    final carouselItems = images
-        .map((e) => (imageUrl: e.imageUrl, clickUrl: e.clickUrl))
-        .toList();
-    final filtered = _filteredDepartments;
+    final welcome = ref.watch(welcomeControllerProvider);
+    final user = ref.watch(sessionProvider);
+    final filtered = welcome.filteredDepartments;
     final carouselHeight = MediaQuery.of(context).size.width - 44;
 
     return Scaffold(
@@ -123,20 +155,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => _searchFocus.unfocus(),
-          child: AnimatedOpacity(
-            opacity: _animate ? 1 : 0,
-            duration: const Duration(milliseconds: 500),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 56),
-                  // ── Header ───────────────────────────────────────────────
-                  AnimatedSlide(
-                    offset: _animate ? Offset.zero : const Offset(0, 0.15),
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOut,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 56),
+                // ── Header (HeaderWelcome: fadeIn + slideInVertically, sin delay) ──
+                FadeTransition(
+                  opacity: _headerFade,
+                  child: SlideTransition(
+                    position: _headerSlide,
                     child: Column(
                       children: [
                         Text(
@@ -148,6 +177,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        // Si hay sesión, mostrar el nombre del usuario (port del
+                        // header de WelcomeScreen.kt).
+                        if (user != null) ...[
+                          const SizedBox(height: 5),
+                          Text(
+                            '${user.firstName} ${user.lastName}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: scheme.onPrimary,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         Text(
                           'Vamos a configurar tu aplicación\nElige tu departamento',
@@ -161,65 +204,74 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // ── Buscador de departamento + dropdown inline ───────────
-                  _DepartmentSearch(
-                    controller: _searchController,
-                    focusNode: _searchFocus,
-                    onChanged: (v) => setState(() => _query = v),
-                    showDropdown: _searchFocused && filtered.isNotEmpty,
-                    departments: filtered,
-                    onSelected: _onDepartmentSelected,
-                    textColor: scheme.onSurface,
+                ),
+                const SizedBox(height: 20),
+                // ── Buscador de departamento + dropdown inline ───────────
+                // fadeIn + slideInVertically(delay=600), entra desde abajo.
+                FadeTransition(
+                  opacity: _searchFade,
+                  child: SlideTransition(
+                    position: _searchSlide,
+                    child: _DepartmentSearch(
+                      controller: _searchController,
+                      focusNode: _searchFocus,
+                      onChanged: ref
+                          .read(welcomeControllerProvider.notifier)
+                          .onQueryChanged,
+                      showDropdown: _searchFocused && filtered.isNotEmpty,
+                      departments: filtered,
+                      onSelected: _onDepartmentSelected,
+                      textColor: scheme.onSurface,
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  // ── Carrusel de anuncios ─────────────────────────────────
-                  _Carousel(
-                    items: carouselItems,
-                    height: carouselHeight,
-                    controller: _pageController,
-                    currentPage: _currentPage,
-                    onPageChanged: (p) => setState(() => _currentPage = p),
-                  ),
-                  const SizedBox(height: 24),
-                  // ── Footer patrocinadores ────────────────────────────────
-                  _FooterSponsors(color: scheme.onPrimary),
-                  const SizedBox(height: 8),
-                  // ── Enlace discreto de login ─────────────────────────────
-                  TextButton(
-                    onPressed: () => context.go(AppRoutes.loginOptions),
-                    child: Text(
-                      'Iniciar sesión',
-                      style: TextStyle(
-                        color: scheme.onPrimary,
-                        decoration: TextDecoration.underline,
-                        decorationColor: scheme.onPrimary,
+                ),
+                const SizedBox(height: 24),
+                // ── Carrusel de anuncios ─────────────────────────────────
+                // fadeIn(delay=100) + scaleIn(delay=100) + slideInVertically
+                // (delay=800), entra desde arriba.
+                FadeTransition(
+                  opacity: _carouselFade,
+                  child: SlideTransition(
+                    position: _carouselSlide,
+                    child: ScaleTransition(
+                      scale: _carouselScale,
+                      child: _Carousel(
+                        items: welcome.carouselImages,
+                        height: carouselHeight,
+                        controller: _pageController,
+                        currentPage: _currentPage,
+                        onPageChanged: (p) => setState(() => _currentPage = p),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+                // ── Footer patrocinadores ────────────────────────────────
+                FooterSponsors(color: scheme.onPrimary),
+                const SizedBox(height: 8),
+                // ── Enlace discreto de login ─────────────────────────────
+                TextButton(
+                  onPressed: () => showLoginBottomSheet(context),
+                  child: Text(
+                    'Iniciar sesión',
+                    style: TextStyle(
+                      color: scheme.onPrimary,
+                      decoration: TextDecoration.underline,
+                      decorationColor: scheme.onPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
         ),
       ),
     );
   }
-
-  static String _removeAccents(String input) {
-    const withAccents = 'áàäâãéèëêíìïîóòöôõúùüûñ';
-    const without = 'aaaaaeeeeiiiiooooouuuun';
-    var s = input.toLowerCase();
-    for (var i = 0; i < withAccents.length; i++) {
-      s = s.replaceAll(withAccents[i], without[i]);
-    }
-    return s;
-  }
 }
 
-/// Campo de búsqueda blanco + lista desplegable inline (replica el `TextField` +
-/// `LazyColumn` animado del WelcomeScreen original).
+
 class _DepartmentSearch extends StatelessWidget {
   const _DepartmentSearch({
     required this.controller,
@@ -293,8 +345,7 @@ class _DepartmentSearch extends StatelessWidget {
   }
 }
 
-/// Carrusel de anuncios — puerto de `AdvertisementSection.kt`: tarjetas cuadradas
-/// con escala/opacidad de las páginas vecinas, dots y "Aplican T&C".
+/// Carrusel de anuncios
 class _Carousel extends StatelessWidget {
   const _Carousel({
     required this.items,
@@ -315,7 +366,8 @@ class _Carousel extends StatelessWidget {
     if (items.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        child:
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
     return Column(
@@ -408,38 +460,3 @@ class _Carousel extends StatelessWidget {
   }
 }
 
-/// Footer de patrocinadores — puerto de `FooterSponsors.kt`. Bancolombia no tiene
-/// PNG raster en el proyecto original (solo vector), se muestra como texto.
-class _FooterSponsors extends StatelessWidget {
-  const _FooterSponsors({required this.color});
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          'Bancolombia',
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        Container(
-          width: 1,
-          height: 24,
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          color: color.withValues(alpha: 0.5),
-        ),
-        Image.asset(
-          'assets/images/logo_101software.png',
-          width: 100,
-          fit: BoxFit.contain,
-        ),
-      ],
-    );
-  }
-}
