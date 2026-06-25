@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/app_status.dart';
 import '../models/app_global_config_dto.dart';
 import '../models/welcome_carousel_image_dto.dart';
+import '../models/tourism_contribution_dto.dart';
 
 /// Número de build actual de la app, usado por `force_update`.
 /// TODO(fase-1): leer de `package_info_plus` en vez de esta constante. Se deja
@@ -59,6 +60,16 @@ class RemoteConfigService {
       return AppGlobalConfigDTO.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     } catch (_) {
       return AppGlobalConfigDTO();
+    }
+  }
+
+  TourismTaxConfigDTO getTourismTaxRates() {
+    final raw = _rc.getString(keyTourismTaxRates);
+    if (raw.isEmpty) return TourismTaxConfigDTO();
+    try {
+      return TourismTaxConfigDTO.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (_) {
+      return TourismTaxConfigDTO();
     }
   }
 

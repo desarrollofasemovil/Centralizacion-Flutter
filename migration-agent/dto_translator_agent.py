@@ -8,6 +8,10 @@ hasta que el archivo Dart compile sin errores.
 Esto es un AGENTE (no un simple script) porque el modelo decide solo cuándo leer,
 escribir y volver a corregir, usando las tres herramientas que le damos abajo.
 
+Compresión de contexto: Utiliza un módulo de compresión basado en reglas
+(headroom_config.py) para reducir tokens en tool outputs (código fuente y
+logs de dart analyze) antes de enviarlos al LLM.
+
 Requisitos:
   pip install anthropic
   variable de entorno ANTHROPIC_API_KEY con tu clave de la API.
@@ -24,6 +28,8 @@ from pathlib import Path
 
 import anthropic
 from anthropic import beta_tool
+
+from headroom_config import compress_tool_output, get_stats, reset_stats
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CONFIGURACIÓN  (ajusta estas rutas a tu entorno)
@@ -70,7 +76,8 @@ def leer_kotlin(nombre_archivo: str) -> str:
     if not ruta.exists():
         return f"ERROR: no existe {ruta}"
     print(f"  [leer]    {nombre_archivo}")
-    return ruta.read_text(encoding="utf-8")
+    contenido = ruta.read_text(encoding="utf-8")
+    return compress_tool_output(contenido, content_type="code")
 
 
 @beta_tool
@@ -113,7 +120,7 @@ def verificar_dart(nombre_archivo: str) -> str:
         salida = (res.stdout + res.stderr).strip()
         if res.returncode == 0:
             return "OK: dart analyze no encontró errores."
-        return f"ERRORES de dart analyze:\n{salida}"
+        return f"ERRORES de dart analyze:\n{compress_tool_output(salida, content_type='log')}"
     except FileNotFoundError:
         return ("AVISO: el comando `dart` no está disponible. Entrega tu mejor "
                 "traducción; la verificaremos manualmente.")
@@ -183,6 +190,7 @@ def listar_dtos() -> list[str]:
 
 
 if __name__ == "__main__":
+    reset_stats()
     if len(sys.argv) > 1:
         traducir(sys.argv[1])
     else:
@@ -190,4 +198,10 @@ if __name__ == "__main__":
         print(f"Modo lote: {len(archivos)} DTOs encontrados.")
         for arch in archivos:
             traducir(arch)
+    stats = get_stats()
+    print(f"\n--- Headroom Stats ---")
+    print(f"Compresiones: {stats['compressions']}")
+    print(f"Tokens antes: {stats['total_before']}")
+    print(f"Tokens después: {stats['total_after']}")
+    print(f"Tokens ahorrados: {stats['total_saved']} ({stats['savings_pct']}%)")
     print("\nListo.")

@@ -7,7 +7,7 @@ class CourseX {
   @JsonKey(name: 'get')
   final String get;
   final int id;
-  final int municipalityId;
+  final int? municipalityId;
   final String name;
   final String post;
   final bool isActive;
@@ -15,7 +15,7 @@ class CourseX {
   CourseX({
     required this.get,
     required this.id,
-    required this.municipalityId,
+    this.municipalityId,
     required this.name,
     required this.post,
     required this.isActive,

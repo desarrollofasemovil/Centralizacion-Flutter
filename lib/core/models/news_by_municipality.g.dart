@@ -9,7 +9,7 @@ part of 'news_by_municipality.dart';
 NewsByMunicipality _$NewsByMunicipalityFromJson(Map<String, dynamic> json) =>
     NewsByMunicipality(
       url: json['getUrlNew'] as String,
-      idMunicipality: (json['idMunicipality'] as num).toInt(),
+      idMunicipality: (json['idMunicipality'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$NewsByMunicipalityToJson(NewsByMunicipality instance) =>

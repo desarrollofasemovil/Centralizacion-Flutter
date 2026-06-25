@@ -1,14 +1,23 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/municipality_dto.dart';
-import '../../../core/models/municipality_procedure.dart';
-import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/models/user_dto.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../tramites/application/tramite_mappers.dart';
+import '../../tramites/domain/info_tramite.dart';
+import '../application/main_viewmodel.dart';
+import 'widgets/main_bottom_nav_bar.dart';
+import 'widgets/main_header.dart';
+import 'widgets/main_side_menu_options.dart';
+import 'widgets/main_top_bar.dart';
+import 'widgets/modal_form.dart';
+import 'widgets/panic_countdown_dialog.dart';
+import 'widgets/tramites_section.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({required this.municipality, super.key});
@@ -20,334 +29,423 @@ class MainScreen extends ConsumerStatefulWidget {
 }
 
 class _MainScreenState extends ConsumerState<MainScreen> {
-  int _currentIndex = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPostLoginModalForm();
+    });
+  }
+
+  void _checkPostLoginModalForm() {
+    final loggedInUser = ref.read(sessionProvider);
+    final prefs = ref.read(userPreferencesProvider);
+    final isCompleted = prefs.modalFormCompleted();
+
+    if (loggedInUser != null && !isCompleted) {
+      ref.read(mainViewModelProvider(widget.municipality.id).notifier)
+          .showModalForm(ModalFormMode.generic);
+    }
+  }
+
+  void _handleNavigation(InfoTramite tramite) {
+    final name = tramite.nombre;
+    final action = tramite.accion;
+
+    if (action is ShowPqrds) {
+      context.go(AppRoutes.pqrdPath(widget.municipality.id));
+    } else if (action is NavegarANativo) {
+      context.go(action.ruta);
+    } else if (action is NavegarAPagoSinValidacion) {
+      context.go(
+        AppRoutes.pagosPsvPath(widget.municipality.id),
+        extra: {
+          'taxId': action.taxId,
+          'taxName': action.taxName,
+          'entityCode': action.entityCode,
+          'dataPolicyUrl': action.dataPolicyUrl,
+          'privacyPolicyUrl': action.privacyPolicyUrl,
+        },
+      );
+    } else if (action is NavegarAConsultaImpuesto) {
+      context.go(
+        AppRoutes.taxesPath(widget.municipality.id),
+        extra: {
+          'taxId': action.taxId,
+          'title': name,
+        },
+      );
+    } else {
+      // Si es un trámite no mapeado (Cursos, Reservas, etc.), mostrar diálogo de próximamente
+      ref.read(mainViewModelProvider(widget.municipality.id).notifier).showInDevelopment();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final design = designFromMunicipality(widget.municipality);
-    final scheme = Theme.of(context).colorScheme;
-    final user = ref.watch(sessionProvider);
+    final state = ref.watch(mainViewModelProvider(widget.municipality.id));
+    final notifier = ref.read(mainViewModelProvider(widget.municipality.id).notifier);
+    final theme = Theme.of(context);
+    final domainModel = widget.municipality.toDomainModel();
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: scheme.primary,
-        foregroundColor: scheme.onPrimary,
-        title: Row(
-          children: [
-            if (design.escudoUrl.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: design.escudoUrl,
-                width: 36,
-                height: 36,
-                errorWidget: (_, _, _) => const Icon(Icons.location_city),
-              ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    design.nombreAlcaldia,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    'Trámites y Servicios',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: scheme.onPrimary.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notificaciones (Fase 2)')),
-              );
-            },
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            UserAccountsDrawerHeader(
-              decoration: BoxDecoration(color: scheme.primary),
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40, color: Colors.blue),
-              ),
-              accountName: Text(
-                user != null
-                    ? '${user.firstName} ${user.lastName}'
-                    : 'Usuario Invitado',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              accountEmail: Text(user?.email ?? 'invitado@tramiapp.gov.co'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.info),
-              title: const Text('Sobre el Municipio'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Alcaldía de ${widget.municipality.name}')),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.help),
-              title: const Text('Soporte y Ayuda'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Ayuda / Formulario (Fase 2)')),
-                );
-              },
-            ),
-            if (user != null)
-              ListTile(
-                leading: const Icon(Icons.logout),
-                title: const Text('Cerrar Sesión'),
-                onTap: () async {
-                  await ref.read(sessionProvider.notifier).logout();
-                  if (context.mounted) {
-                    context.go(AppRoutes.welcome);
-                  }
-                },
-              ),
-            if (user == null)
-              ListTile(
-                leading: const Icon(Icons.login),
-                title: const Text('Iniciar Sesión'),
-                onTap: () {
-                  context.go(AppRoutes.loginOptions);
-                },
-              ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.swap_horiz),
-              title: const Text('Cambiar Municipio'),
-              onTap: () async {
-                final prefs = ref.read(userPreferencesProvider);
-                await prefs.clearCurrentMunicipality();
-                if (context.mounted) {
-                  context.go(AppRoutes.welcome);
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-      body: _currentIndex == 0
-          ? _buildHomeTab(context, scheme)
-          : _currentIndex == 1
-              ? const Center(child: Text('Mis Trámites (Fase 2)'))
-              : _currentIndex == 2
-                  ? const Center(child: Text('Noticias (Fase 2)'))
-                  : const Center(child: Text('Perfil (Fase 2)')),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: scheme.primary,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Servicios'),
-          BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'Noticias'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Mi Perfil'),
-        ],
-      ),
+    // Escuchar si hay alguna URL pendiente para abrir
+    ref.listen<String?>(
+      mainViewModelProvider(widget.municipality.id).select((s) => s.urlToOpen),
+      (prev, next) async {
+        if (next != null && next.isNotEmpty) {
+          final uri = Uri.parse(next);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+          notifier.clearUrlToOpen();
+        }
+      },
     );
-  }
 
-  Widget _buildHomeTab(BuildContext context, ColorScheme scheme) {
-    final procedures = widget.municipality.municipalityProcedures;
+    // Escuchar si el usuario inicia sesión para activar el modal
+    ref.listen<UserDTO?>(sessionProvider, (prev, next) {
+      if (next != null) {
+        final isCompleted = ref.read(userPreferencesProvider).modalFormCompleted();
+        if (!isCompleted) {
+          notifier.showModalForm(ModalFormMode.generic);
+        }
+      }
+    });
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Banner or Welcome Message
-          Container(
-            padding: const EdgeInsets.all(20),
-            color: scheme.primary.withValues(alpha: 0.05),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    // Escuchar cambios en la visibilidad del modal de formulario
+    ref.listen<ModalFormMode?>(
+      mainViewModelProvider(widget.municipality.id).select((s) => s.modalMode),
+      (prev, next) {
+        if (next != null) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            builder: (ctx) => ModalForm(
+              mode: next,
+              dataPolicyUrl: widget.municipality.dataProcessingPrivacy ?? "",
+              privacyPolicyUrl: widget.municipality.dataPrivacy ?? "",
+              onDismiss: () {
+                Navigator.of(ctx).pop();
+              },
+              onConfirm: (guestUser) {
+                Navigator.of(ctx).pop();
+                notifier.onModalConfirmed(guestUser);
+              },
+            ),
+          ).then((_) {
+            final currentMode = ref.read(mainViewModelProvider(widget.municipality.id)).modalMode;
+            if (currentMode == next) {
+              notifier.onModalDismissed();
+            }
+          });
+        }
+      },
+    );
+
+    // Escuchar cambios en la visibilidad del contador de pánico
+    ref.listen<bool>(
+      mainViewModelProvider(widget.municipality.id).select((s) => s.showPanicCountdownDialog),
+      (prev, next) {
+        if (next) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => PanicCountdownDialog(
+              onDismiss: () {
+                Navigator.of(ctx).pop();
+                notifier.cancelPanicAlert();
+              },
+              onConfirm: () {
+                Navigator.of(ctx).pop();
+                final lat = widget.municipality.latitude != null ? double.tryParse(widget.municipality.latitude!) : null;
+                final lng = widget.municipality.longitude != null ? double.tryParse(widget.municipality.longitude!) : null;
+                notifier.confirmAndSendPanicAlert(lat, lng);
+              },
+            ),
+          );
+        }
+      },
+    );
+
+    // Diálogos informativos
+    if (state.showInDevelopmentDialog) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
               children: [
-                const Text(
-                  '¿Qué deseas hacer hoy?',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Elige entre los trámites tributarios y de atención ciudadana del municipio.',
-                  style: TextStyle(color: Colors.black54),
-                ),
+                Icon(Icons.construction, color: Colors.blue),
+                SizedBox(width: 10),
+                Text('¡Próximamente disponible!'),
               ],
             ),
-          ),
-          // Grid of Procedures
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: procedures.isEmpty
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text('No hay trámites habilitados por el momento.'),
-                    ),
-                  )
-                : GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1.25,
-                    ),
-                    itemCount: procedures.length,
-                    itemBuilder: (context, index) {
-                      final proc = procedures[index];
-                      return _buildProcedureCard(context, proc, scheme);
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProcedureCard(
-    BuildContext context,
-    MunicipalityProcedure proc,
-    ColorScheme scheme,
-  ) {
-    final id = proc.procedures.id;
-    final name = proc.procedures.name;
-
-    // Resolve icons and colors based on ID (Motor de trámites FRONTEND §6)
-    IconData icon = Icons.receipt;
-    Color iconColor = scheme.primary;
-
-    switch (id) {
-      case 1: // Predial
-        icon = Icons.home;
-        iconColor = Colors.orange;
-        break;
-      case 2: // ICA
-        icon = Icons.business;
-        iconColor = Colors.purple;
-        break;
-      case 3: // Declaración
-        icon = Icons.article;
-        iconColor = Colors.blue;
-        break;
-      case 4: // PQRSDF
-        icon = Icons.question_answer;
-        iconColor = Colors.teal;
-        break;
-      case 5: // Servicios públicos
-        icon = Icons.water_drop;
-        iconColor = Colors.cyan;
-        break;
-      case 6: // Vehículos
-        icon = Icons.directions_car;
-        iconColor = Colors.indigo;
-        break;
-      case 7: // Retención ICA
-        icon = Icons.percent;
-        iconColor = Colors.deepOrange;
-        break;
-      case 10: // Botón Pánico
-        icon = Icons.emergency;
-        iconColor = Colors.red;
-        break;
-      default:
-        icon = Icons.arrow_forward_ios;
-        iconColor = Colors.grey;
-    }
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _handleProcedureTap(context, proc),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 36, color: iconColor),
-              const Spacer(),
-              Text(
-                name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+            content: const Text(
+              'Estamos trabajando para que esta función esté lista muy pronto. Te avisaremos cuando esté disponible. Síguenos en nuestras redes o visita nuestro sitio web.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  notifier.onInDevelopmentDialogDismiss();
+                },
+                child: const Text('Entendido'),
               ),
             ],
           ),
+        );
+      });
+    }
+
+    if (state.showExitDialog) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.exit_to_app, color: Colors.blue),
+                SizedBox(width: 10),
+                Text('Atención'),
+              ],
+            ),
+            content: const Text('Estás a punto de salir de esta pantalla.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  notifier.onExitDialogDismissed();
+                },
+                child: const Text('No, cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(ctx).pop();
+                  notifier.onExitDialogDismissed();
+                  final loc = ref.read(userPreferencesProvider).getSavedLocation();
+                  if (!loc.guardado) {
+                    context.go(AppRoutes.welcome);
+                  } else {
+                    // Cierra la app o vuelve al selector
+                    context.go(AppRoutes.welcome);
+                  }
+                },
+                child: const Text('Sí, salir'),
+              ),
+            ],
+          ),
+        );
+      });
+    }
+
+    return Scaffold(
+      key: _scaffoldKey,
+      appBar: MainTopBar(
+        onMenuClicked: () {
+          _scaffoldKey.currentState?.openDrawer();
+        },
+        onBackClicked: () {
+          notifier.onBackPressed();
+        },
+      ),
+      drawer: Drawer(
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.horizontal(right: Radius.circular(35)),
         ),
+        child: MainSideMenuOptions(
+          user: state.currentUser,
+          currentMunicipalityName: state.currentMunicipalityName ?? "",
+          showChangeLocationDialog: state.showChangeLocationDialog,
+          onDismissDialog: notifier.onDismissChangeLocationDialog,
+          onConfirmChangeLocation: () {
+            notifier.onConfirmChangeLocation();
+            context.go(AppRoutes.welcome);
+          },
+          onLoginSuccess: () {
+            Navigator.pop(context); // Cerrar drawer
+            context.push(AppRoutes.loginOptions);
+          },
+          goToSettingsUser: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Configuraciones de usuario (Fase 2)')),
+            );
+          },
+          onTermsClick: () async {
+            Navigator.pop(context);
+            final url = widget.municipality.dataPrivacy ?? "https://www.1cero1.com/tratamientos.html";
+            final uri = Uri.parse(url);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          goToHelp: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Soporte y Ayuda (Fase 2)')),
+            );
+          },
+          onLogoutSuccess: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            Navigator.pop(context);
+            await ref.read(sessionProvider.notifier).logout();
+            messenger.showSnackBar(
+              const SnackBar(content: Text('Sesión cerrada correctamente')),
+            );
+          },
+        ),
+      ),
+      body: Column(
+        children: [
+          MainHeader(
+            design: domainModel.design,
+            departamento: domainModel.departamento,
+            isLoading: state.isLoading,
+          ),
+          Expanded(
+            child: Container(
+              color: theme.colorScheme.primary,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Container(
+                  color: theme.colorScheme.surface,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+                    child: Column(
+                      children: [
+                        if (domainModel.tramitesPrincipales.isNotEmpty || state.isLoading) ...[
+                          TramitesSection(
+                            titulo: "Trámites",
+                            tramites: domainModel.tramitesPrincipales,
+                            searchText: state.searchText,
+                            isSearchActive: state.isSearchActive,
+                            isLoading: state.isLoading,
+                            onSearchTextChanged: notifier.onSearchTextChanged,
+                            onSearchToggled: notifier.onSearchToggled,
+                            onTramiteClick: (t) {
+                              notifier.onTramiteClicked(t);
+                              if (t.accion is! AbrirUrl &&
+                                  t.accion is! AbrirUrlDirecto &&
+                                  t.accion is! AbrirBotonPanico) {
+                                _handleNavigation(t);
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (domainModel.otrosTramites.isNotEmpty || state.isLoading) ...[
+                          TramitesSection(
+                            titulo: "Otros trámites",
+                            tramites: domainModel.otrosTramites,
+                            searchText: state.searchText,
+                            isSearchActive: false,
+                            isSearchable: false,
+                            isLoading: state.isLoading,
+                            onSearchTextChanged: (_) {},
+                            onSearchToggled: () {},
+                            onTramiteClick: (t) {
+                              notifier.onTramiteClicked(t);
+                              if (t.accion is! AbrirUrl &&
+                                  t.accion is! AbrirUrlDirecto &&
+                                  t.accion is! AbrirBotonPanico) {
+                                _handleNavigation(t);
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (domainModel.socialLinks.isNotEmpty || state.isLoading) ...[
+                          TramitesSection(
+                            titulo: "Canales",
+                            tramites: domainModel.socialLinks,
+                            searchText: state.searchText,
+                            isSearchActive: false,
+                            isSearchable: false,
+                            isLoading: state.isLoading,
+                            onSearchTextChanged: (_) {},
+                            onSearchToggled: () {},
+                            onTramiteClick: (t) {
+                              notifier.onTramiteClicked(t);
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        const SizedBox(height: 10),
+                        _FooterSponsors(color: theme.colorScheme.onSurface),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: MainBottomNavBar(
+        selectedRoute: state.selectedRoute,
+        onTap: (index) async {
+          if (index == 0) {
+            notifier.onRouteChanged("inicio");
+          } else if (index == 1) {
+            final url = domainModel.newsUrl;
+            if (url.isNotEmpty) {
+              final uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            }
+          } else if (index == 2) {
+            final url = domainModel.domain;
+            if (url.isNotEmpty) {
+              final uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            }
+          } else if (index == 3) {
+            context.go(AppRoutes.pagosHistoryPath(widget.municipality.id));
+          }
+        },
       ),
     );
   }
+}
 
-  void _handleProcedureTap(BuildContext context, MunicipalityProcedure proc) {
-    final id = proc.procedures.id;
-    final name = proc.procedures.name;
+class _FooterSponsors extends StatelessWidget {
+  const _FooterSponsors({required this.color});
+  final Color color;
 
-    // Decision motor mapping (FRONTEND §6.3)
-    if (id == 10 || name.toLowerCase().contains('pánico')) {
-      // Panic Button Trigger
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Botón de pánico presionado (Fase 2)')),
-      );
-      return;
-    }
-
-    if (proc.integrationType.isEmpty && id == 4) {
-      // PQRSDF native
-      context.go(AppRoutes.pqrdPath(widget.municipality.id));
-      return;
-    }
-
-    if (proc.integrationType.isNotEmpty) {
-      if (proc.integrationType.startsWith('http')) {
-        // Open URL
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Abriendo enlace externo: ${proc.integrationType}')),
-        );
-        return;
-      }
-    }
-
-    // Default redirection
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Accediendo a: $name (Fase 3)')),
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          'Bancolombia',
+          style: TextStyle(
+            color: color,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Container(
+          width: 1,
+          height: 24,
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          color: color.withValues(alpha: 0.5),
+        ),
+        Image.asset(
+          'assets/images/logo_101software.png',
+          width: 100,
+          fit: BoxFit.contain,
+        ),
+      ],
     );
   }
 }

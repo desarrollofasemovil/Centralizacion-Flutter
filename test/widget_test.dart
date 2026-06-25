@@ -5,6 +5,39 @@ import 'package:tramiapp_flutter/app.dart';
 import 'package:tramiapp_flutter/core/flavor/flavors.dart';
 import 'package:tramiapp_flutter/core/flavor/flavor_config.dart';
 import 'package:tramiapp_flutter/core/storage/user_preferences.dart';
+import 'package:tramiapp_flutter/core/remote_config/remote_config_service.dart';
+import 'package:tramiapp_flutter/core/models/welcome_carousel_image_dto.dart';
+import 'package:tramiapp_flutter/core/models/app_global_config_dto.dart';
+import 'package:tramiapp_flutter/core/models/tourism_contribution_dto.dart';
+import 'package:tramiapp_flutter/core/api/app_status.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
+
+class FakeFirebaseRemoteConfig implements FirebaseRemoteConfig {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeRemoteConfigService extends RemoteConfigService {
+  FakeRemoteConfigService() : super(FakeFirebaseRemoteConfig());
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  bool shouldSendToWelcome() => false;
+
+  @override
+  CarouselConfigDTO welcomeCarouselConfig() => CarouselConfigDTO(images: []);
+
+  @override
+  AppGlobalConfigDTO appGlobalConfig() => AppGlobalConfigDTO();
+
+  @override
+  TourismTaxConfigDTO getTourismTaxRates() => TourismTaxConfigDTO();
+
+  @override
+  AppStatus toAppStatus({int currentBuildNumber = 999999}) => const AppStatus(type: AppStatusType.operational);
+}
 
 void main() {
   testWidgets('TramiApp arranca y aterriza en Welcome (flavor municipios)',
@@ -15,13 +48,18 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          remoteConfigServiceProvider.overrideWithValue(FakeRemoteConfigService()),
+        ],
         child: const TramiApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
 
     // startDestination sin ubicación guardada → Welcome.
-    expect(find.text('Bienvenido'), findsOneWidget);
+    expect(find.text('¡Bienvenido!'), findsOneWidget);
   });
 }
+
