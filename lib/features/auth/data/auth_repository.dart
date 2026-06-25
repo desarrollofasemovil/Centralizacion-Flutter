@@ -57,6 +57,13 @@ class AuthRepository {
     return LoginResult.success(user);
   }
 
+  /// Persiste una sesión a partir de un [UserDTO] ya obtenido (p. ej. login con
+  /// Google, donde el usuario viene de `getUserByEmail`). El login con Google
+  /// NO usa token nativo, así que solo guardamos el usuario.
+  Future<void> persistSession(UserDTO user) async {
+    await _prefs.saveUserSessionJson(jsonEncode(user.toJson()));
+  }
+
   /// Usuario de la sesión persistida (o null si no hay sesión).
   UserDTO? currentUser() {
     final json = _prefs.getUserSessionJson();

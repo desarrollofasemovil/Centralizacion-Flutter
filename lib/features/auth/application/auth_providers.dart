@@ -24,6 +24,12 @@ class SessionNotifier extends Notifier<UserDTO?> {
     return result;
   }
 
+  /// Fija la sesión a partir de un [UserDTO] ya resuelto (login con Google).
+  Future<void> setSession(UserDTO user) async {
+    await ref.read(authRepositoryProvider).persistSession(user);
+    state = user;
+  }
+
   Future<void> logout() async {
     await ref.read(authRepositoryProvider).logout();
     state = null;
