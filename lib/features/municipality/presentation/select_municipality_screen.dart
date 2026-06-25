@@ -3,16 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../../core/api/services/api_providers.dart';
 import '../../../core/models/municipality.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../core/storage/user_preferences.dart';
+import '../application/select_municipality_controller.dart';
 
 /// Selección de municipio — puerto fiel de `selectmunicipality/SelectMunScreen.kt`
-/// + `components/SelectMunicipality.kt` (fuente de verdad en `codebase/`). Paso 2
-/// del onboarding: recibe el `departmentId` elegido en Welcome, carga sus
-/// municipios y los presenta con un buscador de autocompletar sobre fondo de
-/// marca, con botones "Cancelar / Continuar".
+/// + `components/SelectMunicipality.kt`. Paso 2 del onboarding: recibe el
+/// `departmentId` elegido en Welcome. La UI es "tonta": carga, filtrado,
+/// selección y guardado viven en [selectMunicipalityControllerProvider]
+/// (capa application); aquí solo queda el estado de UI y la navegación.
 class SelectMunicipalityScreen extends ConsumerStatefulWidget {
   const SelectMunicipalityScreen({super.key, required this.departmentId});
 
@@ -31,14 +30,8 @@ class _SelectMunicipalityScreenState
     extends ConsumerState<SelectMunicipalityScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
-
-  List<Municipality> _municipalities = [];
-  Municipality? _selectedMunicipality;
-  String _query = '';
   bool _searchFocused = false;
-  bool _isLoading = false;
   bool _animate = false;
-  bool _savePreference = true;
 
   @override
   void initState() {
@@ -46,7 +39,11 @@ class _SelectMunicipalityScreenState
     _searchFocus.addListener(() {
       setState(() => _searchFocused = _searchFocus.hasFocus);
     });
-    _loadMunicipalities();
+    Future.microtask(
+      () => ref
+          .read(selectMunicipalityControllerProvider.notifier)
+          .load(widget.departmentId),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 200), () {
         if (mounted) setState(() => _animate = true);
@@ -61,56 +58,17 @@ class _SelectMunicipalityScreenState
     super.dispose();
   }
 
-  Future<void> _loadMunicipalities() async {
-    setState(() => _isLoading = true);
-    try {
-      final muns = await ref
-          .read(municipalityApiServiceProvider)
-          .byDepartment(widget.departmentId);
-      if (!mounted) return;
-      setState(() {
-        _municipalities = muns.where((m) => m.isActive).toList();
-        _isLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
-  }
-
-  /// Filtro sin acentos + case-insensitive, ordenado por nombre (replica
-  /// `filteredMunicipalities` del SelectMunViewModel).
-  List<Municipality> get _filteredMunicipalities {
-    final list = _query.trim().isEmpty
-        ? [..._municipalities]
-        : _municipalities
-            .where((m) =>
-                _removeAccents(m.name).contains(_removeAccents(_query)))
-            .toList();
-    list.sort((a, b) => a.name.compareTo(b.name));
-    return list;
-  }
-
   void _onMunicipalitySelected(Municipality mun) {
-    setState(() {
-      _selectedMunicipality = mun;
-      _searchController.text = mun.name;
-      _query = mun.name;
-    });
+    ref
+        .read(selectMunicipalityControllerProvider.notifier)
+        .onMunicipalitySelected(mun);
+    _searchController.text = mun.name;
     _searchFocus.unfocus();
   }
 
-  Future<void> _confirmSelection() async {
-    final mun = _selectedMunicipality;
-    if (mun == null) return;
-    final prefs = ref.read(userPreferencesProvider);
-    await prefs.saveLocation(
-      departmentId: widget.departmentId,
-      municipalityId: mun.id,
-      municipio: mun.name,
-      guardar: _savePreference,
-    );
-    if (mounted) context.go(AppRoutes.municipalityPath(mun.id));
+  Future<void> _confirm(int municipalityId) async {
+    await ref.read(selectMunicipalityControllerProvider.notifier).confirm();
+    if (mounted) context.go(AppRoutes.municipalityPath(municipalityId));
   }
 
   void _cancel() {
@@ -124,7 +82,9 @@ class _SelectMunicipalityScreenState
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final filtered = _filteredMunicipalities;
+    final state = ref.watch(selectMunicipalityControllerProvider);
+    final notifier = ref.read(selectMunicipalityControllerProvider.notifier);
+    final filtered = state.filteredMunicipalities;
 
     return Scaffold(
       backgroundColor: scheme.primary,
@@ -146,8 +106,8 @@ class _SelectMunicipalityScreenState
                         const SizedBox(height: 24),
                         SvgPicture.asset(
                           'assets/images/newtramiapp.svg',
-                          width: 100,
-                          height: 50,
+                          width: 150,
+                          height: 70,
                           fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 30),
@@ -163,8 +123,8 @@ class _SelectMunicipalityScreenState
                         _MunicipalitySearch(
                           controller: _searchController,
                           focusNode: _searchFocus,
-                          onChanged: (v) => setState(() => _query = v),
-                          isLoading: _isLoading,
+                          onChanged: notifier.onQueryChanged,
+                          isLoading: state.municipalities.isLoading,
                           showDropdown:
                               _searchFocused && filtered.isNotEmpty,
                           municipalities: filtered,
@@ -173,9 +133,8 @@ class _SelectMunicipalityScreenState
                         ),
                         const SizedBox(height: 16),
                         _SaveCheckbox(
-                          value: _savePreference,
-                          onChanged: (v) =>
-                              setState(() => _savePreference = v),
+                          value: state.savePreference,
+                          onChanged: notifier.onSavePreferenceChanged,
                           color: scheme.onPrimary,
                         ),
                       ],
@@ -210,9 +169,9 @@ class _SelectMunicipalityScreenState
                       child: SizedBox(
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: _selectedMunicipality == null
+                          onPressed: state.selected == null
                               ? null
-                              : _confirmSelection,
+                              : () => _confirm(state.selected!.id),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _kContinue,
                             foregroundColor: Colors.white,
@@ -238,19 +197,10 @@ class _SelectMunicipalityScreenState
       ),
     );
   }
-
-  static String _removeAccents(String input) {
-    const withAccents = 'áàäâãéèëêíìïîóòöôõúùüûñ';
-    const without = 'aaaaaeeeeiiiiooooouuuun';
-    var s = input.toLowerCase();
-    for (var i = 0; i < withAccents.length; i++) {
-      s = s.replaceAll(withAccents[i], without[i]);
-    }
-    return s;
-  }
 }
 
-/// Tarjeta blanca con buscador + dropdown inline (replica `SelectMunicipio`).
+/// Tarjeta blanca con buscador + dropdown inline dentro del mismo `Material`
+/// (replica `SelectMunicipio`).
 class _MunicipalitySearch extends StatelessWidget {
   const _MunicipalitySearch({
     required this.controller,

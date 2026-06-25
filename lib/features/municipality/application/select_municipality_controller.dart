@@ -22,7 +22,7 @@ class SelectMunicipalityState {
 
   /// Municipios filtrados sin acentos + case-insensitive, ordenados por nombre.
   List<Municipality> get filteredMunicipalities {
-    final all = municipalities.valueOrNull ?? const <Municipality>[];
+    final all = municipalities.value ?? const <Municipality>[];
     final q = _normalize(query.trim());
     final list = q.isEmpty
         ? [...all]
