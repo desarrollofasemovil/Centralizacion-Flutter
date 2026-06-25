@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// Footer de patrocinadores — puerto de `FooterSponsors(color)` del base:
-/// logo de Bancolombia + divisor vertical + logo 101 Software, ambos como
-/// íconos vectoriales tintados con [color]. Reutilizable en welcome, login y
-/// recovery.
+
 class FooterSponsors extends StatelessWidget {
   const FooterSponsors({super.key, required this.color});
 
@@ -19,7 +16,7 @@ class FooterSponsors extends StatelessWidget {
       children: [
         SvgPicture.asset(
           'assets/images/icobancolombia.svg',
-          height: 24,
+          height: 16,
           colorFilter: tint,
         ),
         Container(
@@ -30,7 +27,7 @@ class FooterSponsors extends StatelessWidget {
         ),
         SvgPicture.asset(
           'assets/images/ico101software.svg',
-          height: 22,
+          height: 20,
           colorFilter: tint,
         ),
       ],

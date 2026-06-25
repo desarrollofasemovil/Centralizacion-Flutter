@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
@@ -82,9 +81,19 @@ class _LoginSheetContentState extends ConsumerState<_LoginSheetContent> {
     );
   }
 
+  Widget _dragHandle() => Container(
+        margin: const EdgeInsets.only(top: 8),
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: AppColors.gray900.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      );
+      
   Widget _logo() => Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        child: SvgPicture.asset('assets/images/newtramiapp.svg', height: 64),
+        child: Image.asset('assets/images/logo_tramiapp.png', height: 45),
       );
 
   // ── Vista de opciones (port de LoginOptionsScreen.kt) ──────────────────────
@@ -94,7 +103,7 @@ class _LoginSheetContentState extends ConsumerState<_LoginSheetContent> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Center(child: _logo()),
-        const SizedBox(height: 10),
+        const SizedBox(height: 40),
         // Iniciar sesión (email)
         _primaryPillButton(
           label: 'Iniciar sesión',

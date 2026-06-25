@@ -13,6 +13,10 @@ class AppColors {
   /// `buttoncolorsOptionScreen` — CTA de login/registro (botones celestes).
   static const buttonOptionScreen = Color(0xFF41ACDD);
 
+  /// Acento de la vista de registro (azul-morado). Es el color principal del
+  /// wizard en el base: números de paso, botones, textos y bordes de campos.
+  static const registerAccent = Color(0xFF5856D6);
+
   /// `buttoncolorslogin` — azul de acento (dots del carrusel, etc.).
   static const loginBlue = Color(0xFF4364CD);
 

@@ -7,6 +7,7 @@ import '../../../core/api/services/api_providers.dart';
 import '../../../core/models/create_user_dto.dart';
 import '../../../core/models/document_type_dto.dart';
 import '../../../core/models/municipalities_dto.dart';
+import '../../../core/theme/app_colors.dart';
 import '../application/auth_providers.dart';
 import '../application/registration_draft.dart';
 import '../application/signup_providers.dart';
@@ -103,6 +104,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   String _formatDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
+  /// Formato que espera el backend para `DateOnly`: YYYY-MM-DD.
+  String _apiDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
   void _back() {
     if (_currentStep > 0) {
       setState(() => _currentStep--);
@@ -153,7 +158,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       password: _password.text,
       address: _address.text.trim(),
       phoneNumber: _phone.text.trim(),
-      birthDate: _birthDate?.toIso8601String() ?? '',
+      // El backend espera DateOnly (YYYY-MM-DD), no un datetime ISO.
+      birthDate: _birthDate == null ? null : _apiDate(_birthDate!),
+      // loginStatus es Int32 no-nullable en el backend (no acepta null).
+      loginStatus: 0,
       fixedMunicipality: _selectedMunicipality?.id ?? 0,
       lastMunicipality: _selectedMunicipality?.id ?? 0,
     );
@@ -170,10 +178,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         return;
       }
 
-      // Registro OK en backend → si viene de Google, recién ahora creamos el
-      // usuario Firebase (fix de fantasmas) e iniciamos sesión.
+      // Registro OK en backend → el usuario queda logueado (igual que el base).
       _registrationHadSession = false;
       if (_fromGoogle && _draft != null) {
+        // Google: recién ahora creamos el usuario Firebase (fix de fantasmas)
+        // e iniciamos sesión con sus datos del backend.
         await ref.read(googleAuthServiceProvider).completeFirebaseSignIn(
               idToken: _draft!.googleIdToken,
               accessToken: _draft!.googleAccessToken,
@@ -183,6 +192,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           await ref.read(sessionProvider.notifier).setSession(user);
           _registrationHadSession = true;
         }
+      } else {
+        // Email/clave: auto-login con las credenciales recién registradas.
+        final loginRes = await ref
+            .read(sessionProvider.notifier)
+            .login(_email.text.trim(), _password.text);
+        _registrationHadSession = loginRes.success;
       }
       ref.read(registrationDraftProvider.notifier).state = null;
 
@@ -226,10 +241,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final base = Theme.of(context);
+    final scheme = base.colorScheme;
     final title = _fromGoogle ? 'Completar registro' : 'Registrarse';
 
-    return Scaffold(
+    // El registro usa un acento fijo (#5856D6) en TODA la vista —números de
+    // paso, bordes de campos, back button, etc.— igual que el proyecto base, no
+    // el primarycolor. Se inyecta sobreescribiendo `primary` para este subárbol.
+    return Theme(
+      data: base.copyWith(
+        colorScheme: scheme.copyWith(
+          primary: AppColors.registerAccent,
+          onPrimary: Colors.white,
+        ),
+      ),
+      child: Scaffold(
       backgroundColor: scheme.surface,
       body: SafeArea(
         child: Stack(
@@ -266,7 +292,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               .textTheme
                               .labelLarge
                               ?.copyWith(
-                                color: scheme.primary.withValues(alpha: 0.8),
+                                color: AppColors.registerAccent
+                                    .withValues(alpha: 0.8),
                               ),
                         ),
                         const SizedBox(height: 8),
@@ -279,7 +306,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        _buildButtons(scheme),
+                        _buildButtons(),
                         const SizedBox(height: 24),
                       ],
                     ),
@@ -297,6 +324,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -492,15 +520,23 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     );
   }
 
-  Widget _buildButtons(ColorScheme scheme) {
+  Widget _buildButtons() {
     final isLast = _currentStep == 2;
+    // Botones a ancho completo (como el base) — `stretch` evita que se ajusten
+    // al tamaño del texto.
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
           height: 54,
           child: ElevatedButton(
             onPressed: _isLoading ? null : (isLast ? _finish : _next),
             style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.registerAccent,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor:
+                  AppColors.registerAccent.withValues(alpha: 0.5),
+              disabledForegroundColor: Colors.white70,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -516,15 +552,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           child: OutlinedButton(
             onPressed: _back,
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: scheme.primary),
+              foregroundColor: AppColors.registerAccent,
+              side: const BorderSide(color: AppColors.registerAccent),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text(
-              _currentStep == 0 ? 'Cancelar' : 'Volver',
-              style: TextStyle(color: scheme.primary),
-            ),
+            child: Text(_currentStep == 0 ? 'Cancelar' : 'Volver'),
           ),
         ),
       ],

@@ -103,11 +103,11 @@ class _SelectMunicipalityScreenState
                         horizontal: 20, vertical: 24),
                     child: Column(
                       children: [
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 65),
                         SvgPicture.asset(
                           'assets/images/newtramiapp.svg',
-                          width: 150,
-                          height: 70,
+                          width: 90,
+                          height: 40,
                           fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 30),

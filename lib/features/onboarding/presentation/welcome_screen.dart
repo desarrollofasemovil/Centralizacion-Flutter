@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/department.dart';
 import '../../../core/router/app_routes.dart';
+import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../auth/presentation/widgets/footer_sponsors.dart';
 import '../application/welcome_controller.dart';
@@ -79,6 +80,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final welcome = ref.watch(welcomeControllerProvider);
+    final user = ref.watch(sessionProvider);
     final filtered = welcome.filteredDepartments;
     final carouselHeight = MediaQuery.of(context).size.width - 44;
 
@@ -113,6 +115,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        // Si hay sesión, mostrar el nombre del usuario (port del
+                        // header de WelcomeScreen.kt).
+                        if (user != null) ...[
+                          const SizedBox(height: 5),
+                          Text(
+                            '${user.firstName} ${user.lastName}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: scheme.onPrimary,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         Text(
                           'Vamos a configurar tu aplicación\nElige tu departamento',
