@@ -8,11 +8,11 @@ class NewsByMunicipality {
   final String url;
 
   @JsonKey(name: 'idMunicipality')
-  final int idMunicipality;
+  final int? idMunicipality;
 
   NewsByMunicipality({
     required this.url,
-    required this.idMunicipality,
+    this.idMunicipality,
   });
 
   factory NewsByMunicipality.fromJson(Map<String, dynamic> json) =>

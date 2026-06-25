@@ -3,9 +3,7 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    // El plugin de Google Services debe ir después de los de Android/Kotlin.
     id("com.google.gms.google-services")
-    // El plugin de Flutter debe aplicarse al final (también aplica Kotlin).
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -37,6 +35,9 @@ android {
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        ndk {
+            abiFilters.add("arm64-v8a")
+        }
     }
 
     // AGP 9 desactiva resValues por defecto; se requiere para `resValue(...)`.
@@ -79,6 +80,8 @@ android {
             }
         }
     }
+
+
 }
 
 kotlin {

@@ -11,9 +11,9 @@ MunicipalitySocialMedia _$MunicipalitySocialMediaFromJson(
 ) => MunicipalitySocialMedia(
   id: (json['id'] as num).toInt(),
   isActive: json['isActive'] as bool,
-  municipality: Municipality.fromJson(
-    json['municipality'] as Map<String, dynamic>,
-  ),
+  municipality: json['municipality'] == null
+      ? null
+      : Municipality.fromJson(json['municipality'] as Map<String, dynamic>),
   socialMediaType: SocialMediaType.fromJson(
     json['socialMediaType'] as Map<String, dynamic>,
   ),

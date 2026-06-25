@@ -9,7 +9,7 @@ part of 'course_x.dart';
 CourseX _$CourseXFromJson(Map<String, dynamic> json) => CourseX(
   get: json['get'] as String,
   id: (json['id'] as num).toInt(),
-  municipalityId: (json['municipalityId'] as num).toInt(),
+  municipalityId: (json['municipalityId'] as num?)?.toInt(),
   name: json['name'] as String,
   post: json['post'] as String,
   isActive: json['isActive'] as bool,
