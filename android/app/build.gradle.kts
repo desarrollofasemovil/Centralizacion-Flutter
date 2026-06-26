@@ -1,5 +1,6 @@
 import java.io.FileInputStream
 import java.util.Properties
+import org.gradle.api.tasks.Copy
 
 plugins {
     id("com.android.application")
@@ -92,6 +93,37 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+android.applicationVariants.all {
+    val variantName = name
+    val variantTaskName = "package${variantName.replaceFirstChar { it.uppercase() }}"
+    val flutterProjectRoot = rootProject.projectDir.parentFile
+    val variantFlavor = flavorName
+    val variantBuildType = buildType.name
+    val sourceFileName = if (variantFlavor.isNullOrEmpty()) {
+        "app-${variantBuildType}.apk"
+    } else {
+        "app-${variantFlavor}-${variantBuildType}.apk"
+    }
+    val sourceFile = File(projectDir, "build/outputs/apk/${if (variantFlavor.isNullOrEmpty()) "" else "$variantFlavor/"}${variantBuildType}/${sourceFileName}")
+    val targetDir = File(flutterProjectRoot, "build/app/outputs/flutter-apk")
+
+    tasks.register<Copy>("copy${variantName.replaceFirstChar { it.uppercase() }}FlutterApk") {
+        dependsOn(variantTaskName)
+        from(sourceFile)
+        into(targetDir)
+        rename { sourceFileName }
+        doFirst {
+            if (!sourceFile.exists()) {
+                throw GradleException("No se encontró el APK generado en ${sourceFile}")
+            }
+        }
+    }
+
+    tasks.named(variantTaskName) {
+        finalizedBy("copy${variantName.replaceFirstChar { it.uppercase() }}FlutterApk")
+    }
 }
 
 dependencies {
