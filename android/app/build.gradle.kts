@@ -95,10 +95,12 @@ flutter {
     source = "../.."
 }
 
+val flutterProjectRoot = rootProject.projectDir.parentFile
+val flutterApkOutputDir = File(flutterProjectRoot, "build/app/outputs/flutter-apk")
+
 android.applicationVariants.all {
     val variantName = name
     val variantTaskName = "package${variantName.replaceFirstChar { it.uppercase() }}"
-    val flutterProjectRoot = rootProject.projectDir.parentFile
     val variantFlavor = flavorName
     val variantBuildType = buildType.name
     val sourceFileName = if (variantFlavor.isNullOrEmpty()) {
@@ -106,13 +108,15 @@ android.applicationVariants.all {
     } else {
         "app-${variantFlavor}-${variantBuildType}.apk"
     }
-    val sourceFile = File(projectDir, "build/outputs/apk/${if (variantFlavor.isNullOrEmpty()) "" else "$variantFlavor/"}${variantBuildType}/${sourceFileName}")
-    val targetDir = File(flutterProjectRoot, "build/app/outputs/flutter-apk")
+    val sourceFile = File(
+        projectDir,
+        "build/outputs/apk/${if (variantFlavor.isNullOrEmpty()) "" else "$variantFlavor/"}${variantBuildType}/${sourceFileName}"
+    )
 
     tasks.register<Copy>("copy${variantName.replaceFirstChar { it.uppercase() }}FlutterApk") {
         dependsOn(variantTaskName)
         from(sourceFile)
-        into(targetDir)
+        into(flutterApkOutputDir)
         rename { sourceFileName }
         doFirst {
             if (!sourceFile.exists()) {
@@ -123,6 +127,25 @@ android.applicationVariants.all {
 
     tasks.named(variantTaskName) {
         finalizedBy("copy${variantName.replaceFirstChar { it.uppercase() }}FlutterApk")
+    }
+}
+
+tasks.register<Copy>("copyDefaultDebugFlutterApk") {
+    dependsOn("packageMunicipiosDebug")
+    val sourceFile = File(projectDir, "build/outputs/apk/municipios/debug/app-municipios-debug.apk")
+    from(sourceFile)
+    into(flutterApkOutputDir)
+    rename { "app-debug.apk" }
+    doFirst {
+        if (!sourceFile.exists()) {
+            throw GradleException("No se encontró el APK de fallback en ${sourceFile}")
+        }
+    }
+}
+
+tasks.whenTaskAdded {
+    if (name == "assembleMunicipiosDebug") {
+        finalizedBy("copyDefaultDebugFlutterApk")
     }
 }
 
