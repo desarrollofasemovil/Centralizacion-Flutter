@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/router/app_routes.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../auth/presentation/login_bottom_sheet.dart';
 import '../application/history_pay_notifier.dart';
 
 class HistoryPayScreen extends ConsumerWidget {
@@ -151,7 +152,7 @@ class HistoryPayScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                context.go(AppRoutes.loginOptions);
+                showLoginBottomSheet(context);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: scheme.primary,
