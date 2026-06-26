@@ -54,13 +54,15 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 
 ## Fase 3 — Módulos core
 
-- [ ] Trámites + motor de decisión `toInfoTramite`/`toDomainModel` (portar con tests) — `FRONTEND.md §6`
-- [ ] PQRD (anónima + identificada, 3 pasos; catálogos por `CodigoEntidad`)
-- [ ] Impuestos (consulta dinámica por `queryFields` + respuesta + descarga PDF) 🍎
-- [ ] Certificados (3 pasos)
-- [ ] Servicios Públicos + escáner QR/barcode (`mobile_scanner`) 🍎
-- [ ] Pagos: PSV + PaymentProcessing (pasarela) + estado de transacción
-- [ ] Historial de pagos
+- [x] Trámites + motor de decisión `toInfoTramite`/`toDomainModel` (portar con tests) — `FRONTEND.md §6`
+- [x] PQRD (anónima + identificada, 3 pasos; catálogos por `CodigoEntidad`)
+- [x] Impuestos (consulta dinámica por `queryFields` + respuesta + descarga PDF) 🍎
+- [x] Certificados (3 pasos)
+- [x] Servicios Públicos + escáner QR/barcode (`mobile_scanner`) 🍎
+- [x] Pagos: PSV + PaymentProcessing (pasarela) + estado de transacción
+- [x] Historial de pagos
+
+> ✅ **Fase 3 verificada**: Módulos core (Trámites con mappers y tests unitarios, PQRD, Impuestos con consulta y descarga de PDF, Certificados en 3 pasos, Servicios Públicos con escaneo de código de barras, Pagos PSV y pasarela, e Historial de pagos) completamente implementados en el código Dart.
 
 ## Fase 4 — Módulos de Manizales + perfil
 
@@ -76,7 +78,7 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 - [ ] APNs Auth Key (.p8) en Firebase para FCM
 - [ ] Permisos en `Info.plist` (cámara, ubicación, notificaciones)
 - [ ] `REVERSED_CLIENT_ID` para Google Sign-In
-- [ ] Descarga de PDFs sin DownloadManager (`dio` + `open_filex`)
+- [x] Descarga de PDFs sin DownloadManager (`dio` + `open_filex`)
 - [ ] Safe Area / home indicator en layouts con bottom nav
 - [ ] Pruebas en iPhone físico → TestFlight
 
