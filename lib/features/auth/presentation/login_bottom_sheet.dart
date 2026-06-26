@@ -73,9 +73,17 @@ class _LoginSheetContentState extends ConsumerState<_LoginSheetContent> {
       ),
       child: SafeArea(
         top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: _showEmail ? _buildEmailView() : _buildOptionsView(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(child: _dragHandle()),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: _showEmail ? _buildEmailView() : _buildOptionsView(),
+              ),
+            ),
+          ],
         ),
       ),
     );
