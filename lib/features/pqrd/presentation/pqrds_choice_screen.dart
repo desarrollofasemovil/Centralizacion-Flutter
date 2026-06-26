@@ -105,7 +105,7 @@ class PqrdsChoiceScreen extends ConsumerWidget {
                       _showHabeasDataDialog(context, () {
                         // Carga los catálogos y navega
                         ref.read(pqrdDropdownOptionsProvider.notifier).loadCatalogData(entityCode);
-                        context.go('/municipality/$municipalityId/pqrd/identificada');
+                        context.push('/municipality/$municipalityId/pqrd/identificada');
                       });
                     },
                   ),
@@ -120,7 +120,7 @@ class PqrdsChoiceScreen extends ConsumerWidget {
                       _showHabeasDataDialog(context, () {
                         // Carga los catálogos y navega
                         ref.read(pqrdDropdownOptionsProvider.notifier).loadCatalogData(entityCode);
-                        context.go('/municipality/$municipalityId/pqrd/anonima');
+                        context.push('/municipality/$municipalityId/pqrd/anonima');
                       });
                     },
                   ),

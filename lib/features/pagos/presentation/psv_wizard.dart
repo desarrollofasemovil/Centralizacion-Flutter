@@ -161,7 +161,7 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
       );
 
       if (mounted) {
-        context.go(
+        context.push(
           '/municipality/${widget.municipalityId}/pagos/processing',
           extra: {
             'paymentUrl': gatewayInfo.url,

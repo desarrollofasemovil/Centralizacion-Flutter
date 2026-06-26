@@ -14,6 +14,7 @@ import '../../features/municipality/presentation/select_municipality_screen.dart
 import '../../features/auth/presentation/signup_wizard.dart';
 import '../../features/auth/presentation/recovery_password_screen.dart';
 import '../../features/home/presentation/main_screen.dart';
+import '../../features/home/presentation/main_screen_skeleton.dart';
 import '../../features/news/presentation/news_screen.dart';
 
 // PQRD
@@ -70,10 +71,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
     routes: [
-      GoRoute(
-        path: AppRoutes.splash,
-        builder: (_, _) => const SplashScreen(),
-      ),
+      GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(
         path: AppRoutes.welcome,
         builder: (_, _) => const WelcomeScreen(),
@@ -86,10 +84,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return SelectMunicipalityScreen(departmentId: departmentId);
         },
       ),
-      GoRoute(
-        path: AppRoutes.signup,
-        builder: (_, _) => const SignUpScreen(),
-      ),
+      GoRoute(path: AppRoutes.signup, builder: (_, _) => const SignUpScreen()),
       GoRoute(
         path: AppRoutes.recoverPassword,
         builder: (_, _) => const RecoveryPasswordScreen(),
@@ -171,8 +166,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               final entityCode = state.pathParameters['entityCode'] ?? '';
-              final procedureId = int.tryParse(state.pathParameters['procedureId'] ?? '') ?? 0;
-              final integrationType = state.pathParameters['integrationType'] ?? '';
+              final procedureId =
+                  int.tryParse(state.pathParameters['procedureId'] ?? '') ?? 0;
+              final integrationType =
+                  state.pathParameters['integrationType'] ?? '';
               return CertificatesWizard(
                 municipalityId: id,
                 entityCode: entityCode,
@@ -216,7 +213,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               final factura = state.pathParameters['factura'] ?? '';
               final valor = state.pathParameters['valor'] ?? '';
-              final fechaVencimiento = state.pathParameters['fechaVencimiento'] ?? '';
+              final fechaVencimiento =
+                  state.pathParameters['fechaVencimiento'] ?? '';
               return PublicServicesFormScreen(
                 municipalityId: id,
                 factura: factura,
@@ -253,7 +251,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               final taxName = extra?['taxName'] as String? ?? '';
               final entityCode = extra?['entityCode'] as String? ?? '';
               final dataPolicyUrl = extra?['dataPolicyUrl'] as String? ?? '';
-              final privacyPolicyUrl = extra?['privacyPolicyUrl'] as String? ?? '';
+              final privacyPolicyUrl =
+                  extra?['privacyPolicyUrl'] as String? ?? '';
               return PsvWizard(
                 municipalityId: id,
                 taxId: taxId,
@@ -298,9 +297,10 @@ class _MainScreenContainer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(municipalityProvider(municipalityId));
-    return async.maybeWhen(
+    return async.when(
       data: (dto) => MainScreen(municipality: dto),
-      orElse: () => const LoadingScreen(),
+      loading: () => const MainScreenSkeleton(),
+      error: (_, _) => const LoadingScreen(),
     );
   }
 }
@@ -318,4 +318,3 @@ class _NewsScreenContainer extends ConsumerWidget {
     );
   }
 }
-

@@ -12,6 +12,7 @@ import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../../tramites/domain/info_tramite.dart';
 import '../application/main_viewmodel.dart';
+import 'widgets/animated_section.dart';
 import 'widgets/main_bottom_nav_bar.dart';
 import 'widgets/main_header.dart';
 import 'widgets/main_side_menu_options.dart';
@@ -46,7 +47,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final isCompleted = prefs.modalFormCompleted();
 
     if (loggedInUser != null && !isCompleted) {
-      ref.read(mainViewModelProvider(widget.municipality.id).notifier)
+      ref
+          .read(mainViewModelProvider(widget.municipality.id).notifier)
           .showModalForm(ModalFormMode.generic);
     }
   }
@@ -55,12 +57,15 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final name = tramite.nombre;
     final action = tramite.accion;
 
+    // Navegación "hacia adelante": usamos push para conservar la pila y que el
+    // gesto/botón Atrás regrese a la Home (equivalente a navController.navigate
+    // del original, que apila). Las vueltas a Home tras pagar/enviar siguen con go.
     if (action is ShowPqrds) {
-      context.go(AppRoutes.pqrdPath(widget.municipality.id));
+      context.push(AppRoutes.pqrdPath(widget.municipality.id));
     } else if (action is NavegarANativo) {
-      context.go(action.ruta);
+      context.push(action.ruta);
     } else if (action is NavegarAPagoSinValidacion) {
-      context.go(
+      context.push(
         AppRoutes.pagosPsvPath(widget.municipality.id),
         extra: {
           'taxId': action.taxId,
@@ -71,23 +76,24 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         },
       );
     } else if (action is NavegarAConsultaImpuesto) {
-      context.go(
+      context.push(
         AppRoutes.taxesPath(widget.municipality.id),
-        extra: {
-          'taxId': action.taxId,
-          'title': name,
-        },
+        extra: {'taxId': action.taxId, 'title': name},
       );
     } else {
       // Si es un trámite no mapeado (Cursos, Reservas, etc.), mostrar diálogo de próximamente
-      ref.read(mainViewModelProvider(widget.municipality.id).notifier).showInDevelopment();
+      ref
+          .read(mainViewModelProvider(widget.municipality.id).notifier)
+          .showInDevelopment();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mainViewModelProvider(widget.municipality.id));
-    final notifier = ref.read(mainViewModelProvider(widget.municipality.id).notifier);
+    final notifier = ref.read(
+      mainViewModelProvider(widget.municipality.id).notifier,
+    );
     final theme = Theme.of(context);
     final domainModel = widget.municipality.toDomainModel();
 
@@ -108,7 +114,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     // Escuchar si el usuario inicia sesión para activar el modal
     ref.listen<UserDTO?>(sessionProvider, (prev, next) {
       if (next != null) {
-        final isCompleted = ref.read(userPreferencesProvider).modalFormCompleted();
+        final isCompleted = ref
+            .read(userPreferencesProvider)
+            .modalFormCompleted();
         if (!isCompleted) {
           notifier.showModalForm(ModalFormMode.generic);
         }
@@ -139,7 +147,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               },
             ),
           ).then((_) {
-            final currentMode = ref.read(mainViewModelProvider(widget.municipality.id)).modalMode;
+            final currentMode = ref
+                .read(mainViewModelProvider(widget.municipality.id))
+                .modalMode;
             if (currentMode == next) {
               notifier.onModalDismissed();
             }
@@ -150,7 +160,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     // Escuchar cambios en la visibilidad del contador de pánico
     ref.listen<bool>(
-      mainViewModelProvider(widget.municipality.id).select((s) => s.showPanicCountdownDialog),
+      mainViewModelProvider(
+        widget.municipality.id,
+      ).select((s) => s.showPanicCountdownDialog),
       (prev, next) {
         if (next) {
           showDialog(
@@ -163,8 +175,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               },
               onConfirm: () {
                 Navigator.of(ctx).pop();
-                final lat = widget.municipality.latitude != null ? double.tryParse(widget.municipality.latitude!) : null;
-                final lng = widget.municipality.longitude != null ? double.tryParse(widget.municipality.longitude!) : null;
+                final lat = widget.municipality.latitude != null
+                    ? double.tryParse(widget.municipality.latitude!)
+                    : null;
+                final lng = widget.municipality.longitude != null
+                    ? double.tryParse(widget.municipality.longitude!)
+                    : null;
                 notifier.confirmAndSendPanicAlert(lat, lng);
               },
             ),
@@ -228,7 +244,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 onPressed: () async {
                   Navigator.of(ctx).pop();
                   notifier.onExitDialogDismissed();
-                  final loc = ref.read(userPreferencesProvider).getSavedLocation();
+                  final loc = ref
+                      .read(userPreferencesProvider)
+                      .getSavedLocation();
                   if (!loc.guardado) {
                     context.go(AppRoutes.welcome);
                   } else {
@@ -244,174 +262,207 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       });
     }
 
-    return Scaffold(
-      key: _scaffoldKey,
-      appBar: MainTopBar(
-        onMenuClicked: () {
-          _scaffoldKey.currentState?.openDrawer();
-        },
-        onBackClicked: () {
-          notifier.onBackPressed();
-        },
-      ),
-      drawer: Drawer(
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.horizontal(right: Radius.circular(35)),
-        ),
-        child: MainSideMenuOptions(
-          user: state.currentUser,
-          currentMunicipalityName: state.currentMunicipalityName ?? "",
-          showChangeLocationDialog: state.showChangeLocationDialog,
-          onDismissDialog: notifier.onDismissChangeLocationDialog,
-          onConfirmChangeLocation: () {
-            notifier.onConfirmChangeLocation();
-            context.go(AppRoutes.welcome);
-          },
-          onLoginSuccess: () {
-            Navigator.pop(context); // Cerrar drawer
-            showLoginBottomSheet(context);
-          },
-          goToSettingsUser: () {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Configuraciones de usuario (Fase 2)')),
-            );
-          },
-          onTermsClick: () async {
-            Navigator.pop(context);
-            final url = widget.municipality.dataPrivacy ?? "https://www.1cero1.com/tratamientos.html";
-            final uri = Uri.parse(url);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          },
-          goToHelp: () {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Soporte y Ayuda (Fase 2)')),
-            );
-          },
-          onLogoutSuccess: () async {
-            final messenger = ScaffoldMessenger.of(context);
-            Navigator.pop(context);
-            await ref.read(sessionProvider.notifier).logout();
-            messenger.showSnackBar(
-              const SnackBar(content: Text('Sesión cerrada correctamente')),
-            );
-          },
-        ),
-      ),
-      body: Column(
-        children: [
-          MainHeader(
-            design: domainModel.design,
-            departamento: domainModel.departamento,
-            isLoading: state.isLoading,
+    // Home es la raíz del flujo de alcaldías: el gesto/botón Atrás del sistema no
+    // debe salir de la app, sino reproducir el BackHandler del original (cancelar
+    // PQRD si está visible o mostrar el diálogo de salida).
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        notifier.onBackPressed();
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        drawer: Drawer(
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.horizontal(right: Radius.circular(35)),
           ),
-          Expanded(
-            child: Container(
-              color: theme.colorScheme.primary,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: Container(
-                  color: theme.colorScheme.surface,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-                    child: Column(
-                      children: [
-                        if (domainModel.tramitesPrincipales.isNotEmpty || state.isLoading) ...[
-                          TramitesSection(
-                            titulo: "Trámites",
-                            tramites: domainModel.tramitesPrincipales,
-                            searchText: state.searchText,
-                            isSearchActive: state.isSearchActive,
-                            isLoading: state.isLoading,
-                            onSearchTextChanged: notifier.onSearchTextChanged,
-                            onSearchToggled: notifier.onSearchToggled,
-                            onTramiteClick: (t) {
-                              notifier.onTramiteClicked(t);
-                              if (t.accion is! AbrirUrl &&
-                                  t.accion is! AbrirUrlDirecto &&
-                                  t.accion is! AbrirBotonPanico) {
-                                _handleNavigation(t);
-                              }
-                            },
+          child: MainSideMenuOptions(
+            user: state.currentUser,
+            currentMunicipalityName: state.currentMunicipalityName ?? "",
+            showChangeLocationDialog: state.showChangeLocationDialog,
+            onDismissDialog: notifier.onDismissChangeLocationDialog,
+            onConfirmChangeLocation: () {
+              notifier.onConfirmChangeLocation();
+              context.go(AppRoutes.welcome);
+            },
+            onLoginSuccess: () {
+              Navigator.pop(context); // Cerrar drawer
+              showLoginBottomSheet(context);
+            },
+            goToSettingsUser: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Configuraciones de usuario (Fase 2)'),
+                ),
+              );
+            },
+            onTermsClick: () async {
+              Navigator.pop(context);
+              final url =
+                  widget.municipality.dataPrivacy ??
+                  "https://www.1cero1.com/tratamientos.html";
+              final uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            goToHelp: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Soporte y Ayuda (Fase 2)')),
+              );
+            },
+            onLogoutSuccess: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              Navigator.pop(context);
+              await ref.read(sessionProvider.notifier).logout();
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Sesión cerrada correctamente')),
+              );
+            },
+          ),
+        ),
+        body: Column(
+          children: [
+            MainTopBar(
+              onMenuClicked: () {
+                _scaffoldKey.currentState?.openDrawer();
+              },
+              onBackClicked: () {
+                notifier.onBackPressed();
+              },
+            ),
+            MainHeader(
+              design: domainModel.design,
+              departamento: domainModel.departamento,
+              isLoading: state.isLoading,
+            ),
+            Expanded(
+              child: Container(
+                color: theme.colorScheme.primary,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  child: Container(
+                    color: theme.colorScheme.surface,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+                      child: Column(
+                        children: [
+                          if (domainModel.tramitesPrincipales.isNotEmpty ||
+                              state.isLoading) ...[
+                            AnimatedSection(
+                              child: TramitesSection(
+                                titulo: "Trámites",
+                                tramites: domainModel.tramitesPrincipales,
+                                searchText: state.searchText,
+                                isSearchActive: state.isSearchActive,
+                                isLoading: state.isLoading,
+                                onSearchTextChanged:
+                                    notifier.onSearchTextChanged,
+                                onSearchToggled: notifier.onSearchToggled,
+                                onTramiteClick: (t) {
+                                  notifier.onTramiteClicked(t);
+                                  if (t.accion is! AbrirUrl &&
+                                      t.accion is! AbrirUrlDirecto &&
+                                      t.accion is! AbrirBotonPanico) {
+                                    _handleNavigation(t);
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          if (domainModel.otrosTramites.isNotEmpty ||
+                              state.isLoading) ...[
+                            AnimatedSection(
+                              delayMillis: 300,
+                              child: TramitesSection(
+                                titulo: "Otros trámites",
+                                tramites: domainModel.otrosTramites,
+                                searchText: state.searchText,
+                                isSearchActive: false,
+                                isSearchable: false,
+                                isLoading: state.isLoading,
+                                onSearchTextChanged: (_) {},
+                                onSearchToggled: () {},
+                                onTramiteClick: (t) {
+                                  notifier.onTramiteClicked(t);
+                                  if (t.accion is! AbrirUrl &&
+                                      t.accion is! AbrirUrlDirecto &&
+                                      t.accion is! AbrirBotonPanico) {
+                                    _handleNavigation(t);
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          if (domainModel.socialLinks.isNotEmpty ||
+                              state.isLoading) ...[
+                            AnimatedSection(
+                              delayMillis: 400,
+                              child: TramitesSection(
+                                titulo: "Canales",
+                                tramites: domainModel.socialLinks,
+                                searchText: state.searchText,
+                                isSearchActive: false,
+                                isSearchable: false,
+                                isLoading: state.isLoading,
+                                onSearchTextChanged: (_) {},
+                                onSearchToggled: () {},
+                                onTramiteClick: (t) {
+                                  notifier.onTramiteClicked(t);
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          const SizedBox(height: 10),
+                          AnimatedSection(
+                            delayMillis: 100,
+                            child: _FooterSponsors(
+                              color: theme.colorScheme.onSurface,
+                            ),
                           ),
-                          const SizedBox(height: 16),
                         ],
-                        if (domainModel.otrosTramites.isNotEmpty || state.isLoading) ...[
-                          TramitesSection(
-                            titulo: "Otros trámites",
-                            tramites: domainModel.otrosTramites,
-                            searchText: state.searchText,
-                            isSearchActive: false,
-                            isSearchable: false,
-                            isLoading: state.isLoading,
-                            onSearchTextChanged: (_) {},
-                            onSearchToggled: () {},
-                            onTramiteClick: (t) {
-                              notifier.onTramiteClicked(t);
-                              if (t.accion is! AbrirUrl &&
-                                  t.accion is! AbrirUrlDirecto &&
-                                  t.accion is! AbrirBotonPanico) {
-                                _handleNavigation(t);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        if (domainModel.socialLinks.isNotEmpty || state.isLoading) ...[
-                          TramitesSection(
-                            titulo: "Canales",
-                            tramites: domainModel.socialLinks,
-                            searchText: state.searchText,
-                            isSearchActive: false,
-                            isSearchable: false,
-                            isLoading: state.isLoading,
-                            onSearchTextChanged: (_) {},
-                            onSearchToggled: () {},
-                            onTramiteClick: (t) {
-                              notifier.onTramiteClicked(t);
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        const SizedBox(height: 10),
-                        _FooterSponsors(color: theme.colorScheme.onSurface),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: MainBottomNavBar(
-        selectedRoute: state.selectedRoute,
-        onTap: (index) async {
-          if (index == 0) {
-            notifier.onRouteChanged("inicio");
-          } else if (index == 1) {
-            final url = domainModel.newsUrl;
-            if (url.isNotEmpty) {
-              final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
+          ],
+        ),
+        bottomNavigationBar: MainBottomNavBar(
+          selectedRoute: state.selectedRoute,
+          onTap: (index) async {
+            if (index == 0) {
+              notifier.onRouteChanged("inicio");
+            } else if (index == 1) {
+              final url = domainModel.newsUrl;
+              if (url.isNotEmpty) {
+                final uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
               }
-            }
-          } else if (index == 2) {
-            final url = domainModel.domain;
-            if (url.isNotEmpty) {
-              final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
+            } else if (index == 2) {
+              final url = domainModel.domain;
+              if (url.isNotEmpty) {
+                final uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
               }
+            } else if (index == 3) {
+              context.push(AppRoutes.pagosHistoryPath(widget.municipality.id));
             }
-          } else if (index == 3) {
-            context.go(AppRoutes.pagosHistoryPath(widget.municipality.id));
-          }
-        },
+          },
+        ),
       ),
     );
   }
