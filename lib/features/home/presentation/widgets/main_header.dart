@@ -2,7 +2,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/design.dart';
 
-Color getAdaptiveColor(Color backgroundColor, Color lightColor, Color darkColor) {
+Color getAdaptiveColor(
+  Color backgroundColor,
+  Color lightColor,
+  Color darkColor,
+) {
   return backgroundColor.computeLuminance() > 0.5 ? darkColor : lightColor;
 }
 
@@ -37,45 +41,21 @@ class MainHeader extends StatelessWidget {
     );
 
     if (isLoading) {
+      // Esqueleto del header: escudo + líneas de nombre/departamento como shimmer,
+      // equivalente a MainHeaderPlaceHolder del original (Compose).
       return Container(
         color: primaryColor,
         width: double.infinity,
-        child: Column(
+        child: const Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 10),
-            const ShimmerPlaceholder(
-              width: 100,
-              height: 100,
-              borderRadius: 12,
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                design.nombreAlcaldia,
-                style: TextStyle(
-                  color: adaptiveTitleColor,
-                  fontSize: 25,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 5),
-            if (departamento != null && departamento!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  departamento!,
-                  style: TextStyle(
-                    color: adaptiveSubtitleColor,
-                    fontSize: 14,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            const SizedBox(height: 15),
+            SizedBox(height: 10),
+            ShimmerPlaceholder(width: 100, height: 100, borderRadius: 12),
+            SizedBox(height: 14),
+            ShimmerPlaceholder(width: 180, height: 22, borderRadius: 6),
+            SizedBox(height: 8),
+            ShimmerPlaceholder(width: 120, height: 14, borderRadius: 6),
+            SizedBox(height: 15),
           ],
         ),
       );
@@ -126,10 +106,7 @@ class MainHeader extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: Text(
                 "Departamento de $departamento",
-                style: TextStyle(
-                  color: adaptiveSubtitleColor,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: adaptiveSubtitleColor, fontSize: 14),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -165,8 +142,8 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
   }
 
   @override
@@ -177,21 +154,46 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
 
   @override
   Widget build(BuildContext context) {
+    // Barrido de gradiente gris claro (equivalente a Modifier.shimmerLoading del
+    // original: LightGray 0.2 → 1.0 → 0.2 desplazándose en diagonal).
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return Opacity(
-          opacity: 0.3 + (_controller.value * 0.4),
-          child: Container(
-            width: widget.width,
-            height: widget.height,
-            decoration: BoxDecoration(
-              color: Colors.grey[400],
-              borderRadius: BorderRadius.circular(widget.borderRadius),
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: const [
+                Color(0xFFDFE2E6),
+                Color(0xFFF2F4F6),
+                Color(0xFFDFE2E6),
+              ],
+              stops: const [0.1, 0.3, 0.4],
+              transform: _SlidingGradientTransform(_controller.value),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Desplaza el gradiente horizontalmente según el progreso [slidePercent] (0→1)
+/// para producir el efecto de barrido del shimmer.
+class _SlidingGradientTransform extends GradientTransform {
+  const _SlidingGradientTransform(this.slidePercent);
+  final double slidePercent;
+
+  @override
+  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(
+      bounds.width * (slidePercent * 2 - 1),
+      0,
+      0,
     );
   }
 }

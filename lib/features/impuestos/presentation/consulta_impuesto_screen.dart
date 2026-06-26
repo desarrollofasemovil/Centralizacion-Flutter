@@ -97,7 +97,7 @@ class _ConsultaImpuestoScreenState extends ConsumerState<ConsultaImpuestoScreen>
             );
           } else {
             // Navigate to results screen, passing taxes and email
-            context.go(
+            context.push(
               '/municipality/${widget.municipalityId}/taxes/results',
               extra: {
                 'taxes': taxes,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../tramites/domain/info_tramite.dart';
 import 'main_header.dart'; // For ShimmerPlaceholder
 
@@ -6,21 +7,11 @@ class TramiteCard extends StatelessWidget {
   final InfoTramite cardinfo;
   final VoidCallback onClick;
 
-  const TramiteCard({
-    super.key,
-    required this.cardinfo,
-    required this.onClick,
-  });
+  const TramiteCard({super.key, required this.cardinfo, required this.onClick});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // Si el fondo es blanco (como en redes sociales), tintamos el ícono del color primario.
-    // Si el fondo es pastel, tintamos el ícono del color de contraste (navy oscuro) o primario para visibilidad.
-    final iconColor = cardinfo.color == Colors.white 
-        ? theme.colorScheme.primary 
-        : const Color(0xFF181E31);
 
     return InkWell(
       onTap: onClick,
@@ -39,10 +30,13 @@ class TramiteCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(
+              // El SVG conserva sus colores propios (igual que `tint = Unspecified`
+              // en el original); no se aplica colorFilter.
+              child: SvgPicture.asset(
                 cardinfo.icono,
-                color: iconColor,
-                size: 36,
+                width: 36,
+                height: 36,
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(height: 10),
@@ -81,11 +75,7 @@ class TramiteCardPlaceholder extends StatelessWidget {
             borderRadius: 36, // Circular shape
           ),
           SizedBox(height: 10),
-          ShimmerPlaceholder(
-            width: 80,
-            height: 16,
-            borderRadius: 4,
-          ),
+          ShimmerPlaceholder(width: 80, height: 16, borderRadius: 4),
         ],
       ),
     );

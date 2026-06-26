@@ -98,7 +98,10 @@ class NavegarAPagoSinValidacion extends TramiteAccion {
 
 class InfoTramite {
   final String nombre;
-  final IconData icono;
+
+  /// Ruta del asset SVG del ícono (p. ej. `assets/images/icopredial.svg`).
+  /// Equivalente al `R.drawable.*` del original (Compose usaba `painterResource`).
+  final String icono;
   final Color color;
   final TramiteAccion accion;
   final int idtramite;
@@ -117,7 +120,7 @@ class InfoTramite {
 
   InfoTramite copyWith({
     String? nombre,
-    IconData? icono,
+    String? icono,
     Color? color,
     TramiteAccion? accion,
     int? idtramite,

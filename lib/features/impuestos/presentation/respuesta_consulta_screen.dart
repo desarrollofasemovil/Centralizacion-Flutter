@@ -60,7 +60,7 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
 
       if (mounted) {
         // Navigate to payment processing screen with the gateway URL
-        context.go(
+        context.push(
           '/municipality/${widget.municipalityId}/pagos/processing',
           extra: {
             'paymentUrl': gatewayInfo.url,

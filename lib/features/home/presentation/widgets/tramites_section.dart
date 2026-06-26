@@ -60,6 +60,13 @@ class TramitesSection extends StatelessWidget {
               width: 1,
             ),
             borderRadius: BorderRadius.circular(12),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -108,16 +115,21 @@ class TramitesSection extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
           child: isLoading
               ? Column(
                   children: List.generate(2, (_) {
                     return Row(
                       children: List.generate(3, (_) {
-                        return const Expanded(
-                          child: TramiteCardPlaceholder(),
-                        );
+                        return const Expanded(child: TramiteCardPlaceholder());
                       }),
                     );
                   }),
@@ -136,7 +148,10 @@ class TramitesSection extends StatelessWidget {
                             ),
                           );
                         }),
-                        ...List.generate(emptySlots, (_) => const Expanded(child: SizedBox())),
+                        ...List.generate(
+                          emptySlots,
+                          (_) => const Expanded(child: SizedBox()),
+                        ),
                       ],
                     );
                   }).toList(),

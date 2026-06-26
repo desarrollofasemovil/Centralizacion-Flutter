@@ -19,7 +19,7 @@ const List<Color> kMainProcedureColors = [
   Color(0xFFFFFAB0), // 5. Light Yellow
   Color(0xFFDBFFB0), // 6. Light Lime Green
   Color(0xFFB0FFB4), // 7. Light Green
-  Color(0xFFB0FFD6)  // 8. Light Mint
+  Color(0xFFB0FFD6), // 8. Light Mint
 ];
 
 const List<Color> kOtherProcedureColors = [
@@ -30,43 +30,44 @@ const List<Color> kOtherProcedureColors = [
   Color(0xFFD8B0FF), // 13. Light Magenta
   Color(0xFFF7B0FF), // 14. Light Pink
   Color(0xFFFFB0D8), // 15. Pink
-  Color(0xFFFFB0B0)  // 16. Light Red
+  Color(0xFFFFB0B0), // 16. Light Red
 ];
 
 const Color kPanicButtonColor = Color(0xFFFF4440);
 const Color kSocialMediaColor = Color(0xFFFFFFFF);
 
-// Mapping of icons based on procedure ID (from tramiteConfigMap in DataMappers.kt)
-IconData? _getProcedureIcon(int id) {
+// Mapping of icon assets based on procedure ID (mirrors tramiteConfigMap /
+// R.drawable.* in DataMappers.kt). Cada id usa el mismo SVG que el original.
+String? _getProcedureIcon(int id) {
   switch (id) {
     case 1:
-      return Icons.home; // Predial
+      return 'assets/images/icopredial.svg'; // Predial
     case 2:
-      return Icons.business; // ICA
+      return 'assets/images/icoica.svg'; // ICA
     case 3:
-      return Icons.article; // Declaración
+      return 'assets/images/icodecla.svg'; // Declaración
     case 5:
-      return Icons.water_drop; // Servicios
+      return 'assets/images/icoservici.svg'; // Servicios
     case 6:
-      return Icons.directions_car; // Vehículos
+      return 'assets/images/icovehi.svg'; // Vehículos
     case 7:
-      return Icons.percent; // Retención ICA
+      return 'assets/images/icorete.svg'; // Retención ICA
     case 4:
-      return Icons.question_answer; // PQRSDF
+      return 'assets/images/icopqrsdf.svg'; // PQRSDF
     case 10:
-      return Icons.emergency; // Botón de pánico
+      return 'assets/images/icoataquepanico.svg'; // Botón de pánico
     case 11:
-      return Icons.card_membership; // Certificado Residencia
+      return 'assets/images/icocertresidencia.svg'; // Certificado Residencia
     case 12:
-      return Icons.description; // Certificado Paz y Salvo
+      return 'assets/images/icocertpazysalvo.svg'; // Certificado Paz y Salvo
     case 13:
-      return Icons.flight; // Aporte a Turismo
+      return 'assets/images/icocertourism.svg'; // Aporte a Turismo
     case 14:
-      return Icons.map; // Concepto Uso del Suelo
+      return 'assets/images/icoconceptusodelsuelo.svg'; // Concepto Uso del Suelo
     case 8:
-      return Icons.school; // Cursos
+      return 'assets/images/icocursos.svg'; // Cursos
     case 9:
-      return Icons.sports_soccer; // Reservas (Escenarios)
+      return 'assets/images/icoreservas.svg'; // Reservas (Escenarios)
     default:
       return null;
   }
@@ -95,14 +96,17 @@ TramiteCategory? _getProcedureCategory(int id) {
   }
 }
 
-IconData? _getSocialMediaIcon(String name) {
+String? _getSocialMediaIcon(String name) {
   final lName = name.toLowerCase();
-  if (lName.contains('facebook')) return Icons.facebook;
-  if (lName.contains('instagram')) return Icons.camera_alt;
-  if (lName.contains('x')) return Icons.close; // O un ícono similar
-  if (lName.contains('youtube')) return Icons.play_circle;
-  if (lName.contains('blogger')) return Icons.web;
-  if (lName.contains('tiktok')) return Icons.music_note;
+  if (lName.contains('facebook')) return 'assets/images/icofacebook.svg';
+  if (lName.contains('instagram')) return 'assets/images/icoinstagram.svg';
+  if (lName.contains('youtube')) return 'assets/images/icoyoutube.svg';
+  if (lName.contains('blogger')) return 'assets/images/icoblogger.svg';
+  if (lName.contains('tiktok')) return 'assets/images/tiktok.svg';
+  // "X" (antes Twitter) — comprobar al final para no colisionar con otras letras.
+  if (lName == 'x' || lName.contains('twitter')) {
+    return 'assets/images/icotwitter.svg';
+  }
   return null;
 }
 
