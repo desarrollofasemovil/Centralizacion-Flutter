@@ -9,6 +9,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
+import '../../reminders/presentation/reminders_section.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../../tramites/domain/info_tramite.dart';
 import '../application/main_viewmodel.dart';
@@ -352,6 +353,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
                       child: Column(
                         children: [
+                          if (ref
+                              .read(userPreferencesProvider)
+                              .remindersIsVisible()) ...[
+                            AnimatedSection(
+                              child: RemindersSection(
+                                procedures:
+                                    widget.municipality.municipalityProcedures,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                           if (domainModel.tramitesPrincipales.isNotEmpty ||
                               state.isLoading) ...[
                             AnimatedSection(

@@ -64,11 +64,11 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 
 > ✅ **Fase 3 verificada**: Módulos core (Trámites con mappers y tests unitarios, PQRD, Impuestos con consulta y descarga de PDF, Certificados en 3 pasos, Servicios Públicos con escaneo de código de barras, Pagos PSV y pasarela, e Historial de pagos) completamente implementados en el código Dart.
 
-## Fase 4 — Módulos de Manizales + perfil
+## Fase 4 — Módulos + perfil
 
 - [ ] 🟦 Cursos (`CourseRepository` → Flutter)
 - [ ] 🟦 Escenarios deportivos (`VenueRepository` → Flutter, reserva + email)
-- [ ] Recordatorios + calendario
+- [x] Recordatorios + calendario
 - [ ] Soporte / Ayuda (formulario → email)
 - [ ] Editar perfil + configuración de usuario + cambio de contraseña
 
