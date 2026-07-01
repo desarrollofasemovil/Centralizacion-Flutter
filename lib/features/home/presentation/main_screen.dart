@@ -89,6 +89,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           'emailMunicipalities': action.emailMunicipalities,
         },
       );
+    } else if (action is NavegarAvenues) {
+      context.push(
+        AppRoutes.venuesPath(widget.municipality.id),
+        extra: {
+          'venueId': action.venueId,
+          'emailMunicipalities': action.emailMunicipalities,
+        },
+      );
     } else {
       // Si es un trámite no mapeado (Cursos, Reservas, etc.), mostrar diálogo de próximamente
       ref
