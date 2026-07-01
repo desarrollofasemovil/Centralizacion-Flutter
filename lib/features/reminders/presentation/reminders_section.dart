@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/municipality_procedure.dart';
 import '../../../core/models/reminders_by_user_dto.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/confirmation_dialog.dart';
 import '../../auth/application/auth_providers.dart';
 import '../application/reminders_notifier.dart';
-import 'widgets/confirmation_dialog.dart';
 import 'widgets/create_reminder_modal.dart';
 import 'widgets/swipe_up_dismiss_box.dart';
 

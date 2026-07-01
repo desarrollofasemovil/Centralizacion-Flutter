@@ -81,6 +81,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         AppRoutes.taxesPath(widget.municipality.id),
         extra: {'taxId': action.taxId, 'title': name},
       );
+    } else if (action is NavegarACursos) {
+      context.push(
+        AppRoutes.cursosPath(widget.municipality.id),
+        extra: {
+          'courseId': action.courseId,
+          'emailMunicipalities': action.emailMunicipalities,
+        },
+      );
     } else {
       // Si es un trámite no mapeado (Cursos, Reservas, etc.), mostrar diálogo de próximamente
       ref
