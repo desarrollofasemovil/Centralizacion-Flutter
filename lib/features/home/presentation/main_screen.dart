@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,6 +19,7 @@ import 'widgets/main_bottom_nav_bar.dart';
 import 'widgets/main_header.dart';
 import 'widgets/main_side_menu_options.dart';
 import 'widgets/main_top_bar.dart';
+import 'widgets/maintenance_info_card.dart';
 import 'widgets/modal_form.dart';
 import 'widgets/panic_countdown_dialog.dart';
 import 'widgets/tramites_section.dart';
@@ -369,6 +371,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
                       child: Column(
                         children: [
+                          const MaintenanceInfoCard(),
                           if (ref
                               .read(userPreferencesProvider)
                               .remindersIsVisible()) ...[
@@ -506,13 +509,10 @@ class _FooterSponsors extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          'Bancolombia',
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        SvgPicture.asset(
+          'assets/images/icobancolombia.svg',
+          height: 22,
+          fit: BoxFit.contain,
         ),
         Container(
           width: 1,

@@ -66,8 +66,8 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 
 ## Fase 4 — Módulos + perfil
 
-- [ ] 🟦 Cursos (`CourseRepository` → Flutter)
-- [ ] 🟦 Escenarios deportivos (`VenueRepository` → Flutter, reserva + email)
+- [x] 🟦 Cursos (`CourseRepository` → Flutter)
+- [x] 🟦 Escenarios deportivos (`VenueRepository` → Flutter, reserva + email)
 - [x] Recordatorios + calendario
 - [ ] Soporte / Ayuda (formulario → email)
 - [ ] Editar perfil + configuración de usuario + cambio de contraseña
