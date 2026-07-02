@@ -139,7 +139,11 @@ class _CreateReminderSheet extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: () => notifier.validateAndSubmit(),
+                      onPressed: () async {
+                        final navigator = Navigator.of(context);
+                        final ok = await notifier.validateAndSubmit();
+                        if (ok) navigator.pop();
+                      },
                       child: const Text('Crear recordatorio'),
                     ),
                     const SizedBox(height: 8),

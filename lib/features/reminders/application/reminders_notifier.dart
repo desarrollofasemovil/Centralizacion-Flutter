@@ -86,9 +86,15 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
   // ---------------------------------------------------------------------------
   void toggleModal(bool show) {
     if (show) {
+      // Preseleccionar HOY en el estado (no solo visualmente) para que el
+      // usuario no tenga que tocar el día: la fecha ya cuenta como elegida.
+      final now = DateTime.now();
+      final todayMillis =
+          DateTime.utc(now.year, now.month, now.day).millisecondsSinceEpoch;
       state = state.copyWith(
         formState: state.formState.copyWith(
           isModalVisible: true,
+          selectedDateMillis: state.formState.selectedDateMillis ?? todayMillis,
           clearFormError: true,
         ),
       );
@@ -125,20 +131,22 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
   // ---------------------------------------------------------------------------
   // Crear
   // ---------------------------------------------------------------------------
-  Future<void> validateAndSubmit() async {
+  /// Devuelve `true` si el recordatorio se envió (validación OK), `false` si
+  /// falló la validación — la UI usa esto para cerrar (o no) el bottom sheet.
+  Future<bool> validateAndSubmit() async {
     final form = state.formState;
 
     if (form.selectedProcedure == null) {
       state = state.copyWith(
         formState: form.copyWith(formError: 'Debes seleccionar un tipo de trámite.'),
       );
-      return;
+      return false;
     }
     if (form.selectedDateMillis == null) {
       state = state.copyWith(
         formState: form.copyWith(formError: 'Debes seleccionar una fecha.'),
       );
-      return;
+      return false;
     }
 
     // La fecha se guarda en UTC (igual que el original), la hora es local.
@@ -158,7 +166,7 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
       state = state.copyWith(
         formState: form.copyWith(formError: 'La fecha y hora deben ser futuras.'),
       );
-      return;
+      return false;
     }
 
     await _createAndSchedule(
@@ -169,7 +177,7 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
       sendEmail: form.sendEmail,
       addToCalendar: form.addToCalendar,
     );
-    toggleModal(false);
+    return true;
   }
 
   Future<void> _createAndSchedule({
@@ -228,6 +236,13 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
       } else {
         _toast('Se guardó, pero se necesitan permisos para notificar.');
       }
+
+      // Notificación inmediata de confirmación (y prueba directa del canal).
+      await _scheduler.showNow(
+        id: created.id! + 1000000,
+        title: 'Recordatorio creado',
+        body: '$title · ${_pretty(target)}',
+      );
 
       if (sendEmail) {
         await _sendReminderEmail(title, content);

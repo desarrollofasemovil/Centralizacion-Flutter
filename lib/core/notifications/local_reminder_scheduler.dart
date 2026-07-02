@@ -22,8 +22,11 @@ class LocalReminderScheduler {
   final FlutterLocalNotificationsPlugin _plugin;
 
   static const String _channelId = 'reminders_channel';
+  static const String _channelName = 'Recordatorios locales';
+  static const String _channelDesc = 'Recordatorios de trámites y eventos';
 
   bool _tzReady = false;
+  bool _initialized = false;
 
   void _ensureTz() {
     if (_tzReady) return;
@@ -32,26 +35,65 @@ class LocalReminderScheduler {
     _tzReady = true;
   }
 
+  /// Inicializa el plugin (ícono por defecto) y crea el canal de recordatorios.
+  /// Autocontenido: no depende de que `PushNotificationsService.init()` corra.
+  /// Sin esto, la alarma se dispara pero la notificación se descarta (sin canal
+  /// ni ícono el sistema no la publica).
+  Future<void> _ensureInitialized() async {
+    if (_initialized) return;
+    await _plugin.initialize(
+      settings: const InitializationSettings(
+        android: AndroidInitializationSettings('ic_stat_reminder'),
+        iOS: DarwinInitializationSettings(),
+      ),
+    );
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _channelId,
+        _channelName,
+        description: _channelDesc,
+        importance: Importance.high,
+      ),
+    );
+    _initialized = true;
+  }
+
   static const NotificationDetails _details = NotificationDetails(
     android: AndroidNotificationDetails(
       _channelId,
-      'Recordatorios locales',
-      channelDescription: 'Recordatorios de trámites y eventos',
+      _channelName,
+      channelDescription: _channelDesc,
       importance: Importance.high,
       priority: Priority.high,
+      icon: 'ic_stat_reminder',
     ),
-    iOS: DarwinNotificationDetails(),
+    iOS: DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    ),
   );
 
-  /// Programa una notificación local para [dateTime]. Devuelve `true` si quedó
-  /// agendada. Reintenta en modo inexacto si Android 12+ rechaza las alarmas
-  /// exactas por falta del permiso `SCHEDULE_EXACT_ALARM`.
+  /// Pide el permiso de notificaciones (Android 13+). En iOS lo solicita el
+  /// plugin al inicializar. Idempotente: si ya está concedido retorna al vuelo.
+  Future<void> ensureNotificationPermission() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      await android.requestNotificationsPermission();
+    }
+  }
+
   Future<bool> schedule({
     required int id,
     required String title,
     required String body,
     required DateTime dateTime,
   }) async {
+    await _ensureInitialized();
+    await ensureNotificationPermission();
     _ensureTz();
     final scheduled = tz.TZDateTime.from(dateTime, tz.local);
     if (!scheduled.isAfter(tz.TZDateTime.now(tz.local))) return false;
@@ -75,6 +117,29 @@ class LocalReminderScheduler {
       }
     }
     return false;
+  }
+
+  /// Muestra una notificación inmediata (confirmación al crear el recordatorio
+  /// y, de paso, prueba directa del canal de posteo).
+  Future<bool> showNow({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      await _ensureInitialized();
+      await ensureNotificationPermission();
+      await _plugin.show(
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: _details,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('LocalReminderScheduler.showNow error: $e');
+      return false;
+    }
   }
 
   Future<void> cancel(int id) async {
