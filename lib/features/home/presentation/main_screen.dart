@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,6 +10,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
+import '../../reminders/presentation/reminders_section.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../../tramites/domain/info_tramite.dart';
 import '../application/main_viewmodel.dart';
@@ -17,6 +19,7 @@ import 'widgets/main_bottom_nav_bar.dart';
 import 'widgets/main_header.dart';
 import 'widgets/main_side_menu_options.dart';
 import 'widgets/main_top_bar.dart';
+import 'widgets/maintenance_info_card.dart';
 import 'widgets/modal_form.dart';
 import 'widgets/panic_countdown_dialog.dart';
 import 'widgets/tramites_section.dart';
@@ -79,6 +82,22 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       context.push(
         AppRoutes.taxesPath(widget.municipality.id),
         extra: {'taxId': action.taxId, 'title': name},
+      );
+    } else if (action is NavegarACursos) {
+      context.push(
+        AppRoutes.cursosPath(widget.municipality.id),
+        extra: {
+          'courseId': action.courseId,
+          'emailMunicipalities': action.emailMunicipalities,
+        },
+      );
+    } else if (action is NavegarAvenues) {
+      context.push(
+        AppRoutes.venuesPath(widget.municipality.id),
+        extra: {
+          'venueId': action.venueId,
+          'emailMunicipalities': action.emailMunicipalities,
+        },
       );
     } else {
       // Si es un trámite no mapeado (Cursos, Reservas, etc.), mostrar diálogo de próximamente
@@ -352,6 +371,18 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
                       child: Column(
                         children: [
+                          const MaintenanceInfoCard(),
+                          if (ref
+                              .read(userPreferencesProvider)
+                              .remindersIsVisible()) ...[
+                            AnimatedSection(
+                              child: RemindersSection(
+                                procedures:
+                                    widget.municipality.municipalityProcedures,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                           if (domainModel.tramitesPrincipales.isNotEmpty ||
                               state.isLoading) ...[
                             AnimatedSection(
@@ -478,13 +509,10 @@ class _FooterSponsors extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          'Bancolombia',
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        SvgPicture.asset(
+          'assets/images/icobancolombia.svg',
+          height: 22,
+          fit: BoxFit.contain,
         ),
         Container(
           width: 1,

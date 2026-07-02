@@ -42,6 +42,14 @@ import '../../features/servicios_publicos/presentation/public_services_bill_deta
 import '../../features/pagos/presentation/psv_wizard.dart';
 import '../../features/pagos/presentation/payment_processing_screen.dart';
 
+// Cursos
+import '../../features/cursos/application/courses_notifier.dart';
+import '../../features/cursos/presentation/courses_screen.dart';
+
+// Venues (Escenarios deportivos)
+import '../../features/venues/application/venues_notifier.dart';
+import '../../features/venues/presentation/venues_screen.dart';
+
 // Historial Pagos
 import '../../features/historial_pagos/presentation/history_pay_screen.dart';
 
@@ -282,6 +290,36 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return HistoryPayScreen(municipalityId: id);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.cursos,
+            builder: (context, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+              final extra = state.extra as Map<String, dynamic>?;
+              return CoursesScreen(
+                param: CoursesParam(
+                  municipalityId: id,
+                  courseId: extra?['courseId'] as int? ?? 0,
+                  municipalityEmail:
+                      extra?['emailMunicipalities'] as String? ?? '',
+                ),
+              );
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.venues,
+            builder: (context, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+              final extra = state.extra as Map<String, dynamic>?;
+              return VenuesScreen(
+                param: VenuesParam(
+                  municipalityId: id,
+                  venueId: extra?['venueId'] as int? ?? 0,
+                  municipalityEmail:
+                      extra?['emailMunicipalities'] as String? ?? '',
+                ),
+              );
             },
           ),
         ],

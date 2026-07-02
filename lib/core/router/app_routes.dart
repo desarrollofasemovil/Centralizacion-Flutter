@@ -27,6 +27,8 @@ class AppRoutes {
   static const pagosPsv = '/municipality/:id/pagos/psv';
   static const pagosProcessing = '/municipality/:id/pagos/processing';
   static const pagosHistory = '/municipality/:id/pagos/history';
+  static const cursos = '/municipality/:id/cursos';
+  static const venues = '/municipality/:id/venues';
 
   static String selectMunicipalityPath(int departmentId) =>
       '/select-municipality/$departmentId';
@@ -41,6 +43,8 @@ class AppRoutes {
   static String pagosPsvPath(int id) => '/municipality/$id/pagos/psv';
   static String pagosProcessingPath(int id) => '/municipality/$id/pagos/processing';
   static String pagosHistoryPath(int id) => '/municipality/$id/pagos/history';
+  static String cursosPath(int id) => '/municipality/$id/cursos';
+  static String venuesPath(int id) => '/municipality/$id/venues';
 }
 
 
