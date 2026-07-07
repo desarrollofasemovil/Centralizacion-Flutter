@@ -8,13 +8,13 @@ part 'tax_dto.g.dart';
 @JsonSerializable()
 class TaxQueryResponseDTO {
   @JsonKey(name: 'Mensaje')
-  final String message;
+  final String? message;
 
   @JsonKey(name: 'Informacion')
   final List<TaxInfoDTO>? information;
 
   const TaxQueryResponseDTO({
-    required this.message,
+    this.message,
     this.information,
   });
 
@@ -30,70 +30,70 @@ class TaxQueryResponseDTO {
 @JsonSerializable()
 class TaxInfoDTO {
   @JsonKey(name: 'Entidad')
-  final String entity;
+  final String? entity;
 
   @JsonKey(name: 'CodigoEntidad')
-  final String entityCode;
+  final String? entityCode;
 
   @JsonKey(name: 'Documento')
-  final String document;
+  final String? document;
 
   @JsonKey(name: 'Nombre')
-  final String name;
+  final String? name;
 
   @JsonKey(name: 'Impuesto')
-  final String taxName;
+  final String? taxName;
 
   @JsonKey(name: 'Id_Impuesto')
-  final int taxId;
+  final int? taxId;
 
   @JsonKey(name: 'Valor')
-  final int value;
+  final int? value;
 
   @JsonKey(name: 'ValorAnual')
-  final int annualValue;
+  final int? annualValue;
 
   @JsonKey(name: 'ValorSemestre')
-  final int semesterValue;
+  final int? semesterValue;
 
   @JsonKey(name: 'ValorTrimestre')
-  final int trimesterValue;
+  final int? trimesterValue;
 
   @JsonKey(name: 'ValorParcial')
-  final int partialValue;
+  final int? partialValue;
 
   @JsonKey(name: 'Referencia')
-  final String reference;
+  final String? reference;
 
   @JsonKey(name: 'FechaVencimiento')
-  final String dueDate;
+  final String? dueDate;
 
   @JsonKey(name: 'CodigoCatastral')
-  final String cadastralCode;
+  final String? cadastralCode;
 
   @JsonKey(name: 'Detalle')
   final DetalleDTO? detail;
 
   @JsonKey(name: 'Factura')
-  final String facturaCode;
+  final String? facturaCode;
 
   const TaxInfoDTO({
-    required this.entity,
-    required this.entityCode,
-    required this.document,
-    required this.name,
-    required this.taxName,
-    required this.taxId,
-    required this.value,
-    required this.annualValue,
-    required this.semesterValue,
-    required this.trimesterValue,
-    required this.partialValue,
-    required this.reference,
-    required this.dueDate,
-    required this.cadastralCode,
+    this.entity,
+    this.entityCode,
+    this.document,
+    this.name,
+    this.taxName,
+    this.taxId,
+    this.value,
+    this.annualValue,
+    this.semesterValue,
+    this.trimesterValue,
+    this.partialValue,
+    this.reference,
+    this.dueDate,
+    this.cadastralCode,
     this.detail,
-    required this.facturaCode,
+    this.facturaCode,
   });
 
   factory TaxInfoDTO.fromJson(Map<String, dynamic> json) =>
@@ -130,26 +130,26 @@ class DetalleDTO {
 @JsonSerializable()
 class TaxQueryRequestDTO {
   @JsonKey(name: 'CodigoEntidad')
-  final String entityCode;
+  final String? entityCode;
 
   @JsonKey(name: 'DatoConsulta')
-  final String queryData;
+  final String? queryData;
 
   @JsonKey(name: 'CampoConsulta')
-  final String queryField;
+  final String? queryField;
 
   @JsonKey(name: 'IDImpuesto')
-  final int taxId;
+  final int? taxId;
 
   @JsonKey(name: 'Factura')
-  final String invoice;
+  final String? invoice;
 
   const TaxQueryRequestDTO({
-    required this.entityCode,
-    required this.queryData,
-    required this.queryField,
-    required this.taxId,
-    required this.invoice,
+    this.entityCode,
+    this.queryData,
+    this.queryField,
+    this.taxId,
+    this.invoice,
   });
 
   factory TaxQueryRequestDTO.fromJson(Map<String, dynamic> json) =>
@@ -164,54 +164,54 @@ class TaxQueryRequestDTO {
 @JsonSerializable()
 class BancolombiaGatewayRequestDTO {
   @JsonKey(name: 'Referencia')
-  final String reference;
+  final String? reference;
 
   @JsonKey(name: 'Factura')
-  final String invoice;
+  final String? invoice;
 
   @JsonKey(name: 'CodigoMunicipio')
-  final String municipalityCode;
+  final String? municipalityCode;
 
   @JsonKey(name: 'TipoDocumento')
-  final String documentType;
+  final String? documentType;
 
   @JsonKey(name: 'Identificacion')
-  final String identification;
+  final String? identification;
 
   @JsonKey(name: 'Nombre')
-  final String name;
+  final String? name;
 
   @JsonKey(name: 'Total')
-  final int total;
+  final int? total;
 
   @JsonKey(name: 'IDImpuesto')
-  final int taxId;
+  final int? taxId;
 
   @JsonKey(name: 'Email')
-  final String email;
+  final String? email;
 
   @JsonKey(name: 'Telefono')
-  final String phone;
+  final String? phone;
 
   @JsonKey(name: 'FuentePago')
-  final int paymentSource;
+  final int? paymentSource;
 
   @JsonKey(name: 'TipoImplementacion')
-  final int implementationType;
+  final int? implementationType;
 
   const BancolombiaGatewayRequestDTO({
-    required this.reference,
-    required this.invoice,
-    required this.municipalityCode,
-    required this.documentType,
-    required this.identification,
-    required this.name,
-    required this.total,
-    required this.taxId,
-    required this.email,
-    required this.phone,
-    required this.paymentSource,
-    required this.implementationType,
+    this.reference,
+    this.invoice,
+    this.municipalityCode,
+    this.documentType,
+    this.identification,
+    this.name,
+    this.total,
+    this.taxId,
+    this.email,
+    this.phone,
+    this.paymentSource,
+    this.implementationType,
   });
 
   factory BancolombiaGatewayRequestDTO.fromJson(Map<String, dynamic> json) =>
@@ -226,18 +226,18 @@ class BancolombiaGatewayRequestDTO {
 @JsonSerializable()
 class BancolombiaGatewayResponseDTO {
   @JsonKey(name: 'URL')
-  final String url;
+  final String? url;
 
   @JsonKey(name: 'Codigo')
-  final int code;
+  final int? code;
 
   @JsonKey(name: 'Mensaje')
-  final String message;
+  final String? message;
 
   const BancolombiaGatewayResponseDTO({
-    required this.url,
-    required this.code,
-    required this.message,
+    this.url,
+    this.code,
+    this.message,
   });
 
   factory BancolombiaGatewayResponseDTO.fromJson(Map<String, dynamic> json) =>
@@ -252,46 +252,46 @@ class BancolombiaGatewayResponseDTO {
 @JsonSerializable()
 class FintechTransactionRequestDTO {
   @JsonKey(name: 'idTramite')
-  final int idTramite;
+  final int? idTramite;
 
   @JsonKey(name: 'pagador')
-  final FintechPayerDTO pagador;
+  final FintechPayerDTO? pagador;
 
   @JsonKey(name: 'fuentePago')
-  final int fuentePago;
+  final int? fuentePago;
 
   @JsonKey(name: 'tipoImplementacion')
-  final int tipoImplementacion;
+  final int? tipoImplementacion;
 
   @JsonKey(name: 'estado_Url')
-  final bool estadoUrl;
+  final bool? estadoUrl;
 
   @JsonKey(name: 'url')
-  final String url;
+  final String? url;
 
   @JsonKey(name: 'valorPagar')
-  final int valorPagar;
+  final int? valorPagar;
 
   @JsonKey(name: 'factura')
-  final String factura;
+  final String? factura;
 
   @JsonKey(name: 'referencia')
-  final String referencia;
+  final String? referencia;
 
   @JsonKey(name: 'descripcion')
-  final String descripcion;
+  final String? descripcion;
 
   const FintechTransactionRequestDTO({
-    required this.idTramite,
-    required this.pagador,
+    this.idTramite,
+    this.pagador,
     this.fuentePago = 2,
     this.tipoImplementacion = 1,
     this.estadoUrl = true,
     this.url = '',
-    required this.valorPagar,
-    required this.factura,
-    required this.referencia,
-    required this.descripcion,
+    this.valorPagar,
+    this.factura,
+    this.referencia,
+    this.descripcion,
   });
 
   factory FintechTransactionRequestDTO.fromJson(Map<String, dynamic> json) =>
@@ -306,49 +306,49 @@ class FintechTransactionRequestDTO {
 @JsonSerializable()
 class FintechPayerDTO {
   @JsonKey(name: 'documento')
-  final String documento;
+  final String? documento;
 
   @JsonKey(name: 'tipoDocumento')
-  final int tipoDocumento;
+  final int? tipoDocumento;
 
   @JsonKey(name: 'nombre_Completo')
-  final String nombreCompleto;
+  final String? nombreCompleto;
 
   @JsonKey(name: 'dv')
-  final int dv;
+  final int? dv;
 
   @JsonKey(name: 'primernombre')
-  final String primerNombre;
+  final String? primerNombre;
 
   @JsonKey(name: 'segundonombre')
-  final String segundoNombre;
+  final String? segundoNombre;
 
   @JsonKey(name: 'primerapellido')
-  final String primerApellido;
+  final String? primerApellido;
 
   @JsonKey(name: 'segundoapellido')
-  final String segundoApellido;
+  final String? segundoApellido;
 
   @JsonKey(name: 'telefono')
-  final String telefono;
+  final String? telefono;
 
   @JsonKey(name: 'email')
-  final String email;
+  final String? email;
 
   @JsonKey(name: 'direccion')
-  final String direccion;
+  final String? direccion;
 
   const FintechPayerDTO({
-    required this.documento,
-    required this.tipoDocumento,
-    required this.nombreCompleto,
+    this.documento,
+    this.tipoDocumento,
+    this.nombreCompleto,
     this.dv = 0,
-    required this.primerNombre,
+    this.primerNombre,
     this.segundoNombre = '',
-    required this.primerApellido,
+    this.primerApellido,
     this.segundoApellido = '',
-    required this.telefono,
-    required this.email,
+    this.telefono,
+    this.email,
     this.direccion = '',
   });
 
@@ -364,7 +364,7 @@ class FintechPayerDTO {
 @JsonSerializable()
 class FintechTransactionResponseDTO {
   @JsonKey(name: 'isSuccess')
-  final bool isSuccess;
+  final bool? isSuccess;
 
   @JsonKey(name: 'message')
   final String? message;
@@ -373,13 +373,13 @@ class FintechTransactionResponseDTO {
   final FintechResultDTO? result;
 
   @JsonKey(name: 'state')
-  final int state;
+  final int? state;
 
   const FintechTransactionResponseDTO({
-    required this.isSuccess,
+    this.isSuccess,
     this.message,
     this.result,
-    required this.state,
+    this.state,
   });
 
   factory FintechTransactionResponseDTO.fromJson(Map<String, dynamic> json) =>
@@ -394,13 +394,13 @@ class FintechTransactionResponseDTO {
 @JsonSerializable()
 class FintechResultDTO {
   @JsonKey(name: 'idTransaccion')
-  final int idTransaccion;
+  final int? idTransaccion;
 
   @JsonKey(name: 'url')
   final String? url;
 
   const FintechResultDTO({
-    required this.idTransaccion,
+    this.idTransaccion,
     this.url,
   });
 

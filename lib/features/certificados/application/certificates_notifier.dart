@@ -413,20 +413,20 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
 
         final transactionResponse = await _paymentApi.createTransaction(transactionRequest);
 
-        if (transactionResponse.url.isNotEmpty) {
-          state = state.copyWith(urlTransaction: transactionResponse.url);
+        final url = transactionResponse.url ?? '';
+        if (url.isNotEmpty) {
+          state = state.copyWith(urlTransaction: url);
           final successState = CertificatesResponseSuccess(
-            urlTransaction: transactionResponse.url,
+            urlTransaction: url,
             reference: referencia,
           );
           ref.read(certificatesResponseStateProvider.notifier).setSuccess(successState);
           return successState;
         } else {
-          final errorState = CertificatesResponseError(
-            transactionResponse.message.isNotEmpty
-                ? transactionResponse.message
-                : "Error al registrar la transacción",
-          );
+          final errorMessage = (transactionResponse.message?.isNotEmpty ?? false)
+              ? transactionResponse.message!
+              : "Error al registrar la transacción";
+          final errorState = CertificatesResponseError(errorMessage);
           ref.read(certificatesResponseStateProvider.notifier).setError(errorState.message);
           return errorState;
         }

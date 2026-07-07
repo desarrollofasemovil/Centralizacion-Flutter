@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/municipality_dto.dart';
-import '../../../core/models/user_dto.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
 import '../../auth/application/auth_providers.dart';
@@ -36,26 +35,6 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkPostLoginModalForm();
-    });
-  }
-
-  void _checkPostLoginModalForm() {
-    final loggedInUser = ref.read(sessionProvider);
-    final prefs = ref.read(userPreferencesProvider);
-    final isCompleted = prefs.modalFormCompleted();
-
-    if (loggedInUser != null && !isCompleted) {
-      ref
-          .read(mainViewModelProvider(widget.municipality.id).notifier)
-          .showModalForm(ModalFormMode.generic);
-    }
-  }
-
   void _handleNavigation(InfoTramite tramite) {
     final name = tramite.nombre;
     final action = tramite.accion;
@@ -81,7 +60,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     } else if (action is NavegarAConsultaImpuesto) {
       context.push(
         AppRoutes.taxesPath(widget.municipality.id),
-        extra: {'taxId': action.taxId, 'title': name},
+        extra: {
+          'taxId': action.taxId,
+          'title': name,
+          'dataPolicyUrl': action.dataPolicyUrl,
+          'privacyPolicyUrl': action.privacyPolicyUrl,
+        },
       );
     } else if (action is NavegarACursos) {
       context.push(
@@ -130,17 +114,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       },
     );
 
-    // Escuchar si el usuario inicia sesión para activar el modal
-    ref.listen<UserDTO?>(sessionProvider, (prev, next) {
-      if (next != null) {
-        final isCompleted = ref
-            .read(userPreferencesProvider)
-            .modalFormCompleted();
-        if (!isCompleted) {
-          notifier.showModalForm(ModalFormMode.generic);
-        }
-      }
-    });
+    // Nota: el ModalForm NO se muestra automáticamente al entrar/iniciar sesión.
+    // Igual que en el original (MainViewModel.kt), solo lo dispara
+    // onTramiteClicked cuando el trámite requiere datos y no hay usuario.
 
     // Escuchar cambios en la visibilidad del modal de formulario
     ref.listen<ModalFormMode?>(
@@ -311,11 +287,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             },
             goToSettingsUser: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Configuraciones de usuario (Fase 2)'),
-                ),
-              );
+              context.push(AppRoutes.settingsPath(widget.municipality.id));
             },
             onTermsClick: () async {
               Navigator.pop(context);
@@ -329,8 +301,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             },
             goToHelp: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Soporte y Ayuda (Fase 2)')),
+              context.push(
+                AppRoutes.helpPath(widget.municipality.id),
+                extra: {
+                  'municipality': domainModel.nombreMunicipio,
+                  'portal': domainModel.domain,
+                },
               );
             },
             onLogoutSuccess: () async {
@@ -366,7 +342,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     top: Radius.circular(20),
                   ),
                   child: Container(
-                    color: theme.colorScheme.surface,
+                    // Fondo de página = `background` del original (White /
+                    // Gray1000), no `surface` (ese es el fondo de las cards).
+                    color: theme.colorScheme.surfaceContainerLowest,
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
                       child: Column(
@@ -499,33 +477,45 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   }
 }
 
+/// Puerto de `FooterSponsors.kt`: ambos logos son vectores monocromos que el
+/// original tinta con el color recibido (`Icon(tint = color)`) dentro de un
+/// Row de 30dp de alto. Sin tinte, los SVG (fill blanco) se ven blancos.
 class _FooterSponsors extends StatelessWidget {
   const _FooterSponsors({required this.color});
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SvgPicture.asset(
-          'assets/images/icobancolombia.svg',
-          height: 22,
-          fit: BoxFit.contain,
+    final tint = ColorFilter.mode(color, BlendMode.srcIn);
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: SizedBox(
+        height: 30,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              'assets/images/icobancolombia.svg',
+              width: 102,
+              colorFilter: tint,
+              fit: BoxFit.contain,
+            ),
+            Container(
+              width: 1,
+              height: 30,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: color,
+            ),
+            SvgPicture.asset(
+              'assets/images/ico101software.svg',
+              width: 100,
+              colorFilter: tint,
+              fit: BoxFit.contain,
+            ),
+          ],
         ),
-        Container(
-          width: 1,
-          height: 24,
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          color: color.withValues(alpha: 0.5),
-        ),
-        Image.asset(
-          'assets/images/logo_101software.png',
-          width: 100,
-          fit: BoxFit.contain,
-        ),
-      ],
+      ),
     );
   }
 }

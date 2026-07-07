@@ -51,22 +51,17 @@ class TramitesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Cabecera: fondo `background` + borde `surfaceContainer` (fiel al
+        // Row de TramitesSection.kt; sin sombra en el original).
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
+            color: theme.colorScheme.surfaceContainerLowest,
             border: Border.all(
-              color: theme.colorScheme.outlineVariant,
+              color: theme.colorScheme.surfaceContainer,
               width: 1,
             ),
             borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 10,
-                offset: Offset(0, 3),
-              ),
-            ],
           ),
           child: Row(
             children: [
@@ -112,17 +107,12 @@ class TramitesSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
+        // Grilla: fondo `surface` (F3F4F6 / Gray900) con radio 8, igual que la
+        // Column de TramitesSection.kt.
         Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 10,
-                offset: Offset(0, 3),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(8),
           ),
           child: isLoading
               ? Column(

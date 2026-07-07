@@ -1,15 +1,19 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
-import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
-import '../application/tax_notifier.dart';
+import '../../../core/models/validation_response_dto.dart';
+import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/utils/url_opener.dart';
+import '../application/tax_results_notifier.dart';
 import '../domain/tax.dart';
+import 'widgets/tax_card.dart';
 
+/// Puerto de `TaxResultsScreen` (RespuestaConsultaScreen.kt): lista de
+/// facturas encontradas con pago PSE, descarga y compartir de PDF.
+/// Toda la lógica vive en [TaxResultsNotifier].
 class TaxResultsScreen extends ConsumerStatefulWidget {
   const TaxResultsScreen({
     required this.municipalityId,
@@ -27,280 +31,320 @@ class TaxResultsScreen extends ConsumerStatefulWidget {
 }
 
 class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
-  bool _isDownloading = false;
-  String _downloadMessage = '';
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
 
-  Future<void> _handlePay(Tax tax, String bankName) async {
-    setState(() {
-      _isDownloading = true;
-      _downloadMessage = 'Creando transacción de pago...';
-    });
+  void _handlePay(Tax tax) {
+    final notifier = ref.read(taxResultsNotifierProvider.notifier);
+    final mun = ref.read(municipalityProvider(widget.municipalityId)).value;
+    if (mun == null) {
+      _showSnack('Espere a que carguen los datos del municipio');
+      return;
+    }
+    final matched = mun.municipalityProcedures
+        .where((p) => p.procedures.id == tax.taxId)
+        .firstOrNull;
+    notifier.onPayClicked(
+      tax: tax,
+      email: widget.email,
+      bankName: mun.bank.nameBank,
+      municipalityId: widget.municipalityId,
+      integrationType: matched?.integrationType ?? '0',
+    );
+  }
 
-    try {
-      final repo = ref.read(taxRepositoryProvider);
-      // Retrieve the integrationType (or matching procedure integrationType) from municipalityDTO
-      final asyncMun = ref.read(municipalityProvider(widget.municipalityId));
-      final mun = asyncMun.value;
-      final matchedProcedure = mun?.municipalityProcedures
-          .firstWhere((p) => p.procedures.id == tax.taxId, orElse: () => throw Exception('Procedimiento no encontrado'));
-
-      final integrationType = matchedProcedure?.integrationType ?? '0';
-
-      final gatewayInfo = await repo.createTransaction(
-        tax: tax,
-        email: widget.email,
-        bankName: bankName,
-        municipalityId: widget.municipalityId,
-        integrationType: integrationType,
-      );
-
-      setState(() {
-        _isDownloading = false;
-      });
-
-      if (mounted) {
-        // Navigate to payment processing screen with the gateway URL
-        context.push(
-          '/municipality/${widget.municipalityId}/pagos/processing',
-          extra: {
-            'paymentUrl': gatewayInfo.url,
-            'tax': tax,
-          },
+  void _handleRegisterPayment(Tax tax) {
+    final mun = ref.read(municipalityProvider(widget.municipalityId)).value;
+    if (mun == null) {
+      _showSnack('Tenemos problemas con tu Alcadia, Intenta mas tarde');
+      return;
+    }
+    final matched = mun.municipalityProcedures
+        .where((p) => p.procedures.id == tax.taxId)
+        .firstOrNull;
+    if (matched == null) {
+      _showSnack('Tenemos problemas con tu Alcadia, Intenta mas tarde');
+      return;
+    }
+    if (tax.invoice.isEmpty || tax.entityCode.isEmpty) {
+      _showSnack(
+          'Algunos de los datos de tu información tiene problemas, Intenta mas tarde');
+      return;
+    }
+    ref.read(taxResultsNotifierProvider.notifier).createHistoryPay(
+          amount: tax.value,
+          idImpuesto: tax.taxId.toString(),
+          factura: tax.invoice,
+          codigoEntidad: tax.entityCode,
+          municipalityProceduresId: matched.id,
         );
-      }
-    } catch (e) {
-      setState(() {
-        _isDownloading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al iniciar pasarela de pagos: $e')),
-        );
-      }
+  }
+
+  Future<void> _openPdf(String path) async {
+    final result = await OpenFilex.open(path, type: 'application/pdf');
+    if (result.type != ResultType.done && mounted) {
+      _showSnack('No se encontró una aplicación para abrir el PDF.');
     }
   }
 
-  Future<void> _handlePdfDownload(Tax tax) async {
-    setState(() {
-      _isDownloading = true;
-      _downloadMessage = 'Descargando factura...';
-    });
-
-    try {
-      final repo = ref.read(taxRepositoryProvider);
-      final url = await repo.getInvoicePdfUrl(tax);
-
-      final tempDir = await getTemporaryDirectory();
-      final filePath = '${tempDir.path}/factura_${tax.invoice}.pdf';
-
-      final dio = Dio();
-      await dio.download(url, filePath);
-
-      setState(() {
-        _isDownloading = false;
-      });
-
-      final result = await OpenFilex.open(filePath);
-      if (result.type != ResultType.done) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No se pudo abrir el PDF: ${result.message}')),
-          );
-        }
-      }
-    } catch (e) {
-      setState(() {
-        _isDownloading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al descargar factura: $e')),
-        );
-      }
-    }
+  Future<void> _sharePdf(String path) async {
+    await SharePlus.instance.share(
+      ShareParams(files: [XFile(path, mimeType: 'application/pdf')]),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final state = ref.watch(taxResultsNotifierProvider);
+    final notifier = ref.read(taxResultsNotifierProvider.notifier);
     final asyncMun = ref.watch(municipalityProvider(widget.municipalityId));
 
+    // Eventos de un solo disparo (LaunchedEffect del original).
+    ref.listen(taxResultsNotifierProvider, (previous, next) {
+      final paymentUrl = next.paymentUrl;
+      if (paymentUrl != null && paymentUrl.isNotEmpty) {
+        notifier.onNavigationHandled();
+        // Pasamos a la pantalla de estado del pago (abre la pasarela allí).
+        context.push(
+          '/municipality/${widget.municipalityId}/pagos/processing',
+          extra: {'paymentUrl': paymentUrl},
+        );
+      }
+      final genericUrl = next.genericUrlToOpen;
+      if (genericUrl != null && genericUrl.isNotEmpty) {
+        notifier.onNavigationHandled();
+        abrirUrl(genericUrl, toolbarColor: scheme.primary);
+      }
+      final fileToOpen = next.fileToOpenPath;
+      final fileToShare = next.fileToSharePath;
+      if (fileToOpen != null || fileToShare != null) {
+        notifier.onFileActionHandled();
+        if (fileToOpen != null) _openPdf(fileToOpen);
+        if (fileToShare != null) _sharePdf(fileToShare);
+      }
+      final error = next.error;
+      if (error != null && previous?.error != error) {
+        notifier.onErrorHandled();
+        _showSnack('Error: $error');
+      }
+    });
+
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: AppBar(
-        title: const Text('Facturas Encontradas'),
-        backgroundColor: scheme.primary,
-        foregroundColor: scheme.onPrimary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        centerTitle: true,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: Center(
+            child: _CircularBackButton(onPressed: () => context.pop()),
+          ),
+        ),
+        title: Text(
+          'Facturas Encontradas',
+          style: theme.textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Stack(
         children: [
+          if (asyncMun.isLoading)
+            const Center(child: CircularProgressIndicator.adaptive())
+          else if (asyncMun.hasError)
+            const Center(
+                child: Text('Error al cargar los datos del municipio.')),
           ListView.builder(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             itemCount: widget.taxes.length,
             itemBuilder: (context, index) {
               final tax = widget.taxes[index];
-              return _TaxCard(
-                tax: tax,
-                onPayClick: (bankName) => _handlePay(tax, bankName),
-                onPdfClick: () => _handlePdfDownload(tax),
-                municipalityBank: asyncMun.value?.bank.nameBank ?? 'Bancolombia',
+              return _AnimatedEntry(
+                delay: Duration(milliseconds: index * 100),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: TaxCard(
+                    tax: tax,
+                    isLoading: state.isLoading,
+                    onPayClick: _handlePay,
+                    onPdfClick: notifier.onOpenPdfClicked,
+                    onShareClick: notifier.onSharePdfClicked,
+                    onRegisterPayment: () => _handleRegisterPayment(tax),
+                  ),
+                ),
               );
             },
           ),
-          if (_isDownloading)
-            Container(
-              color: Colors.black45,
-              child: Center(
-                child: Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: Text(
-                            _downloadMessage,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+          // Alerta inferior con el resultado del registro en el historial.
+          if (state.validationCreatePayment != null)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child:
+                    _ValidationAlert(validation: state.validationCreatePayment!),
               ),
             ),
+          // Diálogo modal de carga (DownloadingDialog del original).
+          if (state.isLoading) _DownloadingDialog(message: state.loadingMessage),
         ],
       ),
     );
   }
 }
 
-class _TaxCard extends StatelessWidget {
-  const _TaxCard({
-    required this.tax,
-    required this.onPayClick,
-    required this.onPdfClick,
-    required this.municipalityBank,
-  });
+/// Entrada animada de cada tarjeta: fade + slide vertical de 500 ms con
+/// retardo escalonado (100 ms por ítem), como el original.
+class _AnimatedEntry extends StatefulWidget {
+  const _AnimatedEntry({required this.delay, required this.child});
 
-  final Tax tax;
-  final Function(String) onPayClick;
-  final VoidCallback onPdfClick;
-  final String municipalityBank;
+  final Duration delay;
+  final Widget child;
+
+  @override
+  State<_AnimatedEntry> createState() => _AnimatedEntryState();
+}
+
+class _AnimatedEntryState extends State<_AnimatedEntry> {
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(widget.delay, () {
+      if (mounted) setState(() => _visible = true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isExpired = tax.isExpired;
-    final currencyFormatter = NumberFormat.simpleCurrency(locale: 'es_CO', decimalDigits: 0);
+    return AnimatedSlide(
+      offset: _visible ? Offset.zero : const Offset(0, 0.5),
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOut,
+      child: AnimatedOpacity(
+        opacity: _visible ? 1 : 0,
+        duration: const Duration(milliseconds: 500),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Puerto de `ValidationAlert`: tarjeta de éxito/error del registro de pago.
+class _ValidationAlert extends StatelessWidget {
+  const _ValidationAlert({required this.validation});
+
+  final ValidationResponseDTO validation;
+
+  @override
+  Widget build(BuildContext context) {
+    final success = validation.booleanStatus;
+    final backgroundColor =
+        success ? const Color(0xFFE6F4EA) : const Color(0xFFFFE5E5);
+    final iconTint = success ? const Color(0xFF2E7D32) : Colors.red;
+    // Mejora sobre el original (usaba texto blanco en éxito, ilegible sobre
+    // fondo claro): el texto usa el mismo verde/rojo del ícono.
+    final textColor = success ? const Color(0xFF2E7D32) : Colors.red;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 20),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: backgroundColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.all(8),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    tax.taxName,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                if (isExpired)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'VENCIDO',
-                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildDetailRow('Contribuyente:', tax.name),
-            _buildDetailRow('Referencia:', tax.reference),
-            _buildDetailRow('Factura:', tax.invoice),
-            _buildDetailRow('Vencimiento:', tax.dueDate),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Valor a Pagar:',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  currencyFormatter.format(tax.value),
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: scheme.primary),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onPdfClick,
-                    icon: const Icon(Icons.download),
-                    label: const Text('Descargar'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                if (!isExpired) ...[
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => onPayClick(municipalityBank),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Pagar'),
-                    ),
-                  ),
-                ],
-              ],
+            Icon(success ? Icons.check_circle : Icons.error, color: iconTint),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                validation.sentencesError,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: textColor),
+              ),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+/// Puerto de `DownloadingDialog`: overlay modal no descartable con spinner.
+class _DownloadingDialog extends StatelessWidget {
+  const _DownloadingDialog({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Stack(
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54, fontSize: 13),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: Colors.black87, fontSize: 13),
-              textAlign: TextAlign.end,
+          const ModalBarrier(dismissible: false, color: Colors.black45),
+          Center(
+            child: Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator.adaptive(),
+                    ),
+                    const SizedBox(width: 16),
+                    Flexible(
+                      child: Text(
+                        message,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Botón circular de "atrás" del original (35dp, fondo primary).
+class _CircularBackButton extends StatelessWidget {
+  const _CircularBackButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.primary,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: 35,
+          height: 35,
+          child: Icon(Icons.arrow_back_ios_new,
+              size: 20, color: scheme.onPrimary),
+        ),
       ),
     );
   }

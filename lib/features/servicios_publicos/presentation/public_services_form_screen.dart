@@ -55,19 +55,23 @@ class _PublicServicesFormScreenState extends ConsumerState<PublicServicesFormScr
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final state = ref.read(publicServicesFormNotifierProvider(_familyParam));
       _updateControllers(state);
-      _isEditing = state.pagador.documento.isEmpty;
+      _isEditing = (state.pagador.documento?.isEmpty ?? true);
     });
   }
 
+  void _setText(TextEditingController controller, String? value) {
+    controller.text = value ?? '';
+  }
+
   void _updateControllers(PublicServicesFormState state) {
-    _documentoCtrl.text = state.pagador.documento;
-    _primerNombreCtrl.text = state.pagador.primerNombre;
-    _segundoNombreCtrl.text = state.pagador.segundoNombre;
-    _primerApellidoCtrl.text = state.pagador.primerApellido;
-    _segundoApellidoCtrl.text = state.pagador.segundoApellido;
-    _direccionCtrl.text = state.pagador.direccion;
-    _telefonoCtrl.text = state.pagador.telefono;
-    _emailCtrl.text = state.pagador.email;
+    _setText(_documentoCtrl, state.pagador.documento);
+    _setText(_primerNombreCtrl, state.pagador.primerNombre);
+    _setText(_segundoNombreCtrl, state.pagador.segundoNombre);
+    _setText(_primerApellidoCtrl, state.pagador.primerApellido);
+    _setText(_segundoApellidoCtrl, state.pagador.segundoApellido);
+    _setText(_direccionCtrl, state.pagador.direccion);
+    _setText(_telefonoCtrl, state.pagador.telefono);
+    _setText(_emailCtrl, state.pagador.email);
   }
 
   @override
@@ -113,46 +117,14 @@ class _PublicServicesFormScreenState extends ConsumerState<PublicServicesFormScr
     ref.listen<PublicServicesFormState>(
       publicServicesFormNotifierProvider(_familyParam),
       (previous, next) {
-        if (previous == null || previous.pagador.documento != next.pagador.documento) {
-          if (_documentoCtrl.text != next.pagador.documento) {
-            _documentoCtrl.text = next.pagador.documento;
-          }
-        }
-        if (previous == null || previous.pagador.primerNombre != next.pagador.primerNombre) {
-          if (_primerNombreCtrl.text != next.pagador.primerNombre) {
-            _primerNombreCtrl.text = next.pagador.primerNombre;
-          }
-        }
-        if (previous == null || previous.pagador.segundoNombre != next.pagador.segundoNombre) {
-          if (_segundoNombreCtrl.text != next.pagador.segundoNombre) {
-            _segundoNombreCtrl.text = next.pagador.segundoNombre;
-          }
-        }
-        if (previous == null || previous.pagador.primerApellido != next.pagador.primerApellido) {
-          if (_primerApellidoCtrl.text != next.pagador.primerApellido) {
-            _primerApellidoCtrl.text = next.pagador.primerApellido;
-          }
-        }
-        if (previous == null || previous.pagador.segundoApellido != next.pagador.segundoApellido) {
-          if (_segundoApellidoCtrl.text != next.pagador.segundoApellido) {
-            _segundoApellidoCtrl.text = next.pagador.segundoApellido;
-          }
-        }
-        if (previous == null || previous.pagador.direccion != next.pagador.direccion) {
-          if (_direccionCtrl.text != next.pagador.direccion) {
-            _direccionCtrl.text = next.pagador.direccion;
-          }
-        }
-        if (previous == null || previous.pagador.telefono != next.pagador.telefono) {
-          if (_telefonoCtrl.text != next.pagador.telefono) {
-            _telefonoCtrl.text = next.pagador.telefono;
-          }
-        }
-        if (previous == null || previous.pagador.email != next.pagador.email) {
-          if (_emailCtrl.text != next.pagador.email) {
-            _emailCtrl.text = next.pagador.email;
-          }
-        }
+        _setText(_documentoCtrl, next.pagador.documento);
+        _setText(_primerNombreCtrl, next.pagador.primerNombre);
+        _setText(_segundoNombreCtrl, next.pagador.segundoNombre);
+        _setText(_primerApellidoCtrl, next.pagador.primerApellido);
+        _setText(_segundoApellidoCtrl, next.pagador.segundoApellido);
+        _setText(_direccionCtrl, next.pagador.direccion);
+        _setText(_telefonoCtrl, next.pagador.telefono);
+        _setText(_emailCtrl, next.pagador.email);
 
         if (next.transactionResponse?.result?.url != null) {
           final url = next.transactionResponse!.result!.url!;

@@ -50,6 +50,13 @@ import '../../features/cursos/presentation/courses_screen.dart';
 import '../../features/venues/application/venues_notifier.dart';
 import '../../features/venues/presentation/venues_screen.dart';
 
+// Soporte / Ayuda
+import '../../features/soporte/presentation/help_screen.dart';
+
+// Perfil / Ajustes
+import '../../features/perfil/presentation/user_settings_screen.dart';
+import '../../features/perfil/presentation/edit_profile_screen.dart';
+
 // Historial Pagos
 import '../../features/historial_pagos/presentation/history_pay_screen.dart';
 
@@ -147,10 +154,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               final extra = state.extra as Map<String, dynamic>?;
               final taxId = extra?['taxId'] as int? ?? 1;
               final title = extra?['title'] as String? ?? 'Impuestos';
+              final dataPolicyUrl = extra?['dataPolicyUrl'] as String? ?? '';
+              final privacyPolicyUrl =
+                  extra?['privacyPolicyUrl'] as String? ?? '';
               return ConsultaImpuestoScreen(
                 municipalityId: id,
                 taxId: taxId,
                 title: title,
+                dataPolicyUrl: dataPolicyUrl,
+                privacyPolicyUrl: privacyPolicyUrl,
               );
             },
           ),
@@ -277,11 +289,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               final extra = state.extra as Map<String, dynamic>?;
               final paymentUrl = extra?['paymentUrl'] as String? ?? '';
-              final tax = extra?['tax'] as Tax;
               return PaymentProcessingScreen(
                 municipalityId: id,
                 paymentUrl: paymentUrl,
-                tax: tax,
               );
             },
           ),
@@ -321,6 +331,27 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ),
               );
             },
+          ),
+          GoRoute(
+            path: AppRoutes.help,
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>?;
+              return HelpScreen(
+                municipality: extra?['municipality'] as String? ?? '',
+                portal: extra?['portal'] as String? ?? '',
+              );
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.settings,
+            builder: (context, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+              return UserSettingsScreen(municipalityId: id);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.editProfile,
+            builder: (context, state) => const EditProfileScreen(),
           ),
         ],
       ),

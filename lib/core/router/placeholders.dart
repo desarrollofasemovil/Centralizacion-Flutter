@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../municipality/municipality_repository.dart';
-import '../storage/user_preferences.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_mode_provider.dart';
 
 // Pantallas placeholder de la Fase 1. Se reemplazan por las reales en la Fase 2
 // (ver FRONTEND §5). Aquí solo validan navegación, arranque y theming dinámico.
@@ -35,7 +35,7 @@ class AlcaldiasScope extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dark = ref.watch(userPreferencesProvider).isDarkTheme();
+    final dark = ref.watch(themeIsDarkProvider);
     final async = ref.watch(municipalityProvider(municipalityId));
 
     return async.when(
