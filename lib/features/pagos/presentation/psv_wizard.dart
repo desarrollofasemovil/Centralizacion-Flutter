@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
-import '../../impuestos/domain/tax.dart';
 import '../application/psv_notifier.dart';
 import '../domain/psv_state.dart';
 
@@ -122,8 +121,6 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
     });
 
     try {
-      final state = ref.read(psvFormNotifierProvider);
-      
       // Determine integrationType (matched procedure integrationType)
       final asyncMun = ref.read(municipalityProvider(widget.municipalityId));
       final mun = asyncMun.value;
@@ -145,28 +142,10 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
         _isSubmitting = false;
       });
 
-      // Construct a mock Tax object to pass to the processing screen
-      final taxMock = Tax(
-        entity: 'Pago Sin Validación',
-        entityCode: widget.entityCode,
-        document: state.documentNumber,
-        name: state.fullName,
-        taxName: widget.taxName,
-        taxId: widget.taxId,
-        value: state.amount,
-        invoice: state.invoiceNumber.isNotEmpty ? state.invoiceNumber : 'PSV',
-        reference: state.invoiceNumber.isNotEmpty ? state.invoiceNumber : 'PSV',
-        dueDate: DateTime.now().add(const Duration(days: 1)).toIso8601String(),
-        queryField: 'Manual',
-      );
-
       if (mounted) {
         context.push(
           '/municipality/${widget.municipalityId}/pagos/processing',
-          extra: {
-            'paymentUrl': gatewayInfo.url,
-            'tax': taxMock,
-          },
+          extra: {'paymentUrl': gatewayInfo.url},
         );
       }
     } catch (e) {

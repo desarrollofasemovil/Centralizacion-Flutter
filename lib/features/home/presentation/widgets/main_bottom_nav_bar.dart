@@ -74,23 +74,40 @@ class MainBottomNavBar extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        child: NavigationBar(
-          backgroundColor: primaryColor,
-          indicatorColor: darkerPrimaryColor,
-          selectedIndex: selectedIndex,
-          onDestinationSelected: onTap,
-          destinations: items.map((item) {
-            final isSelected = items.indexOf(item) == selectedIndex;
-            return NavigationDestination(
-              icon: Icon(
-                item.icon,
-                color: isSelected ? adaptiveSelectedIconColor : adaptiveUnselectedIconColor,
-                size: 25,
-              ),
-              label: item.label,
-            );
-          }).toList(),
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        // NavigationBarTheme local: el color de las etiquetas y del indicador
+        // debe ser el adaptativo sobre `primary` (port de selectedTextColor /
+        // unselectedTextColor / indicatorColor de MainBottomNavBar.kt); sin
+        // esto los labels usan onSurface del tema y se pierden sobre el fondo.
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              final color = states.contains(WidgetState.selected)
+                  ? adaptiveSelectedIconColor
+                  : adaptiveUnselectedIconColor;
+              return theme.textTheme.labelMedium?.copyWith(color: color) ??
+                  TextStyle(color: color, fontSize: 12);
+            }),
+          ),
+          child: NavigationBar(
+            backgroundColor: primaryColor,
+            indicatorColor: darkerPrimaryColor,
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onTap,
+            destinations: items.map((item) {
+              final isSelected = items.indexOf(item) == selectedIndex;
+              return NavigationDestination(
+                icon: Icon(
+                  item.icon,
+                  color: isSelected
+                      ? adaptiveSelectedIconColor
+                      : adaptiveUnselectedIconColor,
+                  size: 25,
+                ),
+                label: item.label,
+              );
+            }).toList(),
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          ),
         ),
       ),
     );

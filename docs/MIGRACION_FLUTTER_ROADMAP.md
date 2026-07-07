@@ -57,6 +57,7 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 - [x] Trámites + motor de decisión `toInfoTramite`/`toDomainModel` (portar con tests) — `FRONTEND.md §6`
 - [x] PQRD (anónima + identificada, 3 pasos; catálogos por `CodigoEntidad`)
 - [x] Impuestos (consulta dinámica por `queryFields` + respuesta + descarga PDF) 🍎
+  - [x] Repaso de fidelidad 2026-07: UI portada de `TaxQueryScreen.kt`/`RespuestaConsultaScreen.kt`, validaciones en notifier, botón "Pagar por PSE" (Custom Tabs/Safari VC vía `abrirUrl`), descarga + compartir factura PDF (`share_plus`), registro en historial y pantalla "Procesando tu pago" con countdown
 - [x] Certificados (3 pasos)
 - [x] Servicios Públicos + escáner QR/barcode (`mobile_scanner`) 🍎
 - [x] Pagos: PSV + PaymentProcessing (pasarela) + estado de transacción
@@ -69,8 +70,8 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 - [x] 🟦 Cursos (`CourseRepository` → Flutter)
 - [x] 🟦 Escenarios deportivos (`VenueRepository` → Flutter, reserva + email)
 - [x] Recordatorios + calendario
-- [ ] Soporte / Ayuda (formulario → email)
-- [ ] Editar perfil + configuración de usuario + cambio de contraseña
+- [x] Soporte / Ayuda (formulario → email)
+- [x] Editar perfil + configuración de usuario + cambio de contraseña
 
 ## Fase 5 — Ajuste iOS 🍎
 

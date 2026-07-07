@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:path_provider/path_provider.dart';
+
 import '../../../core/api/services/tax_api_service.dart';
 import '../../../core/api/services/fintech_api_service.dart';
 import '../../../core/models/tax_dto.dart';
@@ -30,16 +34,16 @@ class TaxRepository {
 
     return infoList.map((dto) {
       return Tax(
-        entity: dto.entity,
-        entityCode: dto.entityCode,
-        document: dto.document,
-        name: dto.name,
-        taxName: dto.taxName,
-        taxId: dto.taxId,
-        value: dto.value,
-        invoice: dto.facturaCode,
-        reference: dto.reference,
-        dueDate: dto.dueDate,
+        entity: dto.entity ?? '',
+        entityCode: dto.entityCode ?? '',
+        document: dto.document ?? '',
+        name: dto.name ?? '',
+        taxName: dto.taxName ?? '',
+        taxId: dto.taxId ?? 0,
+        value: dto.value ?? 0,
+        invoice: dto.facturaCode ?? '',
+        reference: dto.reference ?? '',
+        dueDate: dto.dueDate ?? '',
         pdfUrltoApi: dto.detail?.url,
         portalUrl: dto.detail?.portalUrl,
         queryField: queryField,
@@ -77,7 +81,7 @@ class TaxRepository {
       implementationType: 1,
     );
     final res = await _paymentApi.createTransaction(request);
-    return PaymentGatewayInfo(url: res.url);
+    return PaymentGatewayInfo(url: res.url ?? '');
   }
 
   Future<PaymentGatewayInfo> _processFintechTransaction(
@@ -115,12 +119,36 @@ class TaxRepository {
     final res = await _fintechApi.transactionFintech(municipalityId, request);
     final urlPago = res.result?.url;
 
-    if (res.isSuccess && urlPago != null && urlPago.isNotEmpty) {
+    if (res.isSuccess == true && urlPago != null && urlPago.isNotEmpty) {
       return PaymentGatewayInfo(url: urlPago);
     } else {
       final errorMsg = res.message ?? 'Error desconocido en pasarela Fintech';
       throw Exception(errorMsg);
     }
+  }
+
+  /// Puerto de `DownloadInvoiceUseCase`: usa la URL directa si viene en el
+  /// impuesto; si no, la pide al servidor. Descarga el PDF y devuelve la ruta
+  /// local del archivo (`factura_<referencia>.pdf`).
+  ///
+  /// Nota (iOS/Android): el original guardaba en Descargas con MediaStore;
+  /// aquí se guarda en el directorio de la app y se abre/comparte con el visor
+  /// del sistema, que es el equivalente multiplataforma.
+  Future<String> downloadInvoiceFile(Tax tax) async {
+    final url = (tax.pdfUrltoApi != null && tax.pdfUrltoApi!.trim().isNotEmpty)
+        ? tax.pdfUrltoApi!
+        : await getInvoicePdfUrl(tax);
+
+    final bytes = await _taxApi.downloadFile(url);
+    if (bytes.isEmpty) {
+      throw Exception('El cuerpo de la respuesta está vacío.');
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final safeReference = tax.reference.replaceAll(RegExp(r'[^\w\-]'), '_');
+    final file = File('${dir.path}/factura_$safeReference.pdf');
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
   }
 
   Future<String> getInvoicePdfUrl(Tax tax) async {

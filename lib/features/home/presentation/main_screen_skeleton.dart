@@ -79,7 +79,9 @@ class MainScreenSkeleton extends StatelessWidget {
                   top: Radius.circular(20),
                 ),
                 child: Container(
-                  color: theme.colorScheme.surface,
+                  // Fondo de página = `background` del original (White /
+                  // Gray1000), igual que en MainScreen.
+                  color: theme.colorScheme.surfaceContainerLowest,
                   child: SingleChildScrollView(
                     physics: const NeverScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),

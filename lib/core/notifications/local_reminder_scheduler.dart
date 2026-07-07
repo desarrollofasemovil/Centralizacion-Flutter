@@ -4,6 +4,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+// FIXME(reminders/notificaciones) — PENDIENTE DE ARREGLAR (revisar más adelante).
+// La entrega de las notificaciones locales PROGRAMADAS de los recordatorios no
+// es confiable todavía. La notificación inmediata de confirmación (`showNow`) sí
+// aparece, pero la agendada con `zonedSchedule` no siempre se dispara a la hora.
+// Puntos a investigar cuando se retome:
+//   1. Android 12+ (API 31+): `exactAllowWhileIdle` requiere el permiso
+//      SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM; si el usuario no lo concede caemos
+//      a `inexactAllowWhileIdle` (agrupada por el sistema, puede llegar tarde).
+//      Falta pedir/verificar `requestExactAlarmsPermission()` y declararlo en el
+//      Manifest.
+//   2. Optimización de batería / Doze de fabricantes (Xiaomi, Samsung, etc.)
+//      puede matar la alarma. Considerar avisar al usuario o whitelisting.
+//   3. Zona horaria fija `America/Bogota` (ver nota abajo) — validar el cálculo
+//      del `TZDateTime` contra la hora local real del dispositivo.
+//   4. iOS: sin verificar en iPhone físico (entorno sin Mac). Confirmar permisos
+//      y entrega en background.
+// Al retomar, actualizar también [[fase4-and-main-polish-status]].
+
 /// Programa notificaciones locales para los recordatorios (equivalente a la
 /// lógica de `AlarmManager` del `RemindersViewModel` original de Android).
 ///

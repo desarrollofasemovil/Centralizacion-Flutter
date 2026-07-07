@@ -136,12 +136,12 @@ class PublicServicesFormNotifier extends Notifier<PublicServicesFormState> {
 
   bool isFormValid() {
     final p = state.pagador;
-    return p.documento.trim().isNotEmpty &&
-        p.primerNombre.trim().isNotEmpty &&
-        p.primerApellido.trim().isNotEmpty &&
-        p.direccion.trim().isNotEmpty &&
-        p.telefono.trim().isNotEmpty &&
-        p.email.trim().isNotEmpty;
+    return (p.documento?.trim().isNotEmpty ?? false) &&
+        (p.primerNombre?.trim().isNotEmpty ?? false) &&
+        (p.primerApellido?.trim().isNotEmpty ?? false) &&
+        (p.direccion?.trim().isNotEmpty ?? false) &&
+        (p.telefono?.trim().isNotEmpty ?? false) &&
+        (p.email?.trim().isNotEmpty ?? false);
   }
 
   Future<void> submitTransaction() async {

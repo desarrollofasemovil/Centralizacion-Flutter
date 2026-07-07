@@ -223,6 +223,9 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
       final enriched = _withNavigation(created, procedure);
       _checkExpired([...state.reminders, enriched]);
 
+      // FIXME(reminders/notificaciones): la notificación PROGRAMADA no se
+      // entrega de forma confiable a la hora prevista. Pendiente de arreglar
+      // más adelante — ver el bloque FIXME en `local_reminder_scheduler.dart`.
       final scheduled = await _scheduler.schedule(
         id: created.id!,
         title: title,

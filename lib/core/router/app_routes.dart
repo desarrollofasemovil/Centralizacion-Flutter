@@ -29,6 +29,9 @@ class AppRoutes {
   static const pagosHistory = '/municipality/:id/pagos/history';
   static const cursos = '/municipality/:id/cursos';
   static const venues = '/municipality/:id/venues';
+  static const help = '/municipality/:id/help';
+  static const settings = '/municipality/:id/settings';
+  static const editProfile = '/municipality/:id/edit-profile';
 
   static String selectMunicipalityPath(int departmentId) =>
       '/select-municipality/$departmentId';
@@ -45,6 +48,9 @@ class AppRoutes {
   static String pagosHistoryPath(int id) => '/municipality/$id/pagos/history';
   static String cursosPath(int id) => '/municipality/$id/cursos';
   static String venuesPath(int id) => '/municipality/$id/venues';
+  static String helpPath(int id) => '/municipality/$id/help';
+  static String settingsPath(int id) => '/municipality/$id/settings';
+  static String editProfilePath(int id) => '/municipality/$id/edit-profile';
 }
 
 

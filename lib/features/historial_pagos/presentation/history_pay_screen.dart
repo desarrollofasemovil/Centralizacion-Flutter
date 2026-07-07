@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/router/app_routes.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
+import '../../home/presentation/widgets/main_bottom_nav_bar.dart';
+import '../../tramites/application/tramite_mappers.dart';
 import '../application/history_pay_notifier.dart';
 
 class HistoryPayScreen extends ConsumerWidget {
@@ -125,6 +131,29 @@ class HistoryPayScreen extends ConsumerWidget {
                 ),
               ),
             ),
+      // Mismo BottomMenu de la Home, con "Historial" seleccionado.
+      bottomNavigationBar: MainBottomNavBar(
+        selectedRoute: 'history',
+        onTap: (index) async {
+          if (index == 0) {
+            context.go(AppRoutes.municipalityPath(municipalityId));
+            return;
+          }
+          if (index == 1 || index == 2) {
+            final mun = ref.read(municipalityProvider(municipalityId)).value;
+            if (mun == null) return;
+            final domainModel = mun.toDomainModel();
+            final url = index == 1 ? domainModel.newsUrl : domainModel.domain;
+            if (url.isNotEmpty) {
+              final uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            }
+          }
+          // index == 3: ya estamos en Historial.
+        },
+      ),
     );
   }
 
