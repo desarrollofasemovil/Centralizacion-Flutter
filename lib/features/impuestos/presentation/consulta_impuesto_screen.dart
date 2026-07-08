@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/municipality/municipality_repository.dart';
 import '../../../core/widgets/important_alert_dialog.dart';
 import '../../auth/application/auth_providers.dart';
-import '../../home/presentation/widgets/policy_checkboxes.dart';
+import '../../../core/widgets/policy_checkboxes.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../application/tax_notifier.dart';
 import 'widgets/styled_dropdown_menu.dart';

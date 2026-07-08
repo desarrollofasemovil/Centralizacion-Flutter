@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
-import 'widgets/footer_sponsors.dart';
+import '../../../core/widgets/footer_sponsors.dart';
 
 /// Recuperar contraseña — re-estilizado acorde a `RecoveryPasswordScreen.kt`:
 /// fondo navy (`primarycolor`), logo centrado, campo blanco redondeado, botones

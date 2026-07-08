@@ -64,6 +64,20 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 - [x] Historial de pagos
 
 > ✅ **Fase 3 verificada**: Módulos core (Trámites con mappers y tests unitarios, PQRD, Impuestos con consulta y descarga de PDF, Certificados en 3 pasos, Servicios Públicos con escaneo de código de barras, Pagos PSV y pasarela, e Historial de pagos) completamente implementados en el código Dart.
+>
+> 🔧 **Repaso motor de trámites 2026-07-07 (acciones de botón)**: verificado que `toInfoTramite`/`toDomainModel` mapean las 8 reglas de `FRONTEND.md §6.3` (Pánico, PQRD nativo, Certificados, Servicios Públicos, **PT/portal tributario** `AbrirUrl`, PSV, Consulta de impuesto, Cursos/Escenarios). **Corregido el despacho del PT**: `AbrirUrl`/`AbrirUrlDirecto` ahora abren con el navegador in-app (`abrirUrl()` → Chrome Custom Tabs / Safari VC) tintado con el color del municipio, igual que `abrirURL(context, url, colorPrimario)` del original; antes usaban `launchUrl(externalApplication)`. Mismo cambio en las 3 URLs del Home (términos, noticias, portal `domain`).
+
+## Componentes compartidos (`core/widgets`) — `FRONTEND.md §5.15`
+
+- [x] Centralizados en `core/widgets/` (antes dispersos en features): `ConfirmationDialog`, `ImportantAlertDialog`, `FooterSponsors`, `PolicyCheckboxes` (+`PolicyCheckboxRow`), `PanicCountdownDialog`, `SwipeUpDismissBox`.
+- [x] Portados fielmente del codebase: `ErrorMunicipalityScreen` (cableado en `AlcaldiasScope`, reemplaza el stub), `ValidationErrorDialog`, `ConfirmationPoliciesDialog`.
+- [x] `AlcaldiasStateWrapper` → implementado como `AlcaldiasScope` (theming dinámico) en `core/router/placeholders.dart`.
+- [x] `RequestNotificationPermission`: cubierto por `core/notifications` (FCM `requestPermission` + locales `requestNotificationsPermission`) — no requiere widget.
+- [ ] **Consumir los dialogs centralizados**: reemplazar los diálogos inline de certificados/psv por `ValidationErrorDialog`, y cablear `ConfirmationPoliciesDialog` en PQRD paso 3.
+- [ ] `NoConnectionDialog`: requiere el observador de conectividad a nivel app (`connectivity_plus`, `FRONTEND.md §3`) antes de portar el diálogo. Aún sin implementar.
+- [ ] `TopbarNavigation` compartido: hoy certificados/psv/pqrd/history tienen su propio AppBar. Unificar en un componente común (refactor de ~5 pantallas).
+- [ ] `StepIndicator`: unificar el duplicado inline de los 4 wizards (signup/certificados/psv/pqrd) en un solo componente (`FRONTEND.md §11.5`).
+- [ ] `NotificationHelper`: portar las notificaciones locales de confirmación de Cursos/Escenarios (`showCourseRegistrationNotification`/`showVenueReservationNotification`) sobre `flutter_local_notifications`.
 
 ## Fase 4 — Módulos + perfil
 

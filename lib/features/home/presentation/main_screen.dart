@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/municipality_dto.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
+import '../../../core/utils/url_opener.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../reminders/presentation/reminders_section.dart';
@@ -20,7 +20,7 @@ import 'widgets/main_side_menu_options.dart';
 import 'widgets/main_top_bar.dart';
 import 'widgets/maintenance_info_card.dart';
 import 'widgets/modal_form.dart';
-import 'widgets/panic_countdown_dialog.dart';
+import '../../../core/widgets/panic_countdown_dialog.dart';
 import 'widgets/tramites_section.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
@@ -105,10 +105,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       mainViewModelProvider(widget.municipality.id).select((s) => s.urlToOpen),
       (prev, next) async {
         if (next != null && next.isNotEmpty) {
-          final uri = Uri.parse(next);
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
+          // Portal tributario / URLs de trámite: se abren en el navegador in-app
+          // (Chrome Custom Tabs / Safari VC) tintado con el color del municipio,
+          // igual que `abrirURL(context, url, colorPrimario)` del original.
+          await abrirUrl(next, toolbarColor: theme.colorScheme.primary);
           notifier.clearUrlToOpen();
         }
       },
@@ -294,10 +294,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               final url =
                   widget.municipality.dataPrivacy ??
                   "https://www.1cero1.com/tratamientos.html";
-              final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
+              await abrirUrl(url, toolbarColor: theme.colorScheme.primary);
             },
             goToHelp: () {
               Navigator.pop(context);
@@ -454,18 +451,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             } else if (index == 1) {
               final url = domainModel.newsUrl;
               if (url.isNotEmpty) {
-                final uri = Uri.parse(url);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
+                await abrirUrl(url, toolbarColor: theme.colorScheme.primary);
               }
             } else if (index == 2) {
               final url = domainModel.domain;
               if (url.isNotEmpty) {
-                final uri = Uri.parse(url);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
+                await abrirUrl(url, toolbarColor: theme.colorScheme.primary);
               }
             } else if (index == 3) {
               context.push(AppRoutes.pagosHistoryPath(widget.municipality.id));

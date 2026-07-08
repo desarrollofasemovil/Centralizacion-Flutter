@@ -7,7 +7,7 @@ import '../../../../core/models/people_invitated.dart';
 import '../../../../core/storage/user_preferences.dart';
 import '../../../auth/application/auth_providers.dart';
 import '../../application/main_viewmodel.dart';
-import 'policy_checkboxes.dart';
+import '../../../../core/widgets/policy_checkboxes.dart';
 
 class ModalForm extends ConsumerStatefulWidget {
   final ModalFormMode mode;

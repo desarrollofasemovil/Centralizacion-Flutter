@@ -8,7 +8,7 @@ import '../../../core/widgets/confirmation_dialog.dart';
 import '../../auth/application/auth_providers.dart';
 import '../application/reminders_notifier.dart';
 import 'widgets/create_reminder_modal.dart';
-import 'widgets/swipe_up_dismiss_box.dart';
+import '../../../core/widgets/swipe_up_dismiss_box.dart';
 
 /// Sección de Recordatorios de la Home. Port de `RemindersSection` del
 /// `RemindersScreen.kt` original (carrusel de tarjetas + modal de creación).
