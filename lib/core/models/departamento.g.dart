@@ -7,7 +7,7 @@ part of 'departamento.dart';
 // **************************************************************************
 
 Departamento _$DepartamentoFromJson(Map<String, dynamic> json) => Departamento(
-  id: json['Id'] as String,
+  id: pqrdIdToString(json['Id']),
   nombreDepartamento: json['NombreDepartamento'] as String,
 );
 

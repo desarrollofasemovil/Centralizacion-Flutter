@@ -7,7 +7,7 @@ part of 'ciudad.dart';
 // **************************************************************************
 
 Ciudad _$CiudadFromJson(Map<String, dynamic> json) => Ciudad(
-  id: json['Id'] as String,
+  id: pqrdCiudadIdToString(json['Id']),
   nombreCiudad: json['NombreCiudad'] as String,
 );
 
