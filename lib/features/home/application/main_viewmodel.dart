@@ -223,21 +223,23 @@ class MainViewModel extends Notifier<MainUiState> {
   }
 
   Future<void> onModalConfirmed(UserDTO guestUser) async {
+    // ⚠️ Capturar la URL pendiente y limpiar el estado del modal ANTES de
+    // cualquier `await`. El `.then()` del bottom sheet corre al cerrarse y, si
+    // `modalMode` aún figura abierto, dispara `onModalDismissed()` que limpia
+    // `pendingUrl`. Como aquí hay `await` (guardar datos), esa limpieza ganaba
+    // la carrera y al reanudar leíamos `pendingUrl == null` → el PT no abría al
+    // primer "Continuar" (solo al segundo toque). Limpiar `modalMode` de forma
+    // síncrona hace que ese `.then()` vea `modalMode == null` y no interfiera.
+    final url = state.pendingUrl;
+    final panicAction = state.pendingPanicAction;
+    state = state.copyWith(clearModalMode: true, clearPendingUrl: true);
+
     // Si es un usuario invitado, guardar localmente sus datos
     final currentUser = state.currentUser;
     if (currentUser == null) {
       await _prefs.saveGuestUserDataJson(jsonEncode(guestUser.toJson()));
     }
-
     await _prefs.saveModalFormCompleted(true);
-
-    final url = state.pendingUrl;
-    final panicAction = state.pendingPanicAction;
-
-    state = state.copyWith(
-      clearModalMode: true,
-      clearPendingUrl: true,
-    );
 
     if (panicAction != null) {
       // Activar diálogo de pánico directamente tras llenar los datos
