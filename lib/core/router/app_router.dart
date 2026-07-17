@@ -19,7 +19,8 @@ import '../../features/news/presentation/news_screen.dart';
 
 // PQRD
 import '../../features/pqrd/presentation/pqrds_choice_screen.dart';
-import '../../features/pqrd/presentation/pqrd_wizard.dart';
+import '../../features/pqrd/presentation/pqrd_identificacion_screen.dart';
+import '../../features/pqrd/presentation/pqrd_anonima_screen.dart';
 
 // Impuestos
 import '../../features/impuestos/domain/tax.dart';
@@ -136,14 +137,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/municipality/:id/pqrd/identificada',
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-              return PqrdWizard(municipalityId: id, isAnonymous: false);
+              return PqrdIdentificacionScreen(municipalityId: id);
             },
           ),
           GoRoute(
             path: '/municipality/:id/pqrd/anonima',
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-              return PqrdWizard(municipalityId: id, isAnonymous: true);
+              return PqrdAnonimaScreen(municipalityId: id);
             },
           ),
           // Impuestos sub-routes

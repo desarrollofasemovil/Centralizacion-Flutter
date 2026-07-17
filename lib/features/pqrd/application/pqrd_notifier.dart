@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/models/user_dto.dart';
@@ -43,36 +44,89 @@ class PqrdDropdownOptionsNotifier extends Notifier<PqrdDropdownOptionsState> {
 
   PqrdRepository get _repository => ref.read(pqrdRepositoryProvider);
 
+  /// Dedup: evita relanzar el lote completo cuando el flujo entra dos veces
+  /// (la pantalla de elección y el wizard llamaban ambos a `loadCatalogData`,
+  /// disparando el lote de 18 GET por duplicado — visto en logs de red).
+  bool _catalogInFlight = false;
+  String? _loadedEntityCode;
+
+  /// Ejecuta [future] y, si falla (error de red o de parseo del DTO), devuelve
+  /// una lista vacía en vez de propagar. Replica el try/catch por-endpoint del
+  /// `PqrdRepositoryImpl` de Kotlin: así un único catálogo defectuoso no vacía
+  /// TODOS los selects. Antes un `Future.wait` sin protección tumbaba el lote
+  /// entero cuando un solo endpoint (p. ej. Departamentos, que envía `Id`
+  /// numérico) lanzaba al deserializar.
+  Future<List<T>> _safe<T>(String tag, Future<List<T>> future) async {
+    try {
+      return await future;
+    } catch (e) {
+      debugPrint('PQRD_CATALOG: "$tag" falló -> $e');
+      return <T>[];
+    }
+  }
+
   Future<void> loadCatalogData(String codigoEntidad) async {
+    if (_catalogInFlight) return;
+    if (_loadedEntityCode == codigoEntidad && !state.isLoading) return;
+    _catalogInFlight = true;
     state = state.copyWith(isLoading: true);
     try {
       final results = await Future.wait([
-        _repository.listSecretariaEntidad(codigoEntidad),
-        _repository.listAsuntoInteres(codigoEntidad),
-        _repository.listClasificacionSolicitud(codigoEntidad),
-        _repository.listTipoSolicitante(codigoEntidad),
-        _repository.listAtencionPreferencial(codigoEntidad),
-        _repository.listMedioRespuesta(codigoEntidad),
-        _repository.listTipoDocumento(codigoEntidad),
-        _repository.getListGrupoInteresPQRD(codigoEntidad),
-        _repository.listDiscapacidadPQRD(codigoEntidad),
-        _repository.getListGrupoEtnicoPQRD(codigoEntidad),
-        _repository.listGeneroPQRD(codigoEntidad),
-        _repository.listRangoEdadPQRD(codigoEntidad),
-        _repository.listActividadEconomicaPQRD(codigoEntidad),
-        _repository.listNivelEstratoPQRD(codigoEntidad),
-        _repository.listNivelSisbenPQRD(codigoEntidad),
-        _repository.listEscolaridadPQRD(codigoEntidad),
-        _repository.listVulnerabilidadPQRD(codigoEntidad),
-        _repository.getDepartamentos(),
+        _safe('secretarias', _repository.listSecretariaEntidad(codigoEntidad)),
+        _safe('asuntosInteres', _repository.listAsuntoInteres(codigoEntidad)),
+        _safe(
+          'clasificaciones',
+          _repository.listClasificacionSolicitud(codigoEntidad),
+        ),
+        _safe(
+          'tiposSolicitante',
+          _repository.listTipoSolicitante(codigoEntidad),
+        ),
+        _safe(
+          'atencionesPreferenciales',
+          _repository.listAtencionPreferencial(codigoEntidad),
+        ),
+        _safe('mediosRespuesta', _repository.listMedioRespuesta(codigoEntidad)),
+        _safe('tiposDocumento', _repository.listTipoDocumento(codigoEntidad)),
+        _safe(
+          'gruposInteres',
+          _repository.getListGrupoInteresPQRD(codigoEntidad),
+        ),
+        _safe(
+          'discapacidades',
+          _repository.listDiscapacidadPQRD(codigoEntidad),
+        ),
+        _safe(
+          'gruposEtnicos',
+          _repository.getListGrupoEtnicoPQRD(codigoEntidad),
+        ),
+        _safe('generos', _repository.listGeneroPQRD(codigoEntidad)),
+        _safe('rangosEdad', _repository.listRangoEdadPQRD(codigoEntidad)),
+        _safe(
+          'actividadesEconomicas',
+          _repository.listActividadEconomicaPQRD(codigoEntidad),
+        ),
+        _safe(
+          'nivelesEstrato',
+          _repository.listNivelEstratoPQRD(codigoEntidad),
+        ),
+        _safe('nivelesSisben', _repository.listNivelSisbenPQRD(codigoEntidad)),
+        _safe('escolaridades', _repository.listEscolaridadPQRD(codigoEntidad)),
+        _safe(
+          'vulnerabilidades',
+          _repository.listVulnerabilidadPQRD(codigoEntidad),
+        ),
+        _safe('departamentos', _repository.getDepartamentos()),
       ]);
 
       state = PqrdDropdownOptionsState(
         secretarias: (results[0] as List).cast<Secretaria>(),
         asuntosInteres: (results[1] as List).cast<AsuntoInteres>(),
-        clasificacionesSolicitud: (results[2] as List).cast<ClasificacionSolicitud>(),
+        clasificacionesSolicitud: (results[2] as List)
+            .cast<ClasificacionSolicitud>(),
         tiposSolicitante: (results[3] as List).cast<TipoSolicitante>(),
-        atencionesPreferenciales: (results[4] as List).cast<AtencionPreferencial>(),
+        atencionesPreferenciales: (results[4] as List)
+            .cast<AtencionPreferencial>(),
         mediosRespuesta: (results[5] as List).cast<MedioRespuesta>(),
         tiposDocumento: (results[6] as List).cast<TipoDocumento>(),
         gruposInteres: (results[7] as List).cast<GrupoInteresPQRD>(),
@@ -80,7 +134,8 @@ class PqrdDropdownOptionsNotifier extends Notifier<PqrdDropdownOptionsState> {
         gruposEtnicos: (results[9] as List).cast<GrupoEtnicoPQRD>(),
         generos: (results[10] as List).cast<GeneroPQRD>(),
         rangosEdad: (results[11] as List).cast<RangoEdadPQRD>(),
-        actividadesEconomicas: (results[12] as List).cast<ActividadEconomicaPQRD>(),
+        actividadesEconomicas: (results[12] as List)
+            .cast<ActividadEconomicaPQRD>(),
         nivelesEstrato: (results[13] as List).cast<NivelEstratoPQRD>(),
         nivelesSisben: (results[14] as List).cast<NivelSisbenPQRD>(),
         escolaridades: (results[15] as List).cast<EscolaridadPQRD>(),
@@ -89,19 +144,25 @@ class PqrdDropdownOptionsNotifier extends Notifier<PqrdDropdownOptionsState> {
         isLoading: false,
       );
 
+      _loadedEntityCode = codigoEntidad;
+
       final user = ref.read(sessionProvider);
       if (user != null) {
         ref.read(pqrdFormStateProvider.notifier).autofill(user, state);
       }
     } catch (e) {
       state = state.copyWith(isLoading: false);
+    } finally {
+      _catalogInFlight = false;
     }
   }
 
-  Future<void> loadCiudades(int departamentoId) async {
+  /// [departamentoId] es el `Departamento.id` (String, p. ej. "5"); el backend
+  /// espera `?id_Departamento=`.
+  Future<void> loadCiudades(String departamentoId) async {
     state = state.copyWith(isLoadingCiudades: true);
     try {
-      final list = await _repository.getCiudadesPorDepartamento(departamentoId.toString());
+      final list = await _repository.getCiudadesPorDepartamento(departamentoId);
       state = state.copyWith(ciudades: list, isLoadingCiudades: false);
     } catch (e) {
       state = state.copyWith(isLoadingCiudades: false);
@@ -110,7 +171,9 @@ class PqrdDropdownOptionsNotifier extends Notifier<PqrdDropdownOptionsState> {
 }
 
 final pqrdDropdownOptionsProvider =
-    NotifierProvider<PqrdDropdownOptionsNotifier, PqrdDropdownOptionsState>(PqrdDropdownOptionsNotifier.new);
+    NotifierProvider<PqrdDropdownOptionsNotifier, PqrdDropdownOptionsState>(
+      PqrdDropdownOptionsNotifier.new,
+    );
 
 class PqrdFormStateNotifier extends Notifier<PqrdFormState> {
   @override
@@ -181,7 +244,9 @@ class PqrdFormStateNotifier extends Notifier<PqrdFormState> {
       primerNombre: state.primerNombre,
       segundoApellido: state.segundoApellido,
       segundoNombre: state.segundoNombre,
-      telefono: state.telefonoCelular.isNotEmpty ? state.telefonoCelular : state.telefonoFijo,
+      telefono: state.telefonoCelular.isNotEmpty
+          ? state.telefonoCelular
+          : state.telefonoFijo,
       tipoDocumento: state.tipoDocumento?.id ?? 0,
     );
     final body = PqrdIdentificacionPost(
@@ -217,4 +282,7 @@ class PqrdFormStateNotifier extends Notifier<PqrdFormState> {
   }
 }
 
-final pqrdFormStateProvider = NotifierProvider<PqrdFormStateNotifier, PqrdFormState>(PqrdFormStateNotifier.new);
+final pqrdFormStateProvider =
+    NotifierProvider<PqrdFormStateNotifier, PqrdFormState>(
+      PqrdFormStateNotifier.new,
+    );
