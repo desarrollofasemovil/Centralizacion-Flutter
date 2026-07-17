@@ -10,7 +10,7 @@ import '../../../core/models/department.dart';
 import '../../../core/router/app_routes.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
-import '../../auth/presentation/widgets/footer_sponsors.dart';
+import '../../../core/widgets/footer_sponsors.dart';
 import '../application/welcome_controller.dart';
 
 

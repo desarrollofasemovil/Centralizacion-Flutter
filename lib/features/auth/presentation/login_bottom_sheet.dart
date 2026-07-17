@@ -7,7 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../application/auth_providers.dart';
 import '../application/login_options_controller.dart';
 import '../application/registration_draft.dart';
-import 'widgets/footer_sponsors.dart';
+import '../../../core/widgets/footer_sponsors.dart';
 
 /// Resultado con el que se cierra el sheet, para que el llamador navegue/avise
 /// usando el contexto de la página (no el del sheet, que ya no existe tras pop).

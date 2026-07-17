@@ -22,6 +22,8 @@ class PqrdWizard extends ConsumerStatefulWidget {
 class _PqrdWizardState extends ConsumerState<PqrdWizard> {
   int _currentStep = 1;
   bool _isSubmitting = false;
+  // Evita re-disparar la carga de catálogos en cada rebuild.
+  bool _catalogRequested = false;
 
   final _formKey1 = GlobalKey<FormState>();
   final _formKey2 = GlobalKey<FormState>();
@@ -215,6 +217,17 @@ class _PqrdWizardState extends ConsumerState<PqrdWizard> {
     final scheme = Theme.of(context).colorScheme;
     final asyncMun = ref.watch(municipalityProvider(widget.municipalityId));
     final dropdowns = ref.watch(pqrdDropdownOptionsProvider);
+
+    // Carga los catálogos de los selects (por CodigoEntidad, BACKEND §3.16) en
+    // cuanto el municipio está disponible. Sin esto los dropdowns quedaban vacíos.
+    final munForCatalog = asyncMun.asData?.value;
+    if (munForCatalog != null && !_catalogRequested) {
+      _catalogRequested = true;
+      Future.microtask(() => ref
+          .read(pqrdDropdownOptionsProvider.notifier)
+          .loadCatalogData(munForCatalog.entityCode));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isAnonymous ? 'PQRSDF Anónima' : 'PQRSDF Identificada'),

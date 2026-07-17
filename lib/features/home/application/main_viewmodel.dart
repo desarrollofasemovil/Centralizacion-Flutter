@@ -21,6 +21,15 @@ class MainUiState {
   final bool showInDevelopmentDialog;
   final AbrirBotonPanico? pendingPanicAction;
   final ModalFormMode? modalMode;
+
+  /// URL pendiente de abrir DESPUÉS de que el usuario complete el ModalForm
+  /// (equivalente a `urlToOpen` del `_uiState` original: dato almacenado, no
+  /// dispara la apertura). No confundir con [urlToOpen], que sí es el disparador.
+  final String? pendingUrl;
+
+  /// Disparador de apertura in-app: cuando cambia a una URL no vacía, la UI la
+  /// abre con `abrirUrl()` y luego llama `clearUrlToOpen()` (equivalente al
+  /// evento `MainEvent.OpenUrl` del original).
   final String? urlToOpen;
   final bool showExitDialog;
   final bool isDarkTheme;
@@ -41,6 +50,7 @@ class MainUiState {
     this.showInDevelopmentDialog = false,
     this.pendingPanicAction,
     this.modalMode,
+    this.pendingUrl,
     this.urlToOpen,
     this.showExitDialog = false,
     this.isDarkTheme = false,
@@ -62,6 +72,7 @@ class MainUiState {
     bool? showInDevelopmentDialog,
     AbrirBotonPanico? pendingPanicAction,
     ModalFormMode? modalMode,
+    String? pendingUrl,
     String? urlToOpen,
     bool? showExitDialog,
     bool? isDarkTheme,
@@ -72,6 +83,7 @@ class MainUiState {
     String? selectedRoute,
     bool clearPendingPanicAction = false,
     bool clearModalMode = false,
+    bool clearPendingUrl = false,
     bool clearUrlToOpen = false,
   }) {
     return MainUiState(
@@ -85,6 +97,7 @@ class MainUiState {
       showInDevelopmentDialog: showInDevelopmentDialog ?? this.showInDevelopmentDialog,
       pendingPanicAction: clearPendingPanicAction ? null : (pendingPanicAction ?? this.pendingPanicAction),
       modalMode: clearModalMode ? null : (modalMode ?? this.modalMode),
+      pendingUrl: clearPendingUrl ? null : (pendingUrl ?? this.pendingUrl),
       urlToOpen: clearUrlToOpen ? null : (urlToOpen ?? this.urlToOpen),
       showExitDialog: showExitDialog ?? this.showExitDialog,
       isDarkTheme: isDarkTheme ?? this.isDarkTheme,
@@ -193,42 +206,47 @@ class MainViewModel extends Notifier<MainUiState> {
   }
 
   void showModalForm(ModalFormMode mode, {String? url}) {
+    // La URL va a `pendingUrl` (dato almacenado), NO a `urlToOpen`: así el PT
+    // NO se abre hasta que el usuario complete el formulario y pulse "Continuar".
     state = state.copyWith(
       modalMode: mode,
-      urlToOpen: url,
+      pendingUrl: url,
     );
   }
 
   void onModalDismissed() {
     state = state.copyWith(
       clearModalMode: true,
-      clearUrlToOpen: true,
+      clearPendingUrl: true,
       clearPendingPanicAction: true,
     );
   }
 
   Future<void> onModalConfirmed(UserDTO guestUser) async {
+    // ⚠️ Capturar la URL pendiente y limpiar el estado del modal ANTES de
+    // cualquier `await`. El `.then()` del bottom sheet corre al cerrarse y, si
+    // `modalMode` aún figura abierto, dispara `onModalDismissed()` que limpia
+    // `pendingUrl`. Como aquí hay `await` (guardar datos), esa limpieza ganaba
+    // la carrera y al reanudar leíamos `pendingUrl == null` → el PT no abría al
+    // primer "Continuar" (solo al segundo toque). Limpiar `modalMode` de forma
+    // síncrona hace que ese `.then()` vea `modalMode == null` y no interfiera.
+    final url = state.pendingUrl;
+    final panicAction = state.pendingPanicAction;
+    state = state.copyWith(clearModalMode: true, clearPendingUrl: true);
+
     // Si es un usuario invitado, guardar localmente sus datos
     final currentUser = state.currentUser;
     if (currentUser == null) {
       await _prefs.saveGuestUserDataJson(jsonEncode(guestUser.toJson()));
     }
-
     await _prefs.saveModalFormCompleted(true);
-
-    final url = state.urlToOpen;
-    final panicAction = state.pendingPanicAction;
-
-    state = state.copyWith(
-      clearModalMode: true,
-      clearUrlToOpen: true,
-    );
 
     if (panicAction != null) {
       // Activar diálogo de pánico directamente tras llenar los datos
       state = state.copyWith(showPanicCountdownDialog: true);
     } else if (url != null) {
-      // Abrir URL pendiente
+      // Recién ahora se dispara la apertura del PT (equivalente al
+      // `_event.send(OpenUrl(urlToOpen))` de `processConfirmation` original).
       state = state.copyWith(urlToOpen: url);
     }
   }

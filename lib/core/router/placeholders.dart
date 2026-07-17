@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../municipality/municipality_repository.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_mode_provider.dart';
+import '../widgets/error_municipality_screen.dart';
 
 // Pantallas placeholder de la Fase 1. Se reemplazan por las reales en la Fase 2
 // (ver FRONTEND §5). Aquí solo validan navegación, arranque y theming dinámico.
@@ -48,7 +49,7 @@ class AlcaldiasScope extends ConsumerWidget {
       ),
       error: (e, _) => Theme(
         data: buildInicialTheme(dark: dark),
-        child: _ErrorMunicipalityScreen(message: e.toString()),
+        child: const ErrorMunicipalityScreen(),
       ),
       data: (dto) => Theme(
         data: buildAlcaldiasTheme(designFromMunicipality(dto), dark: dark),
@@ -58,12 +59,3 @@ class AlcaldiasScope extends ConsumerWidget {
   }
 }
 
-class _ErrorMunicipalityScreen extends StatelessWidget {
-  const _ErrorMunicipalityScreen({required this.message});
-  final String message;
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Error')),
-    body: Center(child: Text('No se pudo cargar el municipio.\n$message')),
-  );
-}

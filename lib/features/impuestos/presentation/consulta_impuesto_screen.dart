@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/municipality/municipality_repository.dart';
 import '../../../core/widgets/important_alert_dialog.dart';
 import '../../auth/application/auth_providers.dart';
-import '../../home/presentation/widgets/policy_checkboxes.dart';
+import '../../../core/widgets/policy_checkboxes.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../application/tax_notifier.dart';
 import 'widgets/styled_dropdown_menu.dart';
@@ -363,13 +363,18 @@ class _CustomTextFieldState extends State<_CustomTextField> {
       maxLines: 1,
       decoration: InputDecoration(
         labelText: widget.label,
+        // La etiqueta flotante (igual que el `label` del `TextField` filled del
+        // original) necesita espacio arriba al subir; con padding simétrico se
+        // encimaba con el texto. Reservamos top para que no se solape.
+        alignLabelWithHint: true,
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
         filled: true,
         fillColor: scheme.surfaceContainer,
         border: border,
         enabledBorder: border,
         focusedBorder: border,
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            const EdgeInsets.fromLTRB(16, 24, 16, 8),
       ),
     );
   }
