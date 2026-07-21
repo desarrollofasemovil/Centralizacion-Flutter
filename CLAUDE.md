@@ -41,6 +41,24 @@ El código Kotlin original está en `tramiapp_flutter/codebase/app/src/main/java
 
 ---
 
+## 🕸️ Grafo de conocimiento del código (graphify)
+
+El código Flutter está mapeado en un **grafo de conocimiento** (generado con [graphify](https://github.com/Graphify-Labs/graphify)): clases, widgets, providers, servicios API y DTOs con sus relaciones e imports, más los títulos de los `.md` de `docs/`. Vive en `graphify-out/` (ignorado por git, se regenera). **Al inicio de cualquier tarea de arquitectura o de "¿dónde está X? / ¿qué depende de Y?", consúltalo antes de hacer grep a ciegas.** No sustituye la Regla de oro: para el diseño y comportamiento de una pantalla la fuente de verdad sigue siendo el Kotlin en `codebase/`; el grafo mapea el código Flutter **ya migrado**.
+
+**Consultarlo** (desde la raíz `tramiapp_flutter/`):
+```bash
+graphify query "cómo funciona la autenticación y la sesión"   # traversal BFS: contexto amplio
+graphify path "SessionNotifier" "UserPreferences"             # camino más corto entre dos nodos
+graphify explain "sessionProvider"                            # explica un nodo y sus vecinos
+```
+O lee el resumen curado en [`graphify-out/GRAPH_REPORT.md`](graphify-out/GRAPH_REPORT.md) (nodos-dios, conexiones sorprendentes, preguntas sugeridas) y abre `graphify-out/graph.html` para la vista interactiva.
+
+**Mantenerlo fresco:** tras cambiar código corre `graphify update .` — solo AST con tree-sitter, **sin LLM, sin API key, nada sale de tu máquina**; es incremental (ignora lo que no cambió). Si `graphify-out/` no existe (clon o worktree nuevo), reconstrúyelo con `/graphify .`.
+
+**Instalación** (una vez por máquina): `pip install graphifyy && graphify install`.
+
+---
+
 ## Flujo de trabajo al migrar un módulo
 
 1. **Ubica el módulo** en el catálogo de `FRONTEND.md §5` y en el roadmap.
