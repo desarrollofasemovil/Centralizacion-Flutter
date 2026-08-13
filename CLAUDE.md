@@ -16,10 +16,11 @@
 ## Reglas de oro (no negociables)
 
 1. **El backend se consume sin cambios.** Las 6 base URLs y todos los endpoints están en `MIGRACION_FLUTTER_BACKEND.md`. No inventes endpoints ni cambies contratos.
+   > ⚠️ **Cambio en curso (desde 2026-08-13):** por el cambio de patrocinador va a haber cambios en el API. Hasta que lleguen la spec/colección de Postman nuevas, `BACKEND.md` sigue siendo la verdad. **No asumas el contrato nuevo: pídelo.** Ver [`docs/PRODUCTO_2_ALCANCE.md`](docs/PRODUCTO_2_ALCANCE.md) §7.
 2. **Colores, escudo y módulos los define el backend** (`GET /api/Municipality/GetInfoBy{id}`), nunca el código ni el flavor. Se aplican en runtime.
 3. **Dos caminos de autenticación:** login nativo (correo/clave) contra la API propia (NO usa Firebase Auth) + login con Google (único uso de Firebase Auth). Ver `BACKEND.md §5`.
 4. **Package / applicationId por ahora:** `com.tramites1cero1.centralizacion` (el mismo de Centralización).
-5. **Orden de trabajo:** primero migrar **Centralización completa**, después crear **Trami App Manizales** como flavor. No empezar Manizales antes de tiempo.
+5. **Orden de trabajo:** la migración de **Centralización está funcionalmente completa en Android** (los 21 paquetes de pantallas Kotlin tienen equivalente en Flutter). El foco actual es **pulir detalles visuales, cerrar deuda de componentes compartidos y abrir iOS**. **Manizales** va por la mitad, en la rama `claude/manizales-shield-flavor-apk-41c6c7`, aún sin mezclar. Estado medido y verificado en `MIGRACION_FLUTTER_ROADMAP.md`.
 6. **iOS = HTTPS siempre.** No portar `usesCleartextTraffic`; iOS bloquea HTTP. Confirmar que todos los endpoints son HTTPS.
 7. **Sigue las convenciones** de `MIGRACION_FLUTTER_CONVENCIONES.md` para que cada módulo migrado se vea igual. No improvises arquitectura por módulo. **La referencia visual de cada pantalla es su `*Screen.kt` original en `codebase/` — no rediseñes ni reinterpretes la UI.**
 8. **Actualiza el roadmap.** Al completar una tarea, marca su casilla en `MIGRACION_FLUTTER_ROADMAP.md`.
@@ -35,6 +36,7 @@
 | Apps individuales por municipio (Manizales) | [MIGRACION_FLUTTER_FLAVORS.md](MIGRACION_FLUTTER_FLAVORS.md) |
 | Arquitectura, estructura de carpetas, patrones de código | [MIGRACION_FLUTTER_CONVENCIONES.md](MIGRACION_FLUTTER_CONVENCIONES.md) |
 | Qué hacer y en qué orden (checklist) | [MIGRACION_FLUTTER_ROADMAP.md](MIGRACION_FLUTTER_ROADMAP.md) |
+| **Producto 2** (cambio de patrocinador): alcance, funcionalidades nuevas, decisiones abiertas | [PRODUCTO_2_ALCANCE.md](docs/PRODUCTO_2_ALCANCE.md) |
 | Visión general / índice | [MIGRACION_FLUTTER_README.md](MIGRACION_FLUTTER_README.md) |
 
 El código Kotlin original está en `tramiapp_flutter/codebase/app/src/main/java/com/tramites1cero1/centralizacion/` (pantallas en `.../ui/screen/<feature>/`). Úsalo como **fuente de verdad** del comportamiento **y del diseño** actual; ábrelo siempre antes de portar un módulo. Si la carpeta no existe localmente, clónala (ver nota al inicio de este archivo).
