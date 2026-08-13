@@ -6,6 +6,33 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 
 ---
 
+## Estado a 2026-08-13 (auditoría contra el código)
+
+Cifras medidas sobre el repo, no estimadas:
+
+| Métrica | Valor |
+|---|---|
+| Líneas Dart (sin generados) | 31.031 en 316 archivos |
+| Features migradas | 17 |
+| Paquetes de pantallas Kotlin cubiertos | 21 / 21 |
+| DTOs traducidos | 132 |
+| Servicios Retrofit | 14 |
+| Base URLs (todas HTTPS) | 6 / 6 |
+| `flutter analyze` | 0 issues |
+| Tests | 27 pasando, 5 archivos |
+
+**Avance:** funcionalidad Android ~90 % · iOS ~10 % · proyecto global ~72 %.
+
+La app es **funcionalmente completa en Android**: no quedan módulos por migrar. Lo pendiente es
+cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y publicar.
+
+> ⚠️ **Aviso de dirección (2026-08-13).** Entra un **cambio de patrocinador**: mismo backend y misma
+> base de código, pero nuevo producto con giro a lo ciudadano/cultural/educativo y funcionalidades
+> nuevas. El alcance está mapeado en [`PRODUCTO_2_ALCANCE.md`](PRODUCTO_2_ALCANCE.md). Este roadmap
+> sigue rigiendo el cierre de Centralización, que es la base sobre la que se construye el producto 2.
+
+---
+
 ## Fase 0 — Setup del proyecto Flutter ⚙️
 
 - [x] Crear proyecto Flutter (`tramiapp_flutter`) con soporte iOS + Android
@@ -75,11 +102,11 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 - [x] Portados fielmente del codebase: `ErrorMunicipalityScreen` (cableado en `AlcaldiasScope`, reemplaza el stub), `ValidationErrorDialog`, `ConfirmationPoliciesDialog`.
 - [x] `AlcaldiasStateWrapper` → implementado como `AlcaldiasScope` (theming dinámico) en `core/router/placeholders.dart`.
 - [x] `RequestNotificationPermission`: cubierto por `core/notifications` (FCM `requestPermission` + locales `requestNotificationsPermission`) — no requiere widget.
-- [ ] **Consumir los dialogs centralizados**: reemplazar los diálogos inline de certificados/psv por `ValidationErrorDialog`, y cablear `ConfirmationPoliciesDialog` en PQRD paso 3.
-- [ ] `NoConnectionDialog`: requiere el observador de conectividad a nivel app (`connectivity_plus`, `FRONTEND.md §3`) antes de portar el diálogo. Aún sin implementar.
-- [ ] `TopbarNavigation` compartido: hoy certificados/psv/pqrd/history tienen su propio AppBar. Unificar en un componente común (refactor de ~5 pantallas).
-- [ ] `StepIndicator`: unificar el duplicado inline de los 4 wizards (signup/certificados/psv/pqrd) en un solo componente (`FRONTEND.md §11.5`).
-- [ ] `NotificationHelper`: portar las notificaciones locales de confirmación de Cursos/Escenarios (`showCourseRegistrationNotification`/`showVenueReservationNotification`) sobre `flutter_local_notifications`.
+- [x] **Consumir los dialogs centralizados** — `ValidationErrorDialog` cableado en PSV y `ConfirmationPoliciesDialog` en PQRD paso 3. *(Certificados queda con SnackBars a propósito: el `ValidationErrorDialog` también está comentado en el `CertificatesNavScreen.kt` original, así que el port es fiel — no es una desviación.)*
+- [ ] `NoConnectionDialog`: requiere el observador de conectividad a nivel app (`connectivity_plus`, `FRONTEND.md §3`) antes de portar el diálogo. **`connectivity_plus` no está en `pubspec.yaml`** — ese es el primer paso.
+- [ ] `TopbarNavigation` compartido: hoy **18 pantallas** declaran su propio `AppBar`. Unificar en un componente común. Conviene hacerlo **antes** de abrir iOS: después habría que revalidar en dos plataformas.
+- [ ] `StepIndicator`: existe el canónico en `core/widgets/step_indicator.dart`, pero **siguen 2 copias** (`features/auth/.../signup_step_row.dart` y el `_StepIndicator` inline de `psv_wizard.dart`). Unificar (`FRONTEND.md §11.5`).
+- [ ] `NotificationHelper`: portar las notificaciones locales de confirmación de Cursos/Escenarios (`showCourseRegistrationNotification`/`showVenueReservationNotification`) sobre `flutter_local_notifications`. Solo existen en Kotlin.
 
 ## Fase 4 — Módulos + perfil
 
@@ -89,15 +116,68 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 - [x] Soporte / Ayuda (formulario → email)
 - [x] Editar perfil + configuración de usuario + cambio de contraseña
 
+> ✅ **Fase 4 verificada en dispositivo (PR #17, 2026-08-13)** — Redmi Note 10 5G, Android 13, MIUI 14.
+>
+> **Recordatorios — bug de alarmas cerrado.** El síntoma era que la notificación inmediata sí llegaba
+> y la programada no, o llegaba tarde. Causa: en Android 12+ `exactAllowWhileIdle` exige
+> `SCHEDULE_EXACT_ALARM` y **nunca se pedía en runtime**; `zonedSchedule` lanzaba
+> `exact_alarms_not_permitted`, el `catch` caía en silencio a `inexactAllowWhileIdle` y el sistema
+> agrupaba la alarma. Ahora se verifica con `canScheduleExactNotifications()` y se pide antes de
+> agendar; `schedule()` devuelve `ScheduleOutcome` (`exact`/`inexact`/`failed`) para que la UI no
+> prometa una hora que no va a cumplir.
+>
+> **Riesgo de publicación corregido:** se quitó `USE_EXACT_ALARM` del manifest. Se autoconcede, pero
+> la política de Google Play lo restringe a apps de alarma o calendario; declararlo arriesgaba el
+> rechazo del envío.
+>
+> **Verificado bajo Doze profundo** (`deviceidle force-idle`, pantalla apagada): la alarma mantuvo
+> `window=0` y `whenElapsed == maxWhenElapsed` con `device_idle` sin aplazarla, y la notificación se
+> publicó puntual (`NotificationRecord`, `channel=reminders_channel`). La app **no** está en la
+> whitelist de batería, así que no se debe a ninguna exención. De paso quedó validada la zona horaria
+> fija `America/Bogota` contra el reloj real del dispositivo.
+>
+> ⚠️ **Sin cubrir:** el flujo de *solicitud* del permiso cuando no está concedido. En Android 13
+> `SCHEDULE_EXACT_ALARM` viene pre-concedido, así que ese camino solo se ejerce en **Android 14+** o
+> revocándolo a mano. Pendiente de probar en un dispositivo con Android 14/15.
+
+## Deuda técnica e infraestructura (auditoría 2026-08-13)
+
+Nada de esto bloquea la app hoy, pero encarece cada cambio y hay que cerrarlo antes de escalar a
+varios productos.
+
+- [x] **Excluir `codebase/**` y `build/**` del analizador** — `flutter analyze` recorría los 23.596
+      archivos del espejo Android en cada corrida: **806 s → ~13 s**. (PR #17)
+- [x] **`force_update` estaba desactivado de facto** — `kAppBuildNumber` era la constante `999999`,
+      así que `build < minVersionCode` no se cumplía nunca. Ahora sale del bundle nativo vía
+      `package_info_plus` (`core/utils/app_info.dart`), con `999999` solo como fallback seguro. (PR #17)
+- [x] **Test de arranque que no probaba nada** — afirmaba "aterriza en Welcome" pero solo avanzaba
+      600 ms y el splash espera 3600 ms, así que validaba el splash. (PR #17)
+- [ ] **Cobertura de tests**: 5 archivos para 31 k líneas, y solo `tramite_mappers_test.dart` cubre
+      lógica de negocio real. Prioridad: mappers de trámites, validaciones de formularios, `AppStatus`.
+- [ ] **GitHub Actions**: no existe `.github/workflows/`. Cada APK se compila a mano. Con dos flavors
+      y dos tiendas esto se vuelve caro rápido.
+- [ ] **Un test golpea la API real** (`GET /api/Department` devuelve 400 en la suite). Debe usar mock.
+
 ## Fase 5 — Ajuste iOS 🍎
 
+> ⚠️ **iOS está como lo dejó `flutter create`.** `ios/Runner/Info.plist` conserva la fecha de creación
+> del proyecto y solo las claves de plantilla; solo existe `Runner.xcscheme`. El código Dart sí es
+> multiplataforma y las 6 base URLs son HTTPS (sin bloqueo de ATS), así que el trabajo es de
+> configuración nativa, no de migración. **Requiere un Mac y la cuenta de Apple Developer.**
+
+- [ ] **`NSCameraUsageDescription` en `Info.plist`** — sin esto `mobile_scanner` **crashea al abrir**
+      el escáner de servicios públicos. Es el fallo más inmediato al arrancar en iOS.
+- [ ] Resto de permisos en `Info.plist` (ubicación, notificaciones)
 - [ ] Schemes/configs por flavor en Xcode
+- [ ] `GoogleService-Info.plist` por flavor (no existe ninguno)
 - [ ] APNs Auth Key (.p8) en Firebase para FCM
-- [ ] Permisos en `Info.plist` (cámara, ubicación, notificaciones)
 - [ ] `REVERSED_CLIENT_ID` para Google Sign-In
 - [x] Descarga de PDFs sin DownloadManager (`dio` + `open_filex`)
 - [ ] Safe Area / home indicator en layouts con bottom nav
 - [ ] Pruebas en iPhone físico → TestFlight
+
+> 🍎 **Iniciar ya la cuenta de Apple Developer**: es el único punto con espera externa (hasta dos
+> semanas) y no es trabajo, es una fila. Debe arrancar en paralelo con todo lo demás.
 
 ## Fase 6 — QA y publicación de Centralización
 
@@ -110,12 +190,19 @@ Leyenda: ⚙️ infraestructura · 🤖 automatizable con agente · 🍎 requier
 
 > Solo después de terminar Centralización. Seguir el playbook de `FLAVORS.md §11`.
 
-- [ ] Confirmar `id` y `entityCode` de Manizales en el backend
-- [ ] Proyecto Firebase de Manizales (apps iOS+Android, APNs, 4 keys RC, Google Auth)
-- [ ] `flavors.dart` + `main_manizales.dart`
-- [ ] productFlavor Android + scheme iOS (flavorizr)
-- [ ] `google-services.json` / `GoogleService-Info.plist` en sus carpetas
-- [ ] Ícono, nombre y colores de la Alcaldía de Manizales
+> ⚠️ **Esta fase estaba marcada en cero pero va por la mitad.** El trabajo vive en la rama
+> `claude/manizales-shield-flavor-apk-41c6c7` (commit `91df762`), que **sigue sin PR y sin mezclar en
+> `develop`**. Además del flavor, aporta la regla proguard `-dontwarn androidx.window.**` que arregla
+> R8 en release **para ambos flavors** — conviene no dejarla colgando.
+
+- [x] Confirmar `id` y `entityCode` de Manizales en el backend — `id = 213`
+- [~] Proyecto Firebase de Manizales — **temporal**: reusa `betaappcentralizate` con `appId` propio de Android. Falta proyecto propio, iOS, APNs y las 4 keys de Remote Config.
+- [x] `flavors.dart` + `main_manizales.dart`
+- [~] productFlavor Android hecho (`com.tramitesapp.manizales`); **scheme iOS pendiente**
+- [~] `google-services.json` puesto; **`GoogleService-Info.plist` pendiente**
+- [x] Ícono, nombre y colores de la Alcaldía de Manizales (escudo como ícono de launcher)
 - [ ] Bundle id + Provisioning Profile en Apple Developer
-- [ ] Build + publicar en Play Store y App Store (cuenta empresa)
+- [~] APK release generado y verificado; **publicación pendiente**
 - [ ] Documentar el playbook validado para los siguientes municipios
+
+Leyenda: `[~]` = parcial.
