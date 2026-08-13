@@ -4,23 +4,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
-// FIXME(reminders/notificaciones) — PENDIENTE DE ARREGLAR (revisar más adelante).
-// La entrega de las notificaciones locales PROGRAMADAS de los recordatorios no
-// es confiable todavía. La notificación inmediata de confirmación (`showNow`) sí
-// aparece, pero la agendada con `zonedSchedule` no siempre se dispara a la hora.
-// Puntos a investigar cuando se retome:
-//   1. Android 12+ (API 31+): `exactAllowWhileIdle` requiere el permiso
-//      SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM; si el usuario no lo concede caemos
-//      a `inexactAllowWhileIdle` (agrupada por el sistema, puede llegar tarde).
-//      Falta pedir/verificar `requestExactAlarmsPermission()` y declararlo en el
-//      Manifest.
-//   2. Optimización de batería / Doze de fabricantes (Xiaomi, Samsung, etc.)
-//      puede matar la alarma. Considerar avisar al usuario o whitelisting.
-//   3. Zona horaria fija `America/Bogota` (ver nota abajo) — validar el cálculo
-//      del `TZDateTime` contra la hora local real del dispositivo.
-//   4. iOS: sin verificar en iPhone físico (entorno sin Mac). Confirmar permisos
-//      y entrega en background.
-// Al retomar, actualizar también [[fase4-and-main-polish-status]].
+// NOTA(reminders/notificaciones) — causa raíz corregida 2026-08-13.
+// El síntoma era: la notificación inmediata (`showNow`) aparecía, pero la agendada
+// con `zonedSchedule` llegaba tarde o no llegaba. La causa: en Android 12+ (API 31+)
+// `exactAllowWhileIdle` exige el permiso SCHEDULE_EXACT_ALARM, que nunca se pedía en
+// runtime. `zonedSchedule` lanzaba `exact_alarms_not_permitted`, el `catch` caía en
+// silencio a `inexactAllowWhileIdle` y el sistema agrupaba la alarma (Doze la puede
+// retrasar bastante). Ahora se verifica con `canScheduleExactNotifications()` y se
+// pide con `requestExactAlarmsPermission()` antes de agendar, y `schedule()` reporta
+// en qué modo quedó para que la UI pueda decirlo con honestidad.
+//
+// Queda pendiente de verificar en dispositivo (no es código):
+//   1. Doze / optimización de batería de fabricantes (Xiaomi, Samsung) puede seguir
+//      matando la alarma aunque el permiso esté concedido. Si pasa, hay que mandar al
+//      usuario a la whitelist de batería.
+//   2. Zona horaria fija `America/Bogota` (ver nota abajo) — validar el `TZDateTime`
+//      contra la hora local real del dispositivo.
+//   3. iOS: sin verificar en iPhone físico (entorno sin Mac). En iOS este permiso no
+//      existe, así que `ensureExactAlarmPermission` es un no-op allí.
+
+/// En qué modo quedó agendada una notificación.
+enum ScheduleOutcome {
+  /// Alarma exacta: llega a la hora prevista.
+  exact,
+
+  /// El sistema la agrupó: puede llegar tarde. Ocurre cuando el usuario no
+  /// concedió SCHEDULE_EXACT_ALARM.
+  inexact,
+
+  /// No se pudo agendar (fecha en el pasado o error del plugin).
+  failed,
+}
 
 /// Programa notificaciones locales para los recordatorios (equivalente a la
 /// lógica de `AlarmManager` del `RemindersViewModel` original de Android).
@@ -104,7 +118,36 @@ class LocalReminderScheduler {
     }
   }
 
-  Future<bool> schedule({
+  /// ¿Puede la app agendar alarmas exactas? En iOS no aplica (siempre `true`).
+  Future<bool> canScheduleExact() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return true;
+    return await android.canScheduleExactNotifications() ?? false;
+  }
+
+  /// Pide SCHEDULE_EXACT_ALARM si hace falta (Android 12+). Sin esto, el agendado
+  /// cae a modo inexacto y el recordatorio llega tarde — era la causa del bug.
+  ///
+  /// Ojo: `requestExactAlarmsPermission()` abre la pantalla de ajustes del sistema
+  /// y retorna de inmediato, sin esperar al usuario. Por eso el valor de retorno es
+  /// el estado ANTES de que el usuario decida: si era `false`, este agendado saldrá
+  /// inexacto y el siguiente ya saldrá exacto. No hay forma de bloquear aquí sin
+  /// observar el ciclo de vida de la app, que no vale la pena para este caso.
+  Future<bool> ensureExactAlarmPermission() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return true;
+    if (await android.canScheduleExactNotifications() ?? false) return true;
+    try {
+      await android.requestExactAlarmsPermission();
+    } catch (e) {
+      debugPrint('LocalReminderScheduler.requestExactAlarms error: $e');
+    }
+    return false;
+  }
+
+  Future<ScheduleOutcome> schedule({
     required int id,
     required String title,
     required String body,
@@ -112,9 +155,12 @@ class LocalReminderScheduler {
   }) async {
     await _ensureInitialized();
     await ensureNotificationPermission();
+    await ensureExactAlarmPermission();
     _ensureTz();
     final scheduled = tz.TZDateTime.from(dateTime, tz.local);
-    if (!scheduled.isAfter(tz.TZDateTime.now(tz.local))) return false;
+    if (!scheduled.isAfter(tz.TZDateTime.now(tz.local))) {
+      return ScheduleOutcome.failed;
+    }
 
     for (final mode in const [
       AndroidScheduleMode.exactAllowWhileIdle,
@@ -129,12 +175,14 @@ class LocalReminderScheduler {
           notificationDetails: _details,
           androidScheduleMode: mode,
         );
-        return true;
+        return mode == AndroidScheduleMode.exactAllowWhileIdle
+            ? ScheduleOutcome.exact
+            : ScheduleOutcome.inexact;
       } catch (e) {
         debugPrint('LocalReminderScheduler[$mode] error: $e');
       }
     }
-    return false;
+    return ScheduleOutcome.failed;
   }
 
   /// Muestra una notificación inmediata (confirmación al crear el recordatorio

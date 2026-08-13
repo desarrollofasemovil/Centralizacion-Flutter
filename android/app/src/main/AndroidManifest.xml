@@ -1,8 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Recordatorios locales (flutter_local_notifications / AlarmManager) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- SCHEDULE_EXACT_ALARM se pide en runtime (ver LocalReminderScheduler).
+         NO declarar USE_EXACT_ALARM: se concede solo, pero la política de Google
+         Play lo restringe a apps de alarma o calendario y Trami App no lo es;
+         declararlo puede costar el rechazo del envío. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <application

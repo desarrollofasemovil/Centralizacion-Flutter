@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/flavor/flavor_config.dart';
 import '../../../core/models/user_dto.dart';
+import '../../../core/utils/app_info.dart';
 import '../../auth/application/auth_providers.dart';
 import '../data/support_repository.dart';
 import '../domain/help_state.dart';
@@ -17,16 +18,14 @@ import '../domain/support_submission_result.dart';
 ///
 /// Desviación cross-platform respecto al original: la metadata técnica del
 /// correo (dispositivo/sistema) se toma de `dart:io` `Platform` en vez de
-/// `Build.*`, para no añadir plugins nativos (`device_info_plus`/
-/// `package_info_plus`). La versión de app queda como constante hasta cablear
-/// `package_info_plus`.
+/// `Build.*`, para no añadir `device_info_plus`. La versión sí es la real, vía
+/// `AppInfo` (`package_info_plus`).
 class HelpNotifier extends Notifier<HelpState> {
   HelpNotifier(this.municipality);
 
   final String municipality;
 
-  // TODO(soporte): cablear package_info_plus para la versión real de la app.
-  static const String _appVersion = '1.0.0';
+  String get _appVersion => AppInfo.version;
 
   SupportRepository get _repo => ref.read(supportRepositoryProvider);
 
