@@ -14,6 +14,7 @@ import 'core/flavor/flavor_config.dart';
 import 'core/notifications/push_notifications_service.dart';
 import 'core/remote_config/remote_config_service.dart';
 import 'core/storage/user_preferences.dart';
+import 'core/utils/app_info.dart';
 
 /// Inicialización común a todos los flavors. Cada `main_<flavor>.dart` delega
 /// aquí. Todas las integraciones de Firebase van con guardas para que una config
@@ -21,6 +22,9 @@ import 'core/storage/user_preferences.dart';
 Future<void> bootstrap(FlavorConfig config, FirebaseOptions options) async {
   WidgetsFlutterBinding.ensureInitialized();
   FlavorConfig.instance = config;
+
+  // Versión/build reales antes de Remote Config: `force_update` los compara.
+  await AppInfo.init();
 
   await Firebase.initializeApp(options: options);
 

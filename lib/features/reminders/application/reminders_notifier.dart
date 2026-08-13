@@ -223,21 +223,30 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
       final enriched = _withNavigation(created, procedure);
       _checkExpired([...state.reminders, enriched]);
 
-      // FIXME(reminders/notificaciones): la notificación PROGRAMADA no se
-      // entrega de forma confiable a la hora prevista. Pendiente de arreglar
-      // más adelante — ver el bloque FIXME en `local_reminder_scheduler.dart`.
-      final scheduled = await _scheduler.schedule(
+      final outcome = await _scheduler.schedule(
         id: created.id!,
         title: title,
         body: content,
         dateTime: notifyAt,
       );
 
-      if (scheduled) {
-        _toggleActivated(created.id!);
-        _toast('Recordatorio ${created.reminderName ?? title} programado con éxito.');
-      } else {
-        _toast('Se guardó, pero se necesitan permisos para notificar.');
+      switch (outcome) {
+        case ScheduleOutcome.exact:
+          _toggleActivated(created.id!);
+          _toast(
+            'Recordatorio ${created.reminderName ?? title} programado con éxito.',
+          );
+        case ScheduleOutcome.inexact:
+          // El usuario no ha concedido SCHEDULE_EXACT_ALARM: la notificación queda
+          // agendada, pero el sistema puede retrasarla. Se lo decimos en vez de
+          // prometer una hora exacta que no vamos a cumplir.
+          _toggleActivated(created.id!);
+          _toast(
+            'Recordatorio guardado. Activa las alarmas exactas en ajustes para '
+            'que llegue a la hora justa.',
+          );
+        case ScheduleOutcome.failed:
+          _toast('Se guardó, pero se necesitan permisos para notificar.');
       }
 
       // Notificación inmediata de confirmación (y prueba directa del canal).

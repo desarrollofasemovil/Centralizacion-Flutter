@@ -36,7 +36,8 @@ class FakeRemoteConfigService extends RemoteConfigService {
   TourismTaxConfigDTO getTourismTaxRates() => TourismTaxConfigDTO();
 
   @override
-  AppStatus toAppStatus({int currentBuildNumber = 999999}) => const AppStatus(type: AppStatusType.operational);
+  AppStatus toAppStatus({int? currentBuildNumber}) =>
+      const AppStatus(type: AppStatusType.operational);
 }
 
 void main() {
@@ -56,7 +57,15 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
+
+    // El SplashScreen espera 3600 ms antes de navegar (`Future.delayed`). Sin
+    // avanzar ese tiempo el test se quedaba en el splash y nunca llegaba a
+    // Welcome — por eso fallaba aunque la app funciona.
+    await tester.pump(const Duration(milliseconds: 3700));
+    await tester.pump();
+
+    // Animación de entrada del header de Welcome (fadeIn + slideInVertically).
+    await tester.pump(const Duration(milliseconds: 800));
 
     // startDestination sin ubicación guardada → Welcome.
     expect(find.text('¡Bienvenido!'), findsOneWidget);
