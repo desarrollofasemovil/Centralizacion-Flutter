@@ -45,7 +45,7 @@ app.*.map.json
 /android/app/release
 /google-services.json
 /keys
-codebase/
+/codebase/
 
 # Firma release: credenciales del keystore (NUNCA commitear)
 key.properties
@@ -57,3 +57,4 @@ key.properties
 
 # agents claude
 *.env
+
