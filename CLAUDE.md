@@ -120,6 +120,11 @@ flutter analyze
 > _Why: Most feature sessions explicitly required AppTheme compliance and clean analyzer output as a success bar._
 
 
+## State updates (`copyWith`)
+- For a nullable field, never write `field: field ?? this.field` alone — `??` silently keeps the old value whenever you pass `null`, so the field can never actually be cleared. Add a `bool clearField = false` flag and branch on it (see `MainUiState`, `UserSettingsState`, `PasswordFormState` for the pattern already in use across the codebase).
+
+> _Why: `MainUiState.copyWith(currentUser: next)` couldn't null out `currentUser` on logout — the session listener passed `null` through but the old user stuck around, so the side menu kept showing "Cerrar sesión" after logging out. Kotlin's `data class.copy()` doesn't have this problem (it accepts explicit `null`), so this is a translation-specific footgun to watch for in any other ported `copyWith`. Fixed in PR #20 (2026-08-19)._
+
 ## Branch & PR Targeting
 - Always confirm the target branch before opening a PR (default to `develop`, NOT `main`).
 - When working in a worktree, confirm whether testing/changes should happen on the worktree or the main route, and branch worktrees from `develop` unless told otherwise.
