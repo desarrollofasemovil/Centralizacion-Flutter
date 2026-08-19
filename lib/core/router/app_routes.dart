@@ -8,6 +8,7 @@ class AppRoutes {
   static const selectMunicipality = '/select-municipality/:departmentId';
   static const signup = '/signup';
   static const recoverPassword = '/recover-password';
+  static const changePasswordReset = '/recover-password/change';
 
   /// Home del municipio (orquestador "alcaldías"). `:id` = municipalityId.
   static const municipality = '/municipality/:id';
