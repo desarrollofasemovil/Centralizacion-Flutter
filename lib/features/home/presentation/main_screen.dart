@@ -20,6 +20,7 @@ import 'widgets/main_side_menu_options.dart';
 import 'widgets/main_top_bar.dart';
 import 'widgets/maintenance_info_card.dart';
 import 'widgets/modal_form.dart';
+import '../../../core/widgets/confirmation_dialog.dart';
 import '../../../core/widgets/panic_countdown_dialog.dart';
 import 'widgets/tramites_section.dart';
 
@@ -187,28 +188,20 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     // Diálogos informativos
     if (state.showInDevelopmentDialog) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        showDialog(
+        showDialog<void>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.construction, color: Colors.blue),
-                SizedBox(width: 10),
-                Text('¡Próximamente disponible!'),
-              ],
-            ),
-            content: const Text(
-              'Estamos trabajando para que esta función esté lista muy pronto. Te avisaremos cuando esté disponible. Síguenos en nuestras redes o visita nuestro sitio web.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  notifier.onInDevelopmentDialogDismiss();
-                },
-                child: const Text('Entendido'),
-              ),
-            ],
+          barrierDismissible: false,
+          builder: (ctx) => ConfirmationDialog(
+            title: '¡Próximamente disponible!',
+            message:
+                'Estamos trabajando para que esta función esté lista muy pronto. Te avisaremos cuando esté disponible. Síguenos en nuestras redes o visita nuestro sitio web.',
+            icon: Icons.construction,
+            confirmButtonText: 'Entendido',
+            onConfirm: () {
+              Navigator.of(ctx).pop();
+              notifier.onInDevelopmentDialogDismiss();
+            },
+            onDismiss: () {},
           ),
         );
       });
@@ -372,7 +365,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                                 onSearchToggled: notifier.onSearchToggled,
                                 onTramiteClick: (t) {
                                   notifier.onTramiteClicked(t);
-                                  if (t.accion is! AbrirUrl &&
+                                  if (t.isActive &&
+                                      t.accion is! AbrirUrl &&
                                       t.accion is! AbrirUrlDirecto &&
                                       t.accion is! AbrirBotonPanico) {
                                     _handleNavigation(t);
@@ -397,7 +391,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                                 onSearchToggled: () {},
                                 onTramiteClick: (t) {
                                   notifier.onTramiteClicked(t);
-                                  if (t.accion is! AbrirUrl &&
+                                  if (t.isActive &&
+                                      t.accion is! AbrirUrl &&
                                       t.accion is! AbrirUrlDirecto &&
                                       t.accion is! AbrirBotonPanico) {
                                     _handleNavigation(t);

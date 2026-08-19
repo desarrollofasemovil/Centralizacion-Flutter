@@ -85,10 +85,11 @@ class MainUiState {
     bool clearModalMode = false,
     bool clearPendingUrl = false,
     bool clearUrlToOpen = false,
+    bool clearCurrentUser = false,
   }) {
     return MainUiState(
       isLoading: isLoading ?? this.isLoading,
-      currentUser: currentUser ?? this.currentUser,
+      currentUser: clearCurrentUser ? null : (currentUser ?? this.currentUser),
       currentIdMunicipality: currentIdMunicipality ?? this.currentIdMunicipality,
       currentMunicipalityName: currentMunicipalityName ?? this.currentMunicipalityName,
       showLoginSuccessDialog: showLoginSuccessDialog ?? this.showLoginSuccessDialog,
@@ -120,7 +121,9 @@ class MainViewModel extends Notifier<MainUiState> {
   MainUiState build() {
     // Escuchar cambios en la sesión del usuario para actualizar el estado
     ref.listen<UserDTO?>(sessionProvider, (prev, next) {
-      state = state.copyWith(currentUser: next);
+      state = next == null
+          ? state.copyWith(clearCurrentUser: true)
+          : state.copyWith(currentUser: next);
     });
 
     try {
