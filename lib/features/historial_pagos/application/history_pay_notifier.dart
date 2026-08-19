@@ -11,7 +11,8 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
     return const AsyncValue.loading();
   }
 
-  PaymentHistoryApiService get _apiService => ref.read(paymentHistoryApiServiceProvider);
+  PaymentHistoryApiService get _apiService =>
+      ref.read(paymentHistoryApiServiceProvider);
   int? get _userId => ref.watch(sessionProvider)?.id;
 
   void _fetchHistoryInitial() {
@@ -62,4 +63,5 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
 
 final historyPayNotifierProvider =
     NotifierProvider<HistoryPayNotifier, AsyncValue<PaymentHistoryListDTO>>(
-        HistoryPayNotifier.new);
+      HistoryPayNotifier.new,
+    );

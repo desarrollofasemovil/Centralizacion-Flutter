@@ -65,8 +65,9 @@ class _RegistrationFormState extends ConsumerState<RegistrationForm> {
             Text(
               'Inscripción a: $title',
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 10),
             _field(
@@ -82,7 +83,8 @@ class _RegistrationFormState extends ConsumerState<RegistrationForm> {
               label: 'Nombre',
               formatters: [
                 FilteringTextInputFormatter.allow(
-                    RegExp(r'[A-Za-zÁÉÍÓÚáéíóúÑñ ]')),
+                  RegExp(r'[A-Za-zÁÉÍÓÚáéíóúÑñ ]'),
+                ),
               ],
               onChanged: notifier.onFirstNameChanged,
               error: form.firstNameError,
@@ -92,7 +94,8 @@ class _RegistrationFormState extends ConsumerState<RegistrationForm> {
               label: 'Apellido',
               formatters: [
                 FilteringTextInputFormatter.allow(
-                    RegExp(r'[A-Za-zÁÉÍÓÚáéíóúÑñ ]')),
+                  RegExp(r'[A-Za-zÁÉÍÓÚáéíóúÑñ ]'),
+                ),
               ],
               onChanged: notifier.onLastNameChanged,
               error: form.lastNameError,
@@ -115,27 +118,33 @@ class _RegistrationFormState extends ConsumerState<RegistrationForm> {
             if (form.phoneError != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(form.phoneError!,
-                    style: TextStyle(color: theme.colorScheme.error)),
+                child: Text(
+                  form.phoneError!,
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
               ),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 OutlinedButton(
-                  onPressed:
-                      state.isLoading ? null : () => Navigator.of(context).pop(),
+                  onPressed: state.isLoading
+                      ? null
+                      : () => Navigator.of(context).pop(),
                   child: const Text('Cancelar'),
                 ),
                 const SizedBox(width: 10),
                 FilledButton(
-                  onPressed:
-                      state.isLoading ? null : () => notifier.submitRegistration(),
+                  onPressed: state.isLoading
+                      ? null
+                      : () => notifier.submitRegistration(),
                   child: state.isLoading
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
                         )
                       : const Text('Enviar'),
                 ),

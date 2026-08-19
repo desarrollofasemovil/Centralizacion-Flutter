@@ -60,8 +60,12 @@ class EditProfileState {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       address: address ?? this.address,
       isLoading: isLoading ?? this.isLoading,
-      updateResult: clearUpdateResult ? null : (updateResult ?? this.updateResult),
-      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+      updateResult: clearUpdateResult
+          ? null
+          : (updateResult ?? this.updateResult),
+      errorMessage: clearErrorMessage
+          ? null
+          : (errorMessage ?? this.errorMessage),
     );
   }
 }
@@ -172,5 +176,5 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
 
 final editProfileNotifierProvider =
     NotifierProvider<EditProfileNotifier, EditProfileState>(
-  EditProfileNotifier.new,
-);
+      EditProfileNotifier.new,
+    );

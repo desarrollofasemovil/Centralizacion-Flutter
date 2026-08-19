@@ -51,8 +51,10 @@ class PqrdDropdown<T> extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
           border: outline(AppColors.gray400),
           enabledBorder: outline(AppColors.gray400),
           focusedBorder: outline(scheme.primary, 2),
@@ -62,10 +64,7 @@ class PqrdDropdown<T> extends StatelessWidget {
             .map(
               (item) => DropdownMenuItem<T>(
                 value: item,
-                child: Text(
-                  itemLabel(item),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: Text(itemLabel(item), overflow: TextOverflow.ellipsis),
               ),
             )
             .toList(),

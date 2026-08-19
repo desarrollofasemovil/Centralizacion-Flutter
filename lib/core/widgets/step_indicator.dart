@@ -40,22 +40,22 @@ class StepIndicator extends StatelessWidget {
       if (step < stepCount) {
         children.add(
           Expanded(
-            child: Padding(
-              // Alinea la línea con el centro vertical del círculo (32 / 2).
-              padding: const EdgeInsets.only(top: 15),
-              child: Container(
-                height: 2,
-                color: currentStep > step
-                    ? scheme.primary
-                    : scheme.onSurface.withValues(alpha: 0.15),
-              ),
+            // `HorizontalDivider` del original: 1 dp y `surfaceVariant` mientras
+            // el paso no se haya superado (`surfaceContainerHighest` es su
+            // equivalente en el ColorScheme de Material 3 de Flutter).
+            child: Container(
+              height: 1,
+              color: currentStep > step
+                  ? scheme.primary
+                  : scheme.surfaceContainerHighest,
             ),
           ),
         );
       }
     }
 
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: children);
+    // `verticalAlignment = Alignment.CenterVertically` del Row original.
+    return Row(children: children);
   }
 }
 
@@ -69,8 +69,9 @@ class _StepDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final accent =
-        isActive ? scheme.primary : scheme.onSurface.withValues(alpha: 0.5);
+    final accent = isActive
+        ? scheme.primary
+        : scheme.onSurface.withValues(alpha: 0.5);
 
     return Column(
       mainAxisSize: MainAxisSize.min,

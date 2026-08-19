@@ -39,8 +39,15 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
   final CoursesParam param;
 
   static const _keywords = [
-    'Director', 'Contacto', 'Celular', 'Horario', 'Lugar',
-    'Coordinador', 'Instructor', 'Profesor', 'Categoría',
+    'Director',
+    'Contacto',
+    'Celular',
+    'Horario',
+    'Lugar',
+    'Coordinador',
+    'Instructor',
+    'Profesor',
+    'Categoría',
   ];
 
   CoursesRepository get _repo => ref.read(coursesRepositoryProvider);
@@ -64,7 +71,11 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
         param.municipalityId,
         courseId: param.courseId > 0 ? param.courseId : null,
       );
-      state = state.copyWith(isLoading: false, courses: courses, clearError: true);
+      state = state.copyWith(
+        isLoading: false,
+        courses: courses,
+        clearError: true,
+      );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: _message(e));
     }
@@ -114,22 +125,28 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
   // --- Cambios de campos (con el mismo filtrado del original) ---
   void onDocumentNumberChanged(String v) {
     if (v.isEmpty || RegExp(r'^\d+$').hasMatch(v)) {
-      _updateForm(state.formState.copyWith(
-          documentNumber: v, clearDocumentNumberError: true));
+      _updateForm(
+        state.formState.copyWith(
+          documentNumber: v,
+          clearDocumentNumberError: true,
+        ),
+      );
     }
   }
 
   void onFirstNameChanged(String v) {
     if (v.isEmpty || RegExp(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$').hasMatch(v)) {
       _updateForm(
-          state.formState.copyWith(firstName: v, clearFirstNameError: true));
+        state.formState.copyWith(firstName: v, clearFirstNameError: true),
+      );
     }
   }
 
   void onLastNameChanged(String v) {
     if (v.isEmpty || RegExp(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$').hasMatch(v)) {
       _updateForm(
-          state.formState.copyWith(lastName: v, clearLastNameError: true));
+        state.formState.copyWith(lastName: v, clearLastNameError: true),
+      );
     }
   }
 
@@ -160,8 +177,9 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
       age: int.tryParse(f.age) ?? 0,
       email: f.email,
       phone: f.phone,
-      municipalityEmail:
-          param.municipalityEmail.trim().isEmpty ? null : param.municipalityEmail,
+      municipalityEmail: param.municipalityEmail.trim().isEmpty
+          ? null
+          : param.municipalityEmail,
     );
 
     try {
@@ -175,7 +193,9 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
   bool _validate() {
     final s = state.formState;
     if (s.documentNumber.trim().isEmpty) {
-      _updateForm(s.copyWith(documentNumberError: 'El número de documento es requerido'));
+      _updateForm(
+        s.copyWith(documentNumberError: 'El número de documento es requerido'),
+      );
       return false;
     }
     if (s.age.trim().isEmpty) {
@@ -187,8 +207,12 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
       return false;
     }
     if (s.firstName.length > 100) {
-      _updateForm(s.copyWith(
-          firstNameError: 'El primer nombre no puede tener más de 100 caracteres'));
+      _updateForm(
+        s.copyWith(
+          firstNameError:
+              'El primer nombre no puede tener más de 100 caracteres',
+        ),
+      );
       return false;
     }
     if (s.lastName.trim().isEmpty) {
@@ -196,8 +220,12 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
       return false;
     }
     if (s.lastName.length > 100) {
-      _updateForm(s.copyWith(
-          lastNameError: 'El primer apellido no puede tener más de 100 caracteres'));
+      _updateForm(
+        s.copyWith(
+          lastNameError:
+              'El primer apellido no puede tener más de 100 caracteres',
+        ),
+      );
       return false;
     }
     if (s.email.trim().isEmpty) {
@@ -213,11 +241,15 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
       return false;
     }
     if (!RegExp(r'^\d+$').hasMatch(s.phone)) {
-      _updateForm(s.copyWith(phoneError: 'El teléfono solo puede contener números'));
+      _updateForm(
+        s.copyWith(phoneError: 'El teléfono solo puede contener números'),
+      );
       return false;
     }
     if (s.phone.length < 7 || s.phone.length > 15) {
-      _updateForm(s.copyWith(phoneError: 'El teléfono debe tener entre 7 y 15 dígitos'));
+      _updateForm(
+        s.copyWith(phoneError: 'El teléfono debe tener entre 7 y 15 dígitos'),
+      );
       return false;
     }
     return true;
@@ -229,7 +261,10 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
     for (final line in raw.split('\n')) {
       var matched = false;
       for (final keyword in _keywords) {
-        final regex = RegExp('^$keyword\\s*[:\\-]\\s*(.*)', caseSensitive: false);
+        final regex = RegExp(
+          '^$keyword\\s*[:\\-]\\s*(.*)',
+          caseSensitive: false,
+        );
         final match = regex.firstMatch(line.trim());
         if (match != null) {
           details[keyword] = match.group(1) ?? '';
@@ -265,5 +300,5 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
 
 final coursesNotifierProvider =
     NotifierProvider.family<CoursesNotifier, CoursesUiState, CoursesParam>(
-  CoursesNotifier.new,
-);
+      CoursesNotifier.new,
+    );

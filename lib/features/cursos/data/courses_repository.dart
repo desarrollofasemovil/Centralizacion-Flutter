@@ -12,10 +12,15 @@ class CoursesRepository {
 
   final CourseApiService _api;
 
-  Future<List<CourseDTO>> getCourses(int municipalityId, {int? courseId}) async {
+  Future<List<CourseDTO>> getCourses(
+    int municipalityId, {
+    int? courseId,
+  }) async {
     final response = await _api.getCourses(municipalityId, courseId: courseId);
     if (!response.booleanStatus) {
-      throw Exception(response.sentencesError ?? 'Error desconocido en el servidor');
+      throw Exception(
+        response.sentencesError ?? 'Error desconocido en el servidor',
+      );
     }
     return response.result ?? const [];
   }

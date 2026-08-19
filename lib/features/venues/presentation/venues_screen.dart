@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/models/venue_dto.dart';
+import '../../../core/widgets/app_back_button.dart';
+import '../../../core/widgets/circles_decoration.dart';
 import '../../../core/widgets/confirmation_dialog.dart';
 import '../../auth/application/auth_providers.dart';
 import '../application/venues_notifier.dart';
@@ -29,7 +31,9 @@ class _VenuesScreenState extends ConsumerState<VenuesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _showInstructionDialog());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _showInstructionDialog(),
+    );
   }
 
   void _showInstructionDialog() {
@@ -57,7 +61,8 @@ class _VenuesScreenState extends ConsumerState<VenuesScreen> {
       context: context,
       builder: (ctx) => ConfirmationDialog(
         title: 'Atención',
-        message: 'Debes iniciar sesión para poder reservar un espacio deportivo.',
+        message:
+            'Debes iniciar sesión para poder reservar un espacio deportivo.',
         icon: Icons.warning_amber_rounded,
         confirmButtonText: 'Entendido',
         onConfirm: () => Navigator.of(ctx).pop(),
@@ -98,7 +103,9 @@ class _VenuesScreenState extends ConsumerState<VenuesScreen> {
       showDialog<void>(
         context: context,
         builder: (ctx) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(6),
             child: Column(
@@ -163,44 +170,38 @@ class _VenuesScreenState extends ConsumerState<VenuesScreen> {
       },
     );
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Stack(
+      children: [
+        Scaffold(
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Material(
-                    color: theme.colorScheme.primary,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40)),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(40),
-                      onTap: () => context.pop(),
-                      child: SizedBox(
-                        width: 35,
-                        height: 35,
-                        child: Icon(Icons.arrow_back_ios_new,
-                            size: 18, color: theme.colorScheme.onPrimary),
+                Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10),
+                      child: AppBackButton(onPressed: () => context.pop()),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Espacios deportivos',
+                          style: theme.textTheme.titleLarge,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Espacios deportivos',
-                        style: theme.textTheme.titleLarge),
-                  ),
-                ),
+                Expanded(child: _body(context, state)),
               ],
             ),
-            Expanded(child: _body(context, state)),
-          ],
+          ),
         ),
-      ),
+        // Adorno de círculos de la esquina superior (`circles`).
+        const CirclesDecoration.branded(),
+      ],
     );
   }
 
@@ -216,19 +217,27 @@ class _VenuesScreenState extends ConsumerState<VenuesScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.warning_amber_rounded,
-                    size: 72, color: theme.colorScheme.error),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  size: 72,
+                  color: theme.colorScheme.error,
+                ),
                 const SizedBox(height: 16),
-                Text('No pudimos conectar con el servidor',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  'No pudimos conectar con el servidor',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(state.errorMessage,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    )),
+                Text(
+                  state.errorMessage,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 32),
                 FractionallySizedBox(
                   widthFactor: 0.7,

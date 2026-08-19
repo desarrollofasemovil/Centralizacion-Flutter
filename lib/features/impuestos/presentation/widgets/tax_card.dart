@@ -76,18 +76,27 @@ class _TaxCardState extends State<TaxCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Nombre: ${tax.name}',
-                          style: theme.textTheme.bodyMedium),
-                      Text('Impuesto: ${tax.taxName}',
-                          style: theme.textTheme.bodyMedium),
-                      Text('Factura: ${tax.invoice}',
-                          style: theme.textTheme.bodyMedium),
-                      Text('Fecha límite: ${tax.dueDate}',
-                          style: theme.textTheme.bodyMedium),
+                      Text(
+                        'Nombre: ${tax.name}',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      Text(
+                        'Impuesto: ${tax.taxName}',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      Text(
+                        'Factura: ${tax.invoice}',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      Text(
+                        'Fecha límite: ${tax.dueDate}',
+                        style: theme.textTheme.bodyMedium,
+                      ),
                       Text(
                         'Total a pagar: ${formatCurrency(tax.value)}',
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -151,8 +160,9 @@ class _TaxCardState extends State<TaxCard> {
                 ),
                 child: Text(
                   'Pagar por PSE',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(color: Colors.white),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -185,11 +195,7 @@ class _CircleActionButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         child: Tooltip(
           message: tooltip,
-          child: SizedBox(
-            width: 60,
-            height: 60,
-            child: Center(child: child),
-          ),
+          child: SizedBox(width: 60, height: 60, child: Center(child: child)),
         ),
       ),
     );

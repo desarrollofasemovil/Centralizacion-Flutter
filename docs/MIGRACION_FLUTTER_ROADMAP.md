@@ -19,7 +19,7 @@ Cifras medidas sobre el repo, no estimadas:
 | Servicios Retrofit | 14 |
 | Base URLs (todas HTTPS) | 6 / 6 |
 | `flutter analyze` | 0 issues |
-| Tests | 27 pasando, 5 archivos |
+| Tests | 34 pasando, 6 archivos (7 nuevos de componentes compartidos, 2026-08-19) |
 
 **Avance:** funcionalidad Android ~90 % · iOS ~10 % · proyecto global ~72 %.
 
@@ -79,6 +79,26 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 
 > ✅ **Fase 2 verificada**: Pantallas de onboarding, selector de municipios, login nativo y con Google, registro wizard en 3 pasos, recuperación de contraseña, pantalla principal (Home), módulo de noticias e integración de notificaciones push y locales completamente implementados.
 >
+> 🎨 **Pulido de UI de la Home (2026-08-19)** — cotejado contra `MainScreen.kt` y sus componentes:
+> - **Adorno `circles` que faltaba por completo.** El original dibuja `R.drawable.circles` en la
+>   esquina superior derecha de Home, Historial, Cursos y Escenarios; no había asset ni widget en
+>   Flutter. Portado a `assets/images/circles.svg` + `core/widgets/circles_decoration.dart` con los
+>   dos presets del original (Home: 110 dp sin rotar, blanco al 20 %; el resto: 120 dp rotado 90°,
+>   `primary` al 70 %).
+> - **Bottom nav con íconos genéricos de Material** (`Icons.home/newspaper/language/history`) en vez
+>   de los de la marca. Ahora usa `icohome`/`iconoticias`/`icoportal`/`icohistorial`, que ya estaban
+>   en `assets/images/` sin consumir.
+> - **Diálogo de salida suelto.** Era un `AlertDialog` crudo; ahora usa el `ConfirmationDialog`
+>   compartido (mismo caso que el "Próximamente disponible" del PR #20). Además **el botón "Sí, salir"
+>   no cerraba la app**: `onConfirmExit` del original hace `FinishApp` cuando hay municipio guardado y
+>   solo va a Welcome cuando no lo hay; el Flutter iba a Welcome en ambas ramas. Corregido con
+>   `SystemNavigator.pop()`.
+> - **Teclado que no se cerraba al tocar fuera** (el `clickable { focusManager.clearFocus() }` que
+>   envuelve el contenido en `MainScreenContent`). Añadido en Home y en Certificados.
+> - **Espaciados**: 10 dp entre secciones y sin padding inferior extra (`spacedBy(10.dp)` +
+>   `contentPadding` del `LazyColumn` original, que usaba 16) y 5 dp entre tarjetas de trámite
+>   (`Arrangement.spacedBy(5.dp)`, que no se había portado).
+>
 > 🐛 **Bug de logout cerrado (PR #20, 2026-08-19)**: tras cerrar sesión, el side menu seguía mostrando
 > el saludo y "Cerrar sesión" del usuario anterior. Causa: `MainUiState.copyWith(currentUser: next)`
 > usaba `currentUser ?? this.currentUser` — con `next == null` (logout), `??` descarta el `null` y
@@ -93,9 +113,18 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 - [x] Impuestos (consulta dinámica por `queryFields` + respuesta + descarga PDF) 🍎
   - [x] Repaso de fidelidad 2026-07: UI portada de `TaxQueryScreen.kt`/`RespuestaConsultaScreen.kt`, validaciones en notifier, botón "Pagar por PSE" (Custom Tabs/Safari VC vía `abrirUrl`), descarga + compartir factura PDF (`share_plus`), registro en historial y pantalla "Procesando tu pago" con countdown
 - [x] Certificados (3 pasos)
+  - 🎨 **Fidelidad 2026-08-19**: la pantalla usaba un `AppBar` plano en vez de la cabecera
+    `TopbarNavigation` del original (insignia con el ícono del certificado + "Pide, paga y recibe tu
+    certificado."), y un indicador de pasos numerado propio en vez del compartido. De paso,
+    `_getIconPath` devolvía rutas `.png` inexistentes (los assets son `.svg`); el campo nunca se
+    pintaba, así que el error estaba latente hasta que la cabecera empezó a consumirlo.
 - [x] Servicios Públicos + escáner QR/barcode (`mobile_scanner`) 🍎
 - [x] Pagos: PSV + PaymentProcessing (pasarela) + estado de transacción
 - [x] Historial de pagos
+  - 🎨 **Fidelidad 2026-08-19**: portada la cabecera `TopbarNavigation` con el ícono
+    `ico_calendar_history` (vector drawable convertido a SVG), el marco redondeado del original
+    (borde `primary` al 20 % con radio 25 sobre superficie con radio 20) y el adorno `circles`.
+    Antes era un `AppBar` plano titulado "Historial de Pagos".
 
 > ✅ **Fase 3 verificada**: Módulos core (Trámites con mappers y tests unitarios, PQRD, Impuestos con consulta y descarga de PDF, Certificados en 3 pasos, Servicios Públicos con escaneo de código de barras, Pagos PSV y pasarela, e Historial de pagos) completamente implementados en el código Dart.
 >
@@ -122,8 +151,9 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 - [x] `RequestNotificationPermission`: cubierto por `core/notifications` (FCM `requestPermission` + locales `requestNotificationsPermission`) — no requiere widget.
 - [x] **Consumir los dialogs centralizados** — `ValidationErrorDialog` cableado en PSV y `ConfirmationPoliciesDialog` en PQRD paso 3. *(Certificados queda con SnackBars a propósito: el `ValidationErrorDialog` también está comentado en el `CertificatesNavScreen.kt` original, así que el port es fiel — no es una desviación.)* El diálogo "Próximamente disponible" de `MainScreen` (trámites inactivos) también consume `ConfirmationDialog` desde el 2026-08-19 (PR #20) — antes era un `AlertDialog` suelto, sin el padding/header/ícono del componente compartido.
 - [ ] `NoConnectionDialog`: requiere el observador de conectividad a nivel app (`connectivity_plus`, `FRONTEND.md §3`) antes de portar el diálogo. **`connectivity_plus` no está en `pubspec.yaml`** — ese es el primer paso.
-- [ ] `TopbarNavigation` compartido: hoy **18 pantallas** declaran su propio `AppBar`. Unificar en un componente común. Conviene hacerlo **antes** de abrir iOS: después habría que revalidar en dos plataformas.
-- [ ] `StepIndicator`: existe el canónico en `core/widgets/step_indicator.dart`, pero **siguen 2 copias** (`features/auth/.../signup_step_row.dart` y el `_StepIndicator` inline de `psv_wizard.dart`). Unificar (`FRONTEND.md §11.5`).
+- [x] `TopbarNavigation` compartido → `core/widgets/top_bar_navigation.dart` (`TopBarNavigationScaffold`, antes `PqrdScaffold`, que ya era el port fiel pero estaba encerrado en PQRD). Lo consumen las pantallas cuyo original llama a `TopbarNavigation`: PQRD anónima, PQRD con identificación, **Certificados** e **Historial de pagos** (estas dos tenían un `AppBar` plano). PSV conserva su `SliverAppBar` propio por el badge del impuesto, pero ya usa el botón de retroceso compartido. Se le añadieron `bottomBar` (barra fija fuera del scroll) y `onRefresh` (equivalente al `PullToRefreshBox` del Historial).
+- [x] `AppBackButton` (`core/widgets/app_back_button.dart`): el botón circular de "atrás" estaba **duplicado en 7 pantallas** (`_CircleBackButton`/`_CircularBackButton` + dos copias inline) y con tamaños de ícono distintos (18 vs 20 px). Un solo componente con los dos estilos del original: `filled` (círculo `primary` + flecha `onPrimary`, para barras sobre fondo claro — Editar perfil, Configuración, Consulta/Respuesta de impuesto, Cursos, Escenarios) y `light` (círculo blanco + flecha `primary`, para barras sobre el color del municipio — `MainTopBar`, `TopbarNavigation`, PSV).
+- [x] `StepIndicator`: unificado en el canónico. Se borró la copia `_StepIndicator` de `psv_wizard.dart` y el indicador numerado inline de `certificates_wizard.dart` (que ni siquiera era el diseño del original: usaba `CircleAvatar` con números en vez de círculos con check). De paso el canónico se ajustó al `StepIndicator.kt` real: divisor de 1 dp con `surfaceVariant` y fila centrada verticalmente. *(Corrección al inventario anterior: `features/auth/.../signup_step_row.dart` **no** es una copia — `signup/components/StepIndicator.kt` es otro componente del original, con círculos numerados y sin check.)*
 - [ ] `NotificationHelper`: portar las notificaciones locales de confirmación de Cursos/Escenarios (`showCourseRegistrationNotification`/`showVenueReservationNotification`) sobre `flutter_local_notifications`. Solo existen en Kotlin.
 
 ## Fase 4 — Módulos + perfil

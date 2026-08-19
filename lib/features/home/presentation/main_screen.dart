@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,7 @@ import 'widgets/main_side_menu_options.dart';
 import 'widgets/main_top_bar.dart';
 import 'widgets/maintenance_info_card.dart';
 import 'widgets/modal_form.dart';
+import '../../../core/widgets/circles_decoration.dart';
 import '../../../core/widgets/confirmation_dialog.dart';
 import '../../../core/widgets/panic_countdown_dialog.dart';
 import 'widgets/tramites_section.dart';
@@ -102,18 +104,20 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final domainModel = widget.municipality.toDomainModel();
 
     // Escuchar si hay alguna URL pendiente para abrir
-    ref.listen<String?>(
-      mainViewModelProvider(widget.municipality.id).select((s) => s.urlToOpen),
-      (prev, next) async {
-        if (next != null && next.isNotEmpty) {
-          // Portal tributario / URLs de trámite: se abren en el navegador in-app
-          // (Chrome Custom Tabs / Safari VC) tintado con el color del municipio,
-          // igual que `abrirURL(context, url, colorPrimario)` del original.
-          await abrirUrl(next, toolbarColor: theme.colorScheme.primary);
-          notifier.clearUrlToOpen();
-        }
-      },
-    );
+    ref.listen<
+      String?
+    >(mainViewModelProvider(widget.municipality.id).select((s) => s.urlToOpen), (
+      prev,
+      next,
+    ) async {
+      if (next != null && next.isNotEmpty) {
+        // Portal tributario / URLs de trámite: se abren en el navegador in-app
+        // (Chrome Custom Tabs / Safari VC) tintado con el color del municipio,
+        // igual que `abrirURL(context, url, colorPrimario)` del original.
+        await abrirUrl(next, toolbarColor: theme.colorScheme.primary);
+        notifier.clearUrlToOpen();
+      }
+    });
 
     // Nota: el ModalForm NO se muestra automáticamente al entrar/iniciar sesión.
     // Igual que en el original (MainViewModel.kt), solo lo dispara
@@ -211,40 +215,31 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.exit_to_app, color: Colors.blue),
-                SizedBox(width: 10),
-                Text('Atención'),
-              ],
-            ),
-            content: const Text('Estás a punto de salir de esta pantalla.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  notifier.onExitDialogDismissed();
-                },
-                child: const Text('No, cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  Navigator.of(ctx).pop();
-                  notifier.onExitDialogDismissed();
-                  final loc = ref
-                      .read(userPreferencesProvider)
-                      .getSavedLocation();
-                  if (!loc.guardado) {
-                    context.go(AppRoutes.welcome);
-                  } else {
-                    // Cierra la app o vuelve al selector
-                    context.go(AppRoutes.welcome);
-                  }
-                },
-                child: const Text('Sí, salir'),
-              ),
-            ],
+          // `ConfirmationDialog` compartido (cabecera de color + ícono), igual
+          // que el original; antes era un `AlertDialog` suelto sin el estilo
+          // del resto de diálogos de la app.
+          builder: (ctx) => ConfirmationDialog(
+            title: 'Atención',
+            message: 'Estas a punto de salir de esta pantalla.',
+            icon: Icons.exit_to_app,
+            confirmButtonText: 'Si, salir',
+            dismissButtonText: 'No, cancelar',
+            onDismiss: () {
+              Navigator.of(ctx).pop();
+              notifier.onExitDialogDismissed();
+            },
+            onConfirm: () async {
+              Navigator.of(ctx).pop();
+              notifier.onExitDialogDismissed();
+              // Puerto de `onConfirmExit`: si no hay municipio guardado vuelve
+              // al Welcome; si lo hay, cierra la app (`MainEvent.FinishApp`).
+              final loc = ref.read(userPreferencesProvider).getSavedLocation();
+              if (!loc.guardado) {
+                context.go(AppRoutes.welcome);
+              } else {
+                await SystemNavigator.pop();
+              }
+            },
           ),
         );
       });
@@ -309,134 +304,153 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             },
           ),
         ),
-        body: Column(
-          children: [
-            MainTopBar(
-              onMenuClicked: () {
-                _scaffoldKey.currentState?.openDrawer();
-              },
-              onBackClicked: () {
-                notifier.onBackPressed();
-              },
-            ),
-            MainHeader(
-              design: domainModel.design,
-              departamento: domainModel.departamento,
-              isLoading: state.isLoading,
-            ),
-            Expanded(
-              child: Container(
-                color: theme.colorScheme.primary,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
+        // Un toque en cualquier zona vacía cierra el teclado, igual que el
+        // `clickable(indication = null) { focusManager.clearFocus() }` que
+        // envuelve el contenido en `MainScreenContent`.
+        body: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  MainTopBar(
+                    onMenuClicked: () {
+                      _scaffoldKey.currentState?.openDrawer();
+                    },
+                    onBackClicked: () {
+                      notifier.onBackPressed();
+                    },
                   ),
-                  child: Container(
-                    // Fondo de página = `background` del original (White /
-                    // Gray1000), no `surface` (ese es el fondo de las cards).
-                    color: theme.colorScheme.surfaceContainerLowest,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-                      child: Column(
-                        children: [
-                          const MaintenanceInfoCard(),
-                          if (ref
-                              .read(userPreferencesProvider)
-                              .remindersIsVisible()) ...[
-                            AnimatedSection(
-                              child: RemindersSection(
-                                procedures:
-                                    widget.municipality.municipalityProcedures,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          if (domainModel.tramitesPrincipales.isNotEmpty ||
-                              state.isLoading) ...[
-                            AnimatedSection(
-                              child: TramitesSection(
-                                titulo: "Trámites",
-                                tramites: domainModel.tramitesPrincipales,
-                                searchText: state.searchText,
-                                isSearchActive: state.isSearchActive,
-                                isLoading: state.isLoading,
-                                onSearchTextChanged:
-                                    notifier.onSearchTextChanged,
-                                onSearchToggled: notifier.onSearchToggled,
-                                onTramiteClick: (t) {
-                                  notifier.onTramiteClicked(t);
-                                  if (t.isActive &&
-                                      t.accion is! AbrirUrl &&
-                                      t.accion is! AbrirUrlDirecto &&
-                                      t.accion is! AbrirBotonPanico) {
-                                    _handleNavigation(t);
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          if (domainModel.otrosTramites.isNotEmpty ||
-                              state.isLoading) ...[
-                            AnimatedSection(
-                              delayMillis: 300,
-                              child: TramitesSection(
-                                titulo: "Otros trámites",
-                                tramites: domainModel.otrosTramites,
-                                searchText: state.searchText,
-                                isSearchActive: false,
-                                isSearchable: false,
-                                isLoading: state.isLoading,
-                                onSearchTextChanged: (_) {},
-                                onSearchToggled: () {},
-                                onTramiteClick: (t) {
-                                  notifier.onTramiteClicked(t);
-                                  if (t.isActive &&
-                                      t.accion is! AbrirUrl &&
-                                      t.accion is! AbrirUrlDirecto &&
-                                      t.accion is! AbrirBotonPanico) {
-                                    _handleNavigation(t);
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          if (domainModel.socialLinks.isNotEmpty ||
-                              state.isLoading) ...[
-                            AnimatedSection(
-                              delayMillis: 400,
-                              child: TramitesSection(
-                                titulo: "Canales",
-                                tramites: domainModel.socialLinks,
-                                searchText: state.searchText,
-                                isSearchActive: false,
-                                isSearchable: false,
-                                isLoading: state.isLoading,
-                                onSearchTextChanged: (_) {},
-                                onSearchToggled: () {},
-                                onTramiteClick: (t) {
-                                  notifier.onTramiteClicked(t);
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          const SizedBox(height: 10),
-                          AnimatedSection(
-                            delayMillis: 100,
-                            child: _FooterSponsors(
-                              color: theme.colorScheme.onSurface,
+                  MainHeader(
+                    design: domainModel.design,
+                    departamento: domainModel.departamento,
+                    isLoading: state.isLoading,
+                  ),
+                  Expanded(
+                    child: Container(
+                      color: theme.colorScheme.primary,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                        child: Container(
+                          // Fondo de página = `background` del original (White /
+                          // Gray1000), no `surface` (ese es el fondo de las cards).
+                          color: theme.colorScheme.surfaceContainerLowest,
+                          child: SingleChildScrollView(
+                            // contentPadding + verticalArrangement.spacedBy(10.dp) del
+                            // LazyColumn original: 16 a los lados, 10 arriba y 10
+                            // entre secciones.
+                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                            child: Column(
+                              children: [
+                                const MaintenanceInfoCard(),
+                                if (ref
+                                    .read(userPreferencesProvider)
+                                    .remindersIsVisible()) ...[
+                                  AnimatedSection(
+                                    child: RemindersSection(
+                                      procedures: widget
+                                          .municipality
+                                          .municipalityProcedures,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                if (domainModel
+                                        .tramitesPrincipales
+                                        .isNotEmpty ||
+                                    state.isLoading) ...[
+                                  AnimatedSection(
+                                    child: TramitesSection(
+                                      titulo: "Trámites",
+                                      tramites: domainModel.tramitesPrincipales,
+                                      searchText: state.searchText,
+                                      isSearchActive: state.isSearchActive,
+                                      isLoading: state.isLoading,
+                                      onSearchTextChanged:
+                                          notifier.onSearchTextChanged,
+                                      onSearchToggled: notifier.onSearchToggled,
+                                      onTramiteClick: (t) {
+                                        notifier.onTramiteClicked(t);
+                                        if (t.isActive &&
+                                            t.accion is! AbrirUrl &&
+                                            t.accion is! AbrirUrlDirecto &&
+                                            t.accion is! AbrirBotonPanico) {
+                                          _handleNavigation(t);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                if (domainModel.otrosTramites.isNotEmpty ||
+                                    state.isLoading) ...[
+                                  AnimatedSection(
+                                    delayMillis: 300,
+                                    child: TramitesSection(
+                                      titulo: "Otros trámites",
+                                      tramites: domainModel.otrosTramites,
+                                      searchText: state.searchText,
+                                      isSearchActive: false,
+                                      isSearchable: false,
+                                      isLoading: state.isLoading,
+                                      onSearchTextChanged: (_) {},
+                                      onSearchToggled: () {},
+                                      onTramiteClick: (t) {
+                                        notifier.onTramiteClicked(t);
+                                        if (t.isActive &&
+                                            t.accion is! AbrirUrl &&
+                                            t.accion is! AbrirUrlDirecto &&
+                                            t.accion is! AbrirBotonPanico) {
+                                          _handleNavigation(t);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                if (domainModel.socialLinks.isNotEmpty ||
+                                    state.isLoading) ...[
+                                  AnimatedSection(
+                                    delayMillis: 400,
+                                    child: TramitesSection(
+                                      titulo: "Canales",
+                                      tramites: domainModel.socialLinks,
+                                      searchText: state.searchText,
+                                      isSearchActive: false,
+                                      isSearchable: false,
+                                      isLoading: state.isLoading,
+                                      onSearchTextChanged: (_) {},
+                                      onSearchToggled: () {},
+                                      onTramiteClick: (t) {
+                                        notifier.onTramiteClicked(t);
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                const SizedBox(height: 10),
+                                AnimatedSection(
+                                  delayMillis: 100,
+                                  child: _FooterSponsors(
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ),
-          ],
+              // Adorno de círculos de la esquina superior derecha (`circles`).
+              const CirclesDecoration.home(),
+            ],
+          ),
         ),
         bottomNavigationBar: MainBottomNavBar(
           selectedRoute: state.selectedRoute,

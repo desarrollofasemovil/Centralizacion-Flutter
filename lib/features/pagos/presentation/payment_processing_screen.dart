@@ -63,8 +63,8 @@ class _PaymentProcessingScreenState
     final checkLabel = state.isVerifying
         ? 'Verificando…'
         : state.secondsRemaining > 0
-            ? 'Verificar estado (${state.secondsRemaining}s)'
-            : 'Verificar estado del pago';
+        ? 'Verificar estado (${state.secondsRemaining}s)'
+        : 'Verificar estado del pago';
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -85,8 +85,9 @@ class _PaymentProcessingScreenState
                     Text(
                       'Procesando tu pago',
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall
-                          ?.copyWith(color: scheme.onSurface),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: scheme.onSurface,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     ConstrainedBox(
@@ -95,8 +96,9 @@ class _PaymentProcessingScreenState
                         'Completa el pago en la pasarela. Cuando termines, '
                         'verifica el estado para ver el resultado en tu historial.',
                         textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(color: scheme.onSurfaceVariant),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ],
@@ -118,8 +120,9 @@ class _PaymentProcessingScreenState
               SizedBox(
                 height: 52,
                 child: OutlinedButton(
-                  onPressed: () => context
-                      .go(AppRoutes.municipalityPath(widget.municipalityId)),
+                  onPressed: () => context.go(
+                    AppRoutes.municipalityPath(widget.municipalityId),
+                  ),
                   child: const Text('Volver al inicio'),
                 ),
               ),

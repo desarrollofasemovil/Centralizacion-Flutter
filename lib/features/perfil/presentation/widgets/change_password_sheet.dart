@@ -60,9 +60,12 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Cambiar Contraseña',
-              style: theme.textTheme.titleLarge
-                  ?.copyWith(color: theme.colorScheme.onSurface)),
+          Text(
+            'Cambiar Contraseña',
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
           const SizedBox(height: 16),
           _PasswordField(
             controller: _current,
@@ -120,7 +123,8 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                           child: CircularProgressIndicator.adaptive(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation(
-                                theme.colorScheme.onPrimary),
+                              theme.colorScheme.onPrimary,
+                            ),
                           ),
                         )
                       : const Text('Actualizar'),

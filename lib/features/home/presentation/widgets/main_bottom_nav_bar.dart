@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class BottomNavItem {
   final String label;
-  final IconData icon;
+
+  /// Asset SVG del ícono, portado de los `R.drawable` del `enum Destination`
+  /// original (icohome / iconoticias / icoportal / icohistorial). Antes se
+  /// usaban íconos genéricos de Material, que no son los de la marca.
+  final String iconAsset;
   final String route;
 
   const BottomNavItem({
     required this.label,
-    required this.icon,
+    required this.iconAsset,
     required this.route,
   });
 }
@@ -31,7 +36,9 @@ class MainBottomNavBar extends StatelessWidget {
         ? const Color(0xFF212121) // Gray900
         : Colors.white;
 
-    final adaptiveUnselectedIconColor = adaptiveSelectedIconColor.withValues(alpha: 0.7);
+    final adaptiveUnselectedIconColor = adaptiveSelectedIconColor.withValues(
+      alpha: 0.7,
+    );
 
     final Color darkerPrimaryColor;
     if (primaryColor.computeLuminance() < 0.5) {
@@ -43,14 +50,32 @@ class MainBottomNavBar extends StatelessWidget {
       );
     } else {
       final hsl = HSLColor.fromColor(primaryColor);
-      darkerPrimaryColor = hsl.withLightness((hsl.lightness * 0.9).clamp(0.0, 1.0)).toColor();
+      darkerPrimaryColor = hsl
+          .withLightness((hsl.lightness * 0.9).clamp(0.0, 1.0))
+          .toColor();
     }
 
     final items = [
-      const BottomNavItem(label: "Inicio", icon: Icons.home, route: "inicio"),
-      const BottomNavItem(label: "Noticias", icon: Icons.newspaper, route: "noticias"),
-      const BottomNavItem(label: "Portal", icon: Icons.language, route: "portal"),
-      const BottomNavItem(label: "Historial", icon: Icons.history, route: "historial"),
+      const BottomNavItem(
+        label: "Inicio",
+        iconAsset: "assets/images/icohome.svg",
+        route: "inicio",
+      ),
+      const BottomNavItem(
+        label: "Noticias",
+        iconAsset: "assets/images/iconoticias.svg",
+        route: "noticias",
+      ),
+      const BottomNavItem(
+        label: "Portal",
+        iconAsset: "assets/images/icoportal.svg",
+        route: "portal",
+      ),
+      const BottomNavItem(
+        label: "Historial",
+        iconAsset: "assets/images/icohistorial.svg",
+        route: "historial",
+      ),
     ];
 
     int getSelectedIndex() {
@@ -96,12 +121,16 @@ class MainBottomNavBar extends StatelessWidget {
             destinations: items.map((item) {
               final isSelected = items.indexOf(item) == selectedIndex;
               return NavigationDestination(
-                icon: Icon(
-                  item.icon,
-                  color: isSelected
-                      ? adaptiveSelectedIconColor
-                      : adaptiveUnselectedIconColor,
-                  size: 25,
+                icon: SvgPicture.asset(
+                  item.iconAsset,
+                  width: 25,
+                  height: 25,
+                  colorFilter: ColorFilter.mode(
+                    isSelected
+                        ? adaptiveSelectedIconColor
+                        : adaptiveUnselectedIconColor,
+                    BlendMode.srcIn,
+                  ),
                 ),
                 label: item.label,
               );

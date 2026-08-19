@@ -9,6 +9,8 @@ import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../home/presentation/widgets/main_bottom_nav_bar.dart';
 import '../../tramites/application/tramite_mappers.dart';
+import '../../../core/widgets/circles_decoration.dart';
+import '../../../core/widgets/top_bar_navigation.dart';
 import '../application/history_pay_notifier.dart';
 
 class HistoryPayScreen extends ConsumerWidget {
@@ -21,139 +23,194 @@ class HistoryPayScreen extends ConsumerWidget {
     final user = ref.watch(sessionProvider);
     final historyAsync = ref.watch(historyPayNotifierProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Historial de Pagos'),
-        backgroundColor: scheme.primary,
-        foregroundColor: scheme.onPrimary,
-      ),
-      body: user == null
-          ? _buildLoginPrompt(context, scheme)
-          : RefreshIndicator(
-              onRefresh: () => ref.read(historyPayNotifierProvider.notifier).fetchHistory(),
-              child: historyAsync.when(
-                data: (list) {
-                  if (list.isEmpty) {
-                    return _buildEmptyState();
-                  }
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: list.length,
-                    itemBuilder: (context, index) {
-                      final item = list[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12.0),
-                        elevation: 1.5,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: _getStatusColor(item.idStatusType).withValues(alpha: 0.1),
-                                child: Icon(
-                                  _getStatusIcon(item.idStatusType),
-                                  color: _getStatusColor(item.idStatusType),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.procedureName,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+    // Cabecera compartida `TopbarNavigation` + adorno de circulos, igual que
+    // `HistoryPayScreen.kt`. Antes era un `AppBar` plano con el titulo en texto.
+    return Stack(
+      children: [
+        TopBarNavigationScaffold(
+          iconAsset: 'assets/images/ico_calendar_history.svg',
+          title: 'Historial de pagos',
+          description:
+              'Desliza hacia abajo y actualiza el estado de tus transacciones.',
+          onRefresh: user == null
+              ? null
+              : () => ref
+                    .read(historyPayNotifierProvider.notifier)
+                    .fetchHistory(),
+          body: _Frame(
+            child: user == null
+                ? _buildLoginPrompt(context, scheme)
+                : historyAsync.when(
+                    data: (list) {
+                      if (list.isEmpty) {
+                        return _buildEmptyState();
+                      }
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16.0),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: list.length,
+                        itemBuilder: (context, index) {
+                          final item = list[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12.0),
+                            elevation: 1.5,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: _getStatusColor(
+                                      item.idStatusType,
+                                    ).withValues(alpha: 0.1),
+                                    child: Icon(
+                                      _getStatusIcon(item.idStatusType),
+                                      color: _getStatusColor(item.idStatusType),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Alcaldía: ${item.alcaldia}',
-                                      style: const TextStyle(color: Colors.black54, fontSize: 12),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Referencia: ${item.factura}',
-                                      style: const TextStyle(color: Colors.black54, fontSize: 12),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Fecha: ${_formatDate(item.paymentDate)}',
-                                      style: const TextStyle(color: Colors.grey, fontSize: 11),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '\$${item.amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                                          style: TextStyle(
+                                          item.procedureName,
+                                          style: const TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 15,
-                                            color: scheme.primary,
+                                            fontSize: 14,
                                           ),
                                         ),
-                                        _buildStatusChip(context, ref, item, scheme),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Alcaldía: ${item.alcaldia}',
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Referencia: ${item.factura}',
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Fecha: ${_formatDate(item.paymentDate)}',
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              '\$${item.amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                                color: scheme.primary,
+                                              ),
+                                            ),
+                                            _buildStatusChip(
+                                              context,
+                                              ref,
+                                              item,
+                                              scheme,
+                                            ),
+                                          ],
+                                        ),
                                       ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                    ),
+                                    onPressed: () =>
+                                        _confirmDelete(context, ref, item.id),
+                                  ),
+                                ],
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                onPressed: () => _confirmDelete(context, ref, item.id),
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                        const SizedBox(height: 16),
-                        Text('Error al cargar historial: $e', textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => ref.read(historyPayNotifierProvider.notifier).fetchHistory(),
-                          child: const Text('Reintentar'),
+                    loading: () => const SizedBox(
+                      height: 240,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (e, _) => Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              size: 48,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error al cargar historial: $e',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => ref
+                                  .read(historyPayNotifierProvider.notifier)
+                                  .fetchHistory(),
+                              child: const Text('Reintentar'),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
-      // Mismo BottomMenu de la Home, con "Historial" seleccionado.
-      bottomNavigationBar: MainBottomNavBar(
-        selectedRoute: 'history',
-        onTap: (index) async {
-          if (index == 0) {
-            context.go(AppRoutes.municipalityPath(municipalityId));
-            return;
-          }
-          if (index == 1 || index == 2) {
-            final mun = ref.read(municipalityProvider(municipalityId)).value;
-            if (mun == null) return;
-            final domainModel = mun.toDomainModel();
-            final url = index == 1 ? domainModel.newsUrl : domainModel.domain;
-            if (url.isNotEmpty) {
-              final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
+          ),
+          // Mismo BottomMenu de la Home, con "Historial" seleccionado.
+          bottomBar: MainBottomNavBar(
+            selectedRoute: 'history',
+            onTap: (index) async {
+              if (index == 0) {
+                context.go(AppRoutes.municipalityPath(municipalityId));
+                return;
               }
-            }
-          }
-          // index == 3: ya estamos en Historial.
-        },
-      ),
+              if (index == 1 || index == 2) {
+                final mun = ref
+                    .read(municipalityProvider(municipalityId))
+                    .value;
+                if (mun == null) return;
+                final domainModel = mun.toDomainModel();
+                final url = index == 1
+                    ? domainModel.newsUrl
+                    : domainModel.domain;
+                if (url.isNotEmpty) {
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                }
+              }
+              // index == 3: ya estamos en Historial.
+            },
+          ),
+        ),
+        const CirclesDecoration.branded(),
+      ],
     );
   }
 
@@ -184,8 +241,13 @@ class HistoryPayScreen extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: scheme.primary,
                 foregroundColor: scheme.onPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text('Iniciar Sesión'),
             ),
@@ -220,7 +282,12 @@ class HistoryPayScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusChip(BuildContext context, WidgetRef ref, dynamic item, ColorScheme scheme) {
+  Widget _buildStatusChip(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic item,
+    ColorScheme scheme,
+  ) {
     final statusId = item.idStatusType;
     final color = _getStatusColor(statusId);
     final text = item.statusType;
@@ -233,7 +300,9 @@ class HistoryPayScreen extends ConsumerWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Sincronizando estado de pago...')),
             );
-            await ref.read(historyPayNotifierProvider.notifier).syncPayment(item.id);
+            await ref
+                .read(historyPayNotifierProvider.notifier)
+                .syncPayment(item.id);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Estado de pago sincronizado.')),
@@ -248,11 +317,16 @@ class HistoryPayScreen extends ConsumerWidget {
           }
         },
         icon: const Icon(Icons.sync, size: 14, color: Colors.orange),
-        label: const Text('Sync', style: TextStyle(fontSize: 11, color: Colors.orange)),
+        label: const Text(
+          'Sync',
+          style: TextStyle(fontSize: 11, color: Colors.orange),
+        ),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           side: const BorderSide(color: Colors.orange),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -266,7 +340,11 @@ class HistoryPayScreen extends ConsumerWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -309,7 +387,9 @@ class HistoryPayScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar registro'),
-        content: const Text('¿Está seguro de que desea eliminar este registro del historial? Esta acción no se puede deshacer.'),
+        content: const Text(
+          '¿Está seguro de que desea eliminar este registro del historial? Esta acción no se puede deshacer.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -319,10 +399,14 @@ class HistoryPayScreen extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await ref.read(historyPayNotifierProvider.notifier).deleteHistory(idHistory);
+                await ref
+                    .read(historyPayNotifierProvider.notifier)
+                    .deleteHistory(idHistory);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Registro eliminado del historial.')),
+                    const SnackBar(
+                      content: Text('Registro eliminado del historial.'),
+                    ),
                   );
                 }
               } catch (e) {
@@ -337,6 +421,38 @@ class HistoryPayScreen extends ConsumerWidget {
             child: const Text('Eliminar'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Marco redondeado que envuelve el contenido en `HistoryPayScreen.kt`: un
+/// borde del color del municipio al 20 % con radio 25 y, dentro, la superficie
+/// clara con radio 20.
+class _Frame extends StatelessWidget {
+  const _Frame({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.all(6),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: scheme.primary.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        ),
       ),
     );
   }

@@ -119,6 +119,17 @@ flutter analyze
 
 > _Why: Most feature sessions explicitly required AppTheme compliance and clean analyzer output as a success bar._
 
+## Componentes de UI compartidos (`core/widgets/`)
+- **No escribas una barra superior, un botón de "atrás" ni un indicador de pasos nuevo.** Usa
+  `TopBarNavigationScaffold` (port de `TopbarNavigation.kt`), `AppBackButton` (estilos `filled` /
+  `light`), `StepIndicator` y `CirclesDecoration` (adorno `circles` del original). Si el original
+  Kotlin de tu pantalla usa `TopbarNavigation`, la pantalla Flutter debe usar el scaffold compartido,
+  no un `AppBar` plano.
+
+> _Why: el botón circular de atrás llegó a estar duplicado en 7 pantallas con tamaños distintos, el
+> indicador de pasos en 3, y Certificados/Historial se habían quedado con un `AppBar` genérico que no
+> se parecía al original. Unificado el 2026-08-19._
+
 
 ## State updates (`copyWith`)
 - For a nullable field, never write `field: field ?? this.field` alone — `??` silently keeps the old value whenever you pass `null`, so the field can never actually be cleared. Add a `bool clearField = false` flag and branch on it (see `MainUiState`, `UserSettingsState`, `PasswordFormState` for the pattern already in use across the codebase).

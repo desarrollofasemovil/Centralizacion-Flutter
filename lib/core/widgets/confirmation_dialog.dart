@@ -37,8 +37,9 @@ class ConfirmationDialog extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 25),
             decoration: BoxDecoration(
               color: theme.colorScheme.primary,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
             ),
             child: Center(
               child: Container(

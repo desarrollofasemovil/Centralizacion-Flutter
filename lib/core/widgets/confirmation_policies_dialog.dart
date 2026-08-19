@@ -62,7 +62,8 @@ class ConfirmationPoliciesDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             PolicyCheckboxRow(
-              text: "Acepto y autorizo la política de tratamiento de datos personales",
+              text:
+                  "Acepto y autorizo la política de tratamiento de datos personales",
               linkText: "tratamiento de datos personales",
               url: dataPolicyUrl,
               checked: aceptaTratamientoDatos,
@@ -81,7 +82,8 @@ class ConfirmationPoliciesDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             PolicyCheckboxRow(
-              text: "Acepto las condiciones de uso y las políticas de privacidad",
+              text:
+                  "Acepto las condiciones de uso y las políticas de privacidad",
               linkText: "políticas de privacidad",
               url: privacyPolicyUrl,
               checked: aceptaCondicionesUso,
@@ -115,10 +117,7 @@ class ConfirmationPoliciesDialog extends StatelessWidget {
                       backgroundColor: theme.colorScheme.primary,
                       foregroundColor: theme.colorScheme.onPrimary,
                     ),
-                    child: Text(
-                      "Radicar",
-                      style: theme.textTheme.titleSmall,
-                    ),
+                    child: Text("Radicar", style: theme.textTheme.titleSmall),
                   ),
                 ),
               ],

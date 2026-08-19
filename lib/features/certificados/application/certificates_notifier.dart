@@ -41,9 +41,11 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
   CertificatesNotifier(this.familyParam);
 
   PqrdApiService get _pqrdApi => ref.read(pqrdApiServiceProvider);
-  ProcedureApplicationApiService get _procedureApi => ref.read(procedureApplicationApiServiceProvider);
+  ProcedureApplicationApiService get _procedureApi =>
+      ref.read(procedureApplicationApiServiceProvider);
   PaymentApiService get _paymentApi => ref.read(paymentApiServiceProvider);
-  RemoteConfigService get _remoteConfig => ref.read(remoteConfigServiceProvider);
+  RemoteConfigService get _remoteConfig =>
+      ref.read(remoteConfigServiceProvider);
 
   int get _taxId => familyParam.taxId;
   String get _entityCode => familyParam.entityCode;
@@ -97,15 +99,15 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
   String _getIconPath(int taxId) {
     switch (taxId) {
       case 11:
-        return "assets/images/icocertresidencia.png";
+        return "assets/images/icocertresidencia.svg";
       case 12:
-        return "assets/images/icocertpazysalvo.png";
+        return "assets/images/icocertpazysalvo.svg";
       case 13:
-        return "assets/images/icocertourism.png";
+        return "assets/images/icocertourism.svg";
       case 14:
-        return "assets/images/icoconceptusodelsuelo.png";
+        return "assets/images/icoconceptusodelsuelo.svg";
       default:
-        return "assets/images/icocertresidencia.png";
+        return "assets/images/icocertresidencia.svg";
     }
   }
 
@@ -114,10 +116,7 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
     try {
       final result = await _pqrdApi.listTipoDocumento(_entityCode);
       if (result.isNotEmpty) {
-        state = state.copyWith(
-          isLoading: false,
-          listTipoDocumento: result,
-        );
+        state = state.copyWith(isLoading: false, listTipoDocumento: result);
         final user = ref.read(sessionProvider);
         if (user != null) {
           autofillUserData(user);
@@ -138,8 +137,11 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
 
   void autofillUserData(UserDTO user) {
     final userDocumentType = state.listTipoDocumento.firstWhere(
-      (it) => it.descripcion.toLowerCase() == user.documentType.name.toLowerCase(),
-      orElse: () => state.listTipoDocumento.isNotEmpty ? state.listTipoDocumento.first : TipoDocumento(id: 0, descripcion: ''),
+      (it) =>
+          it.descripcion.toLowerCase() == user.documentType.name.toLowerCase(),
+      orElse: () => state.listTipoDocumento.isNotEmpty
+          ? state.listTipoDocumento.first
+          : TipoDocumento(id: 0, descripcion: ''),
     );
 
     state = state.copyWith(
@@ -197,9 +199,7 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
       newCertificateValue = rates.adult;
     }
 
-    state = state.copyWith(
-      certificateValue: newCertificateValue.toString(),
-    );
+    state = state.copyWith(certificateValue: newCertificateValue.toString());
   }
 
   void onIdentificacionChange(String value) {
@@ -310,7 +310,9 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
         state = state.copyWith(ageError: "La edad es requerida.");
         ageValid = false;
       } else if (ageInt == null || ageInt < 0 || ageInt > 120) {
-        state = state.copyWith(ageError: "Por favor, introduce una edad válida (0-120).");
+        state = state.copyWith(
+          ageError: "Por favor, introduce una edad válida (0-120).",
+        );
         ageValid = false;
       }
     }
@@ -350,10 +352,14 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
 
   Future<CertificatesResponseState> submitSolicitudTramite() async {
     if (!state.aceptaTratamientoDatos) {
-      return const CertificatesResponseError("Debes aceptar la política de tratamiento de datos.");
+      return const CertificatesResponseError(
+        "Debes aceptar la política de tratamiento de datos.",
+      );
     }
     if (!state.aceptaCondicionesUso) {
-      return const CertificatesResponseError("Debes aceptar las condiciones de uso y políticas de privacidad.");
+      return const CertificatesResponseError(
+        "Debes aceptar las condiciones de uso y políticas de privacidad.",
+      );
     }
 
     ref.read(certificatesResponseStateProvider.notifier).setLoading();
@@ -393,7 +399,9 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
         final referencia = ticket.replaceAll(RegExp(r'\D'), '');
 
         // Second step: Bancolombia Gateway
-        final name = "${state.primerNombre} ${state.segundoNombre} ${state.primerApellido} ${state.segundoApellido}".trim();
+        final name =
+            "${state.primerNombre} ${state.segundoNombre} ${state.primerApellido} ${state.segundoApellido}"
+                .trim();
         const docType = "CC"; // Hardcoded matching Kotlin
 
         final transactionRequest = BancolombiaGatewayRequestDTO(
@@ -411,7 +419,9 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
           implementationType: 3,
         );
 
-        final transactionResponse = await _paymentApi.createTransaction(transactionRequest);
+        final transactionResponse = await _paymentApi.createTransaction(
+          transactionRequest,
+        );
 
         final url = transactionResponse.url ?? '';
         if (url.isNotEmpty) {
@@ -420,18 +430,24 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
             urlTransaction: url,
             reference: referencia,
           );
-          ref.read(certificatesResponseStateProvider.notifier).setSuccess(successState);
+          ref
+              .read(certificatesResponseStateProvider.notifier)
+              .setSuccess(successState);
           return successState;
         } else {
-          final errorMessage = (transactionResponse.message?.isNotEmpty ?? false)
+          final errorMessage =
+              (transactionResponse.message?.isNotEmpty ?? false)
               ? transactionResponse.message!
               : "Error al registrar la transacción";
           final errorState = CertificatesResponseError(errorMessage);
-          ref.read(certificatesResponseStateProvider.notifier).setError(errorState.message);
+          ref
+              .read(certificatesResponseStateProvider.notifier)
+              .setError(errorState.message);
           return errorState;
         }
       } else {
-        final errorMsg = (response.mensaje != null && response.mensaje!.isNotEmpty)
+        final errorMsg =
+            (response.mensaje != null && response.mensaje!.isNotEmpty)
             ? response.mensaje!
             : "Error al crear la solicitud.";
         ref.read(certificatesResponseStateProvider.notifier).setError(errorMsg);
@@ -445,7 +461,8 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
   }
 }
 
-class CertificatesResponseStateNotifier extends Notifier<CertificatesResponseState> {
+class CertificatesResponseStateNotifier
+    extends Notifier<CertificatesResponseState> {
   @override
   CertificatesResponseState build() => const CertificatesResponseEmpty();
 
@@ -467,7 +484,12 @@ class CertificatesResponseStateNotifier extends Notifier<CertificatesResponseSta
 }
 
 final certificatesResponseStateProvider =
-    NotifierProvider<CertificatesResponseStateNotifier, CertificatesResponseState>(CertificatesResponseStateNotifier.new);
+    NotifierProvider<
+      CertificatesResponseStateNotifier,
+      CertificatesResponseState
+    >(CertificatesResponseStateNotifier.new);
 
-final certificatesNotifierProvider = NotifierProvider.autoDispose.family<
-    CertificatesNotifier, CertificatesUiState, CertificatesFamilyParam>(CertificatesNotifier.new);
+final certificatesNotifierProvider = NotifierProvider.autoDispose
+    .family<CertificatesNotifier, CertificatesUiState, CertificatesFamilyParam>(
+      CertificatesNotifier.new,
+    );

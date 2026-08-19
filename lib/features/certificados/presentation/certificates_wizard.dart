@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:tramiapp_flutter/core/router/app_routes.dart';
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
 import 'package:tramiapp_flutter/core/models/tipo_documento.dart';
+import 'package:tramiapp_flutter/core/widgets/step_indicator.dart';
+import 'package:tramiapp_flutter/core/widgets/top_bar_navigation.dart';
 import '../application/certificates_notifier.dart';
 import '../domain/certificates_state.dart';
 
@@ -106,7 +108,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
         if (sizeBytes > 10 * 1024 * 1024) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('El archivo excede el tamaño máximo de 10 MB.')),
+              const SnackBar(
+                content: Text('El archivo excede el tamaño máximo de 10 MB.'),
+              ),
             );
           }
           return;
@@ -150,14 +154,16 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final asyncMun = ref.watch(municipalityProvider(widget.municipalityId));
     final state = ref.watch(certificatesNotifierProvider(_param));
     final notifier = ref.read(certificatesNotifierProvider(_param).notifier);
     final responseState = ref.watch(certificatesResponseStateProvider);
 
     // Sync input text controllers with notifier state updates (e.g. from autofill)
-    ref.listen<CertificatesUiState>(certificatesNotifierProvider(_param), (previous, next) {
+    ref.listen<CertificatesUiState>(certificatesNotifierProvider(_param), (
+      previous,
+      next,
+    ) {
       if (previous == null || previous.identificacion != next.identificacion) {
         if (_identificacionCtrl.text != next.identificacion) {
           _identificacionCtrl.text = next.identificacion;
@@ -178,12 +184,14 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
           _primerApellidoCtrl.text = next.primerApellido;
         }
       }
-      if (previous == null || previous.segundoApellido != next.segundoApellido) {
+      if (previous == null ||
+          previous.segundoApellido != next.segundoApellido) {
         if (_segundoApellidoCtrl.text != next.segundoApellido) {
           _segundoApellidoCtrl.text = next.segundoApellido;
         }
       }
-      if (previous == null || previous.correoElectronico != next.correoElectronico) {
+      if (previous == null ||
+          previous.correoElectronico != next.correoElectronico) {
         if (_correoCtrl.text != next.correoElectronico) {
           _correoCtrl.text = next.correoElectronico;
         }
@@ -193,7 +201,8 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
           _direccionCtrl.text = next.direccion;
         }
       }
-      if (previous == null || previous.telefonoCelular != next.telefonoCelular) {
+      if (previous == null ||
+          previous.telefonoCelular != next.telefonoCelular) {
         if (_celularCtrl.text != next.telefonoCelular) {
           _celularCtrl.text = next.telefonoCelular;
         }
@@ -211,7 +220,10 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
     });
 
     // Listen for submission responses
-    ref.listen<CertificatesResponseState>(certificatesResponseStateProvider, (prev, next) {
+    ref.listen<CertificatesResponseState>(certificatesResponseStateProvider, (
+      prev,
+      next,
+    ) {
       if (next is CertificatesResponseSuccess) {
         ref.read(certificatesResponseStateProvider.notifier).reset();
         // Redirect to WebView processing screen
@@ -233,6 +245,10 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
     });
 
     final title = state.titleCertificate ?? 'Certificado';
+    final isReady =
+        asyncMun.hasValue &&
+        !state.isLoading &&
+        responseState is! CertificatesResponseLoading;
 
     return PopScope(
       canPop: state.currentStep == 1,
@@ -241,76 +257,47 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
           notifier.onPreviousStep();
         }
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(title),
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              if (state.currentStep == 1) {
-                context.pop();
-              } else {
-                notifier.onPreviousStep();
-              }
-            },
-          ),
-        ),
-        body: asyncMun.maybeWhen(
-          data: (munDto) {
-            if (state.isLoading || responseState is CertificatesResponseLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            return Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildStepIndicator(state.currentStep, scheme),
-                        const SizedBox(height: 24),
-                        if (state.currentStep == 1) _buildStep1(state, notifier),
-                        if (state.currentStep == 2) _buildStep2(state, notifier),
-                        if (state.currentStep == 3) _buildStep3(state, notifier),
-                      ],
-                    ),
+      // Cabecera compartida `TopbarNavigation` del original (franja primaria con
+      // insignia del certificado, título y descripción, que colapsa al hacer
+      // scroll). Antes era un `AppBar` plano con la flecha por defecto.
+      child: TopBarNavigationScaffold(
+        iconAsset:
+            state.certificateIconPath ?? 'assets/images/icocertresidencia.svg',
+        title: title,
+        description: 'Pide, paga y recibe tu certificado.',
+        onBack: () {
+          if (state.currentStep == 1) {
+            context.pop();
+          } else {
+            notifier.onPreviousStep();
+          }
+        },
+        bottomBar: isReady ? _buildBottomButtons(state, notifier) : null,
+        body: !isReady
+            ? const SizedBox(
+                height: 280,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            : GestureDetector(
+                // Toque fuera de los campos = cerrar teclado, igual que el
+                // `clickable { focusManager.clearFocus() }` del original.
+                behavior: HitTestBehavior.translucent,
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      StepIndicator(currentStep: state.currentStep),
+                      const SizedBox(height: 24),
+                      if (state.currentStep == 1) _buildStep1(state, notifier),
+                      if (state.currentStep == 2) _buildStep2(state, notifier),
+                      if (state.currentStep == 3) _buildStep3(state, notifier),
+                    ],
                   ),
                 ),
-                _buildBottomButtons(state, notifier),
-              ],
-            );
-          },
-          orElse: () => const Center(child: CircularProgressIndicator()),
-        ),
+              ),
       ),
-    );
-  }
-
-  Widget _buildStepIndicator(int currentStep, ColorScheme scheme) {
-    return Row(
-      children: List.generate(5, (index) {
-        if (index.isEven) {
-          final stepNum = index ~/ 2 + 1;
-          final isActive = stepNum <= currentStep;
-          return CircleAvatar(
-            radius: 16,
-            backgroundColor: isActive ? scheme.primary : Colors.grey[300],
-            foregroundColor: isActive ? scheme.onPrimary : Colors.black87,
-            child: Text('$stepNum', style: const TextStyle(fontWeight: FontWeight.bold)),
-          );
-        } else {
-          return Expanded(
-            child: Container(
-              height: 2,
-              color: Colors.grey[300],
-            ),
-          );
-        }
-      }),
     );
   }
 
@@ -332,7 +319,12 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
             ),
             initialValue: state.tipoDocumento,
             items: state.listTipoDocumento
-                .map((t) => DropdownMenuItem<TipoDocumento>(value: t, child: Text(t.descripcion)))
+                .map(
+                  (t) => DropdownMenuItem<TipoDocumento>(
+                    value: t,
+                    child: Text(t.descripcion),
+                  ),
+                )
                 .toList(),
             onChanged: (val) {
               if (val != null) {
@@ -364,7 +356,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
               keyboardType: TextInputType.number,
               onChanged: notifier.onAgeChange,
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'La edad es requerida';
+                if (v == null || v.trim().isEmpty) {
+                  return 'La edad es requerida';
+                }
                 final ageInt = int.tryParse(v);
                 if (ageInt == null || ageInt < 0 || ageInt > 120) {
                   return 'Introduzca una edad válida (0-120)';
@@ -381,7 +375,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
               border: OutlineInputBorder(),
             ),
             onChanged: notifier.onPrimerNombreChange,
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'El primer nombre es requerido' : null,
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'El primer nombre es requerido'
+                : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
@@ -400,7 +396,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
               border: OutlineInputBorder(),
             ),
             onChanged: notifier.onPrimerApellidoChange,
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'El primer apellido es requerido' : null,
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'El primer apellido es requerido'
+                : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
@@ -424,7 +422,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
   TextInputType _getKeyboardType(String? docType) {
     if (docType == null) return TextInputType.number;
     final lower = docType.toLowerCase();
-    if (lower.contains('pasaporte') || lower.contains('nit') || lower.contains('visa')) {
+    if (lower.contains('pasaporte') ||
+        lower.contains('nit') ||
+        lower.contains('visa')) {
       return TextInputType.text;
     }
     return TextInputType.number;
@@ -450,9 +450,13 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
             keyboardType: TextInputType.emailAddress,
             onChanged: notifier.correoElectronicoChange,
             validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'El correo electrónico es requerido';
+              if (v == null || v.trim().isEmpty) {
+                return 'El correo electrónico es requerido';
+              }
               final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-              if (!emailRegex.hasMatch(v)) return 'Ingrese un correo electrónico válido';
+              if (!emailRegex.hasMatch(v)) {
+                return 'Ingrese un correo electrónico válido';
+              }
               return null;
             },
           ),
@@ -475,8 +479,12 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
             keyboardType: TextInputType.phone,
             onChanged: notifier.onTelefonoCelularChange,
             validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'El teléfono celular es requerido';
-              if (v.trim().length != 10) return 'Ingrese un número válido de 10 dígitos';
+              if (v == null || v.trim().isEmpty) {
+                return 'El teléfono celular es requerido';
+              }
+              if (v.trim().length != 10) {
+                return 'Ingrese un número válido de 10 dígitos';
+              }
               return null;
             },
           ),
@@ -490,7 +498,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
             ),
             maxLines: 4,
             onChanged: notifier.onDescripcionChange,
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'La descripción no puede estar vacía' : null,
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'La descripción no puede estar vacía'
+                : null,
           ),
           const SizedBox(height: 20),
           const Text(
@@ -505,7 +515,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
               label: const Text('Adjuntar documentos'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             )
           else
@@ -544,7 +556,8 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
   }
 
   Widget _buildStep3(CertificatesUiState state, CertificatesNotifier notifier) {
-    final valueText = (state.certificateValue != null && state.certificateValue!.isNotEmpty)
+    final valueText =
+        (state.certificateValue != null && state.certificateValue!.isNotEmpty)
         ? '\$${state.certificateValue} COP'
         : '\$0 COP';
 
@@ -558,14 +571,19 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
         const SizedBox(height: 16),
         Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 _buildSummaryRow('Trámite:', state.titleCertificate ?? ''),
                 const Divider(),
-                _buildSummaryRow('Nombre:', '${state.primerNombre} ${state.primerApellido}'),
+                _buildSummaryRow(
+                  'Nombre:',
+                  '${state.primerNombre} ${state.primerApellido}',
+                ),
                 const Divider(),
                 _buildSummaryRow('Correo:', state.correoElectronico),
                 const Divider(),
@@ -581,7 +599,8 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
           children: [
             Checkbox(
               value: state.aceptaTratamientoDatos,
-              onChanged: (val) => notifier.onTratamientoDatosAcepted(val ?? false),
+              onChanged: (val) =>
+                  notifier.onTratamientoDatosAcepted(val ?? false),
             ),
             const Expanded(
               child: Text(
@@ -595,7 +614,8 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
           children: [
             Checkbox(
               value: state.aceptaCondicionesUso,
-              onChanged: (val) => notifier.onCondicionesUsoAcepted(val ?? false),
+              onChanged: (val) =>
+                  notifier.onCondicionesUsoAcepted(val ?? false),
             ),
             const Expanded(
               child: Text(
@@ -608,7 +628,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
         const SizedBox(height: 16),
         Card(
           color: Colors.red[400],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: const Padding(
             padding: EdgeInsets.all(16),
             child: Column(
@@ -620,7 +642,11 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
                     SizedBox(width: 8),
                     Text(
                       'Importante',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -660,10 +686,14 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
     );
   }
 
-  Widget _buildBottomButtons(CertificatesUiState state, CertificatesNotifier notifier) {
+  Widget _buildBottomButtons(
+    CertificatesUiState state,
+    CertificatesNotifier notifier,
+  ) {
     final showBack = state.currentStep > 1;
     final isSubmit = state.currentStep == 3;
-    final isSubmitEnabled = state.aceptaTratamientoDatos && state.aceptaCondicionesUso;
+    final isSubmitEnabled =
+        state.aceptaTratamientoDatos && state.aceptaCondicionesUso;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -679,7 +709,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
                 onPressed: notifier.onPreviousStep,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 child: const Text('Atrás'),
               ),
@@ -691,7 +723,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
                 onPressed: () => context.pop(),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   foregroundColor: Colors.grey[700],
                   side: BorderSide(color: Colors.grey[350]!),
                 ),
@@ -719,7 +753,9 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 backgroundColor: isSubmit
                     ? (isSubmitEnabled ? Colors.green[600] : Colors.grey[300])
                     : Theme.of(context).colorScheme.primary,

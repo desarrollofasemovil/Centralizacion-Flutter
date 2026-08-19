@@ -119,7 +119,8 @@ class CertificatesUiState {
       certificateValue: certificateValue ?? this.certificateValue,
       currentStep: currentStep ?? this.currentStep,
       isNextButtonEnabled: isNextButtonEnabled ?? this.isNextButtonEnabled,
-      showConfirmationSheet: showConfirmationSheet ?? this.showConfirmationSheet,
+      showConfirmationSheet:
+          showConfirmationSheet ?? this.showConfirmationSheet,
       identificacion: identificacion ?? this.identificacion,
       primerNombre: primerNombre ?? this.primerNombre,
       segundoNombre: segundoNombre ?? this.segundoNombre,
@@ -129,12 +130,14 @@ class CertificatesUiState {
       direccion: direccion ?? this.direccion,
       telefonoCelular: telefonoCelular ?? this.telefonoCelular,
       descripcion: descripcion ?? this.descripcion,
-      aceptaTratamientoDatos: aceptaTratamientoDatos ?? this.aceptaTratamientoDatos,
+      aceptaTratamientoDatos:
+          aceptaTratamientoDatos ?? this.aceptaTratamientoDatos,
       aceptaCondicionesUso: aceptaCondicionesUso ?? this.aceptaCondicionesUso,
       age: age ?? this.age,
       nombreArchivo: nombreArchivo ?? this.nombreArchivo,
       tipoArchivo: tipoArchivo ?? this.tipoArchivo,
-      contenidoArchivoBase64: contenidoArchivoBase64 ?? this.contenidoArchivoBase64,
+      contenidoArchivoBase64:
+          contenidoArchivoBase64 ?? this.contenidoArchivoBase64,
       urlTransaction: urlTransaction ?? this.urlTransaction,
     );
   }
@@ -207,7 +210,8 @@ class CertificatesFormErrorState {
       identificacionError: identificacionError ?? this.identificacionError,
       primerNombreError: primerNombreError ?? this.primerNombreError,
       primerApellidoError: primerApellidoError ?? this.primerApellidoError,
-      correoElectronicoError: correoElectronicoError ?? this.correoElectronicoError,
+      correoElectronicoError:
+          correoElectronicoError ?? this.correoElectronicoError,
       descripcionError: descripcionError ?? this.descripcionError,
       telefonoCelularError: telefonoCelularError ?? this.telefonoCelularError,
       rangoEdadError: rangoEdadError ?? this.rangoEdadError,

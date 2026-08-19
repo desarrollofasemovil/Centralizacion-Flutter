@@ -1,26 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// Cabecera + cuerpo de las pantallas PQRD. Port de `ui/components/TopbarNavigation.kt`
-/// (un `LargeTopAppBar` de Compose con `enterAlwaysScrollBehavior`): franja con el
-/// color primario del municipio, botón de retroceso en círculo blanco, insignia
-/// circular blanca con el ícono del trámite, título y descripción; el cuerpo va
-/// en un contenedor con esquinas superiores redondeadas sobre la franja.
+import 'app_back_button.dart';
+
+/// Cabecera + cuerpo compartidos. Port de `ui/components/TopbarNavigation.kt`
+/// (un `LargeTopAppBar` de Compose con `enterAlwaysScrollBehavior`): franja con
+/// el color primario del municipio, botón de retroceso en círculo blanco,
+/// insignia circular blanca con el ícono del trámite, título y descripción; el
+/// cuerpo va en un contenedor con esquinas superiores redondeadas sobre la
+/// franja.
 ///
-/// **Colapsa al hacer scroll**, igual que el original: al desplazarse la insignia
-/// se reacomoda y encoge, la descripción se desvanece y solo queda el título en
-/// una sola fila. Implementado con un [SliverPersistentHeader] `pinned` cuyo
-/// delegate hace un crossfade entre el estado expandido y el colapsado (robusto
-/// para títulos de una o dos líneas). El [body] NO debe traer su propio scroll:
-/// se desplaza junto con la cabecera dentro del [CustomScrollView].
-class PqrdScaffold extends StatelessWidget {
-  const PqrdScaffold({
+/// **Colapsa al hacer scroll**, igual que el original: al desplazarse la
+/// insignia se reacomoda y encoge, la descripción se desvanece y solo queda el
+/// título en una sola fila. Implementado con un [SliverPersistentHeader]
+/// `pinned` cuyo delegate hace un crossfade entre el estado expandido y el
+/// colapsado (robusto para títulos de una o dos líneas). El [body] NO debe
+/// traer su propio scroll: se desplaza junto con la cabecera dentro del
+/// [CustomScrollView].
+///
+/// Lo usan las 5 pantallas que en el original llaman a `TopbarNavigation`:
+/// PQRD anónima, PQRD con identificación, Certificados, Historial de pagos y
+/// PSV (esta última conserva su propio `SliverAppBar` por el badge del
+/// impuesto).
+class TopBarNavigationScaffold extends StatelessWidget {
+  const TopBarNavigationScaffold({
     super.key,
     required this.iconAsset,
     required this.title,
     required this.description,
     required this.body,
     this.onBack,
+    this.bottomBar,
+    this.onRefresh,
   });
 
   /// Ruta del asset SVG del ícono del trámite (se tinta con el color primario).
@@ -30,13 +41,20 @@ class PqrdScaffold extends StatelessWidget {
   final Widget body;
   final VoidCallback? onBack;
 
+  /// Barra fija al pie (botones de paso, acciones). Queda fuera del scroll.
+  final Widget? bottomBar;
+
+  /// Si se pasa, envuelve el scroll en un `RefreshIndicator` (equivalente al
+  /// `PullToRefreshBox` que el original usa en Historial de pagos).
+  final Future<void> Function()? onRefresh;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final topInset = MediaQuery.paddingOf(context).top;
 
-    final delegate = _PqrdHeaderDelegate(
+    final delegate = _TopBarHeaderDelegate(
       iconAsset: iconAsset,
       title: title,
       description: description,
@@ -49,10 +67,16 @@ class PqrdScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: scheme.primary,
+      bottomNavigationBar: bottomBar,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final viewportHeight = constraints.maxHeight;
-          return CustomScrollView(
+          final scrollView = CustomScrollView(
+            // `always` para que el gesto de refrescar funcione aunque el
+            // contenido no llene la pantalla.
+            physics: onRefresh == null
+                ? null
+                : const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPersistentHeader(pinned: true, delegate: delegate),
               SliverToBoxAdapter(
@@ -60,8 +84,10 @@ class PqrdScaffold extends StatelessWidget {
                   // Garantiza que el cuerpo blanco llegue al fondo aunque el
                   // contenido sea corto, y deja margen de scroll para colapsar.
                   constraints: BoxConstraints(
-                    minHeight: (viewportHeight - delegate.minExtent)
-                        .clamp(0.0, double.infinity),
+                    minHeight: (viewportHeight - delegate.minExtent).clamp(
+                      0.0,
+                      double.infinity,
+                    ),
                   ),
                   child: Container(
                     width: double.infinity,
@@ -79,14 +105,22 @@ class PqrdScaffold extends StatelessWidget {
               ),
             ],
           );
+
+          if (onRefresh == null) return scrollView;
+          return RefreshIndicator(
+            onRefresh: onRefresh!,
+            edgeOffset: MediaQuery.paddingOf(context).top + 56,
+            color: scheme.primary,
+            child: scrollView,
+          );
         },
       ),
     );
   }
 }
 
-class _PqrdHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _PqrdHeaderDelegate({
+class _TopBarHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _TopBarHeaderDelegate({
     required this.iconAsset,
     required this.title,
     required this.description,
@@ -117,7 +151,11 @@ class _PqrdHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => topInset + _toolbar + _expandedExtra;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final range = maxExtent - minExtent;
     final t = range <= 0 ? 1.0 : (shrinkOffset / range).clamp(0.0, 1.0);
     // 0 = expandido, 1 = colapsado. Crossfade con umbral en 0.5.
@@ -150,8 +188,10 @@ class _PqrdHeaderDelegate extends SliverPersistentHeaderDelegate {
                         ),
                         child: SvgPicture.asset(
                           iconAsset,
-                          colorFilter:
-                              ColorFilter.mode(primary, BlendMode.srcIn),
+                          colorFilter: ColorFilter.mode(
+                            primary,
+                            BlendMode.srcIn,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -206,8 +246,10 @@ class _PqrdHeaderDelegate extends SliverPersistentHeaderDelegate {
                           padding: const EdgeInsets.all(3),
                           child: SvgPicture.asset(
                             iconAsset,
-                            colorFilter:
-                                ColorFilter.mode(onPrimary, BlendMode.srcIn),
+                            colorFilter: ColorFilter.mode(
+                              onPrimary,
+                              BlendMode.srcIn,
+                            ),
                           ),
                         ),
                       ),
@@ -231,22 +273,11 @@ class _PqrdHeaderDelegate extends SliverPersistentHeaderDelegate {
             // ---- Botón de retroceso (siempre visible, fijo) ----
             Positioned(
               left: 16,
-              top: topInset + (_toolbar - 40) / 2,
-              child: Material(
-                color: Colors.white,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: onBack,
-                  child: Padding(
-                    padding: const EdgeInsets.all(9),
-                    child: Icon(
-                      Icons.arrow_back_ios_new,
-                      size: 20,
-                      color: primary,
-                    ),
-                  ),
-                ),
+              top: topInset + (_toolbar - AppBackButton.size) / 2,
+              child: AppBackButton(
+                onPressed: onBack,
+                style: AppBackButtonStyle.light,
+                tooltip: 'Volver',
               ),
             ),
           ],
@@ -256,7 +287,7 @@ class _PqrdHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _PqrdHeaderDelegate oldDelegate) {
+  bool shouldRebuild(covariant _TopBarHeaderDelegate oldDelegate) {
     return oldDelegate.title != title ||
         oldDelegate.description != description ||
         oldDelegate.iconAsset != iconAsset ||

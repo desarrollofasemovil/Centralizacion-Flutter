@@ -53,9 +53,13 @@ class PasswordFormState {
       current: current ?? this.current,
       newPass: newPass ?? this.newPass,
       confirm: confirm ?? this.confirm,
-      currentError: clearCurrentError ? null : (currentError ?? this.currentError),
+      currentError: clearCurrentError
+          ? null
+          : (currentError ?? this.currentError),
       newError: clearNewError ? null : (newError ?? this.newError),
-      confirmError: clearConfirmError ? null : (confirmError ?? this.confirmError),
+      confirmError: clearConfirmError
+          ? null
+          : (confirmError ?? this.confirmError),
       isSaving: isSaving ?? this.isSaving,
     );
   }
@@ -134,15 +138,18 @@ class UserSettingsNotifier extends Notifier<UserSettingsState> {
   void onPasswordInput(String field, String value) {
     final form = state.passwordForm;
     final next = switch (field) {
-      'current' => value.trim().isEmpty
-          ? form.copyWith(current: value, currentError: 'Campo requerido')
-          : form.copyWith(current: value, clearCurrentError: true),
-      'new' => value.length < 8
-          ? form.copyWith(newPass: value, newError: 'Mínimo 8 caracteres')
-          : form.copyWith(newPass: value, clearNewError: true),
-      'confirm' => value != form.newPass
-          ? form.copyWith(confirm: value, confirmError: 'No coinciden')
-          : form.copyWith(confirm: value, clearConfirmError: true),
+      'current' =>
+        value.trim().isEmpty
+            ? form.copyWith(current: value, currentError: 'Campo requerido')
+            : form.copyWith(current: value, clearCurrentError: true),
+      'new' =>
+        value.length < 8
+            ? form.copyWith(newPass: value, newError: 'Mínimo 8 caracteres')
+            : form.copyWith(newPass: value, clearNewError: true),
+      'confirm' =>
+        value != form.newPass
+            ? form.copyWith(confirm: value, confirmError: 'No coinciden')
+            : form.copyWith(confirm: value, clearConfirmError: true),
       _ => form,
     };
     state = state.copyWith(passwordForm: next);
@@ -156,16 +163,21 @@ class UserSettingsNotifier extends Notifier<UserSettingsState> {
     state = state.copyWith(passwordForm: form.copyWith(isSaving: true));
 
     try {
-      final response =
-          await _repo.updatePassword(user.id, form.current, form.newPass);
+      final response = await _repo.updatePassword(
+        user.id,
+        form.current,
+        form.newPass,
+      );
       if (response.booleanStatus) {
         // Correo de confirmación (best-effort).
         try {
-          await _emailApi.sendEmail(EmailDto(
-            to: user.email,
-            subject: 'Cambio de contraseña',
-            body: 'Tu contraseña ha sido actualizada.',
-          ));
+          await _emailApi.sendEmail(
+            EmailDto(
+              to: user.email,
+              subject: 'Cambio de contraseña',
+              body: 'Tu contraseña ha sido actualizada.',
+            ),
+          );
         } catch (_) {}
         state = state.copyWith(
           passwordForm: const PasswordFormState(),
@@ -237,7 +249,10 @@ class UserSettingsNotifier extends Notifier<UserSettingsState> {
           navigateToWelcome: true,
         );
       } else {
-        state = state.copyWith(isDeleting: false, message: result.sentencesError);
+        state = state.copyWith(
+          isDeleting: false,
+          message: result.sentencesError,
+        );
       }
     } catch (_) {
       state = state.copyWith(
@@ -251,11 +266,12 @@ class UserSettingsNotifier extends Notifier<UserSettingsState> {
   // Consumo de eventos transitorios
   // ---------------------------------------------------------------------------
   void consumeMessage() => state = state.copyWith(clearMessage: true);
-  void consumePasswordChanged() => state = state.copyWith(passwordChanged: false);
+  void consumePasswordChanged() =>
+      state = state.copyWith(passwordChanged: false);
   void consumeNavigation() => state = state.copyWith(navigateToWelcome: false);
 }
 
 final userSettingsNotifierProvider =
     NotifierProvider<UserSettingsNotifier, UserSettingsState>(
-  UserSettingsNotifier.new,
-);
+      UserSettingsNotifier.new,
+    );

@@ -34,15 +34,16 @@ class _SwipeUpDismissBoxState extends State<SwipeUpDismissBox>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    )..addListener(() {
-        setState(() {
-          _offsetY = _offsetAnim?.value ?? _offsetY;
-          _opacity = _opacityAnim?.value ?? _opacity;
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 250),
+        )..addListener(() {
+          setState(() {
+            _offsetY = _offsetAnim?.value ?? _offsetY;
+            _opacity = _opacityAnim?.value ?? _opacity;
+          });
         });
-      });
   }
 
   @override
@@ -64,13 +65,18 @@ class _SwipeUpDismissBoxState extends State<SwipeUpDismissBox>
 
   void _onDragEnd(DragEndDetails details) {
     if (_offsetY < _dismissThreshold) {
-      _animate(fromOffset: _offsetY, toOffset: -1000, toOpacity: 0, then: () {
-        widget.onDismiss();
-        setState(() {
-          _offsetY = 0;
-          _opacity = 1;
-        });
-      });
+      _animate(
+        fromOffset: _offsetY,
+        toOffset: -1000,
+        toOpacity: 0,
+        then: () {
+          widget.onDismiss();
+          setState(() {
+            _offsetY = 0;
+            _opacity = 1;
+          });
+        },
+      );
     } else {
       _animate(fromOffset: _offsetY, toOffset: 0, toOpacity: 1);
     }
@@ -82,10 +88,14 @@ class _SwipeUpDismissBoxState extends State<SwipeUpDismissBox>
     required double toOpacity,
     VoidCallback? then,
   }) {
-    _offsetAnim = Tween<double>(begin: fromOffset, end: toOffset)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-    _opacityAnim = Tween<double>(begin: _opacity, end: toOpacity)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _offsetAnim = Tween<double>(
+      begin: fromOffset,
+      end: toOffset,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _opacityAnim = Tween<double>(
+      begin: _opacity,
+      end: toOpacity,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller
       ..reset()
       ..forward().whenComplete(() => then?.call());

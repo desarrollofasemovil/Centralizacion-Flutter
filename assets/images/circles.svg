@@ -1,0 +1,9 @@
+<!-- Port de res/drawable/circles.xml: tres círculos decorativos que el original
+     dibuja en la esquina superior de Home, Historial, Cursos, Escenarios y el
+     wizard de registro. El color se reemplaza siempre con un ColorFilter, pero
+     se conserva fill-opacity=0.145 porque el tinte solo cambia el RGB. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="151" height="155" viewBox="0 0 151 155">
+  <path d="M65,74.5a40,39.5 0,1 0,80 0a40,39.5 0,1 0,-80 0z" fill="#CACACA" fill-opacity="0.145"/>
+  <path d="M61,51m-41,0a41,41 0,1 1,82 0a41,41 0,1 1,-82 0" fill="#CACACA" fill-opacity="0.145"/>
+  <path d="M61,104m-41,0a41,41 0,1 1,82 0a41,41 0,1 1,-82 0" fill="#CACACA" fill-opacity="0.145"/>
+</svg>

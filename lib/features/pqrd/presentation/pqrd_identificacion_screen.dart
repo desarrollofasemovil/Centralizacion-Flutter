@@ -10,7 +10,7 @@ import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart'
 import 'package:tramiapp_flutter/core/theme/app_colors.dart';
 import 'package:tramiapp_flutter/core/widgets/confirmation_policies_dialog.dart';
 import 'package:tramiapp_flutter/core/widgets/pqrd_dropdown.dart';
-import 'package:tramiapp_flutter/core/widgets/pqrd_scaffold.dart';
+import 'package:tramiapp_flutter/core/widgets/top_bar_navigation.dart';
 import 'package:tramiapp_flutter/core/widgets/step_indicator.dart';
 import '../application/pqrd_notifier.dart';
 import '../domain/pqrd_state.dart';
@@ -163,7 +163,7 @@ class _PqrdIdentificacionScreenState
       );
     }
 
-    return PqrdScaffold(
+    return TopBarNavigationScaffold(
       iconAsset: 'assets/images/ico_pqrd_identificacion.svg',
       title: 'PQRDS CON IDENTIFICACIÓN',
       description: 'Peticiones, quejas, reclamos y sugerencias',

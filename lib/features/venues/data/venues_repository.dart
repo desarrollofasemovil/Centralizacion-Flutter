@@ -26,7 +26,9 @@ class VenuesRepository {
   /// Verifica si el usuario ya tiene una reserva activa. Un 204 (sin contenido)
   /// significa que está libre (`null`). Usamos Dio directo para poder inspeccionar
   /// el status code, ya que el 204 no trae cuerpo parseable.
-  Future<UserReservationStatusDTO?> checkUserStatus(String documentNumber) async {
+  Future<UserReservationStatusDTO?> checkUserStatus(
+    String documentNumber,
+  ) async {
     final url =
         '${NetworkProvider.centralizacionApiUrl}api/reservations/user/$documentNumber/status';
     final response = await _dio.get<dynamic>(url);
@@ -42,10 +44,13 @@ class VenuesRepository {
   /// Crea la reserva. Devuelve el [ReservationResponseDTO]; lanza con el mensaje
   /// del backend si falla la regla de negocio (cooldown / solapamiento).
   Future<ReservationResponseDTO> createReservation(
-      ReservationRequestDTO request) async {
+    ReservationRequestDTO request,
+  ) async {
     final response = await _api.sendReservation(request);
     if (!response.booleanStatus || response.result == null) {
-      throw Exception(response.sentencesError ?? 'No se pudo completar la reserva.');
+      throw Exception(
+        response.sentencesError ?? 'No se pudo completar la reserva.',
+      );
     }
     return response.result!;
   }

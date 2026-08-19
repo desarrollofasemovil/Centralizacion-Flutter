@@ -118,6 +118,8 @@ class TramitesSection extends StatelessWidget {
               ? Column(
                   children: List.generate(2, (_) {
                     return Row(
+                      // `Arrangement.spacedBy(5.dp)` del original.
+                      spacing: 5,
                       children: List.generate(3, (_) {
                         return const Expanded(child: TramiteCardPlaceholder());
                       }),
@@ -129,6 +131,7 @@ class TramitesSection extends StatelessWidget {
                     final emptySlots = 3 - filaDeTramites.length;
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 5,
                       children: [
                         ...filaDeTramites.map((tramite) {
                           return Expanded(

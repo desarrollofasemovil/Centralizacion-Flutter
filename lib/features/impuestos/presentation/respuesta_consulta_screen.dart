@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/models/validation_response_dto.dart';
 import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/utils/url_opener.dart';
 import '../application/tax_results_notifier.dart';
 import '../domain/tax.dart';
@@ -32,8 +33,9 @@ class TaxResultsScreen extends ConsumerStatefulWidget {
 
 class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handlePay(Tax tax) {
@@ -70,10 +72,13 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
     }
     if (tax.invoice.isEmpty || tax.entityCode.isEmpty) {
       _showSnack(
-          'Algunos de los datos de tu información tiene problemas, Intenta mas tarde');
+        'Algunos de los datos de tu información tiene problemas, Intenta mas tarde',
+      );
       return;
     }
-    ref.read(taxResultsNotifierProvider.notifier).createHistoryPay(
+    ref
+        .read(taxResultsNotifierProvider.notifier)
+        .createHistoryPay(
           amount: tax.value,
           idImpuesto: tax.taxId.toString(),
           factura: tax.invoice,
@@ -142,14 +147,13 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
         centerTitle: true,
         leading: Padding(
           padding: const EdgeInsets.only(left: 10),
-          child: Center(
-            child: _CircularBackButton(onPressed: () => context.pop()),
-          ),
+          child: Center(child: AppBackButton(onPressed: () => context.pop())),
         ),
         title: Text(
           'Facturas Encontradas',
-          style: theme.textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: Stack(
@@ -158,7 +162,8 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
             const Center(child: CircularProgressIndicator.adaptive())
           else if (asyncMun.hasError)
             const Center(
-                child: Text('Error al cargar los datos del municipio.')),
+              child: Text('Error al cargar los datos del municipio.'),
+            ),
           ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             itemCount: widget.taxes.length,
@@ -186,12 +191,14 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
               alignment: Alignment.bottomCenter,
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child:
-                    _ValidationAlert(validation: state.validationCreatePayment!),
+                child: _ValidationAlert(
+                  validation: state.validationCreatePayment!,
+                ),
               ),
             ),
           // Diálogo modal de carga (DownloadingDialog del original).
-          if (state.isLoading) _DownloadingDialog(message: state.loadingMessage),
+          if (state.isLoading)
+            _DownloadingDialog(message: state.loadingMessage),
         ],
       ),
     );
@@ -245,8 +252,9 @@ class _ValidationAlert extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final success = validation.booleanStatus;
-    final backgroundColor =
-        success ? const Color(0xFFE6F4EA) : const Color(0xFFFFE5E5);
+    final backgroundColor = success
+        ? const Color(0xFFE6F4EA)
+        : const Color(0xFFFFE5E5);
     final iconTint = success ? const Color(0xFF2E7D32) : Colors.red;
     // Mejora sobre el original (usaba texto blanco en éxito, ilegible sobre
     // fondo claro): el texto usa el mismo verde/rojo del ícono.
@@ -266,10 +274,9 @@ class _ValidationAlert extends StatelessWidget {
             Flexible(
               child: Text(
                 validation.sentencesError,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: textColor),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: textColor),
               ),
             ),
           ],
@@ -294,7 +301,8 @@ class _DownloadingDialog extends StatelessWidget {
           Center(
             child: Card(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                borderRadius: BorderRadius.circular(16),
+              ),
               margin: const EdgeInsets.symmetric(horizontal: 40),
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -319,32 +327,6 @@ class _DownloadingDialog extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Botón circular de "atrás" del original (35dp, fondo primary).
-class _CircularBackButton extends StatelessWidget {
-  const _CircularBackButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.primary,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onPressed,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 35,
-          height: 35,
-          child: Icon(Icons.arrow_back_ios_new,
-              size: 20, color: scheme.onPrimary),
-        ),
       ),
     );
   }

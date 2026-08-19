@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/models/course_dto.dart';
+import '../../../core/widgets/app_back_button.dart';
+import '../../../core/widgets/circles_decoration.dart';
 import '../../../core/widgets/confirmation_dialog.dart';
 import '../../auth/application/auth_providers.dart';
 import '../application/courses_notifier.dart';
@@ -88,7 +90,8 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final state = ref.watch(coursesNotifierProvider(widget.param));
-    final showingDetails = state.selectedCourseForDetails != null &&
+    final showingDetails =
+        state.selectedCourseForDetails != null &&
         state.parsedCourseDetails != null;
 
     // Abrir la hoja de inscripción cuando se selecciona un curso.
@@ -101,13 +104,15 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
 
     // Éxito de inscripción → cerrar hoja y mostrar diálogo.
     ref.listen<bool>(
-      coursesNotifierProvider(widget.param).select((s) => s.registrationSuccess),
+      coursesNotifierProvider(
+        widget.param,
+      ).select((s) => s.registrationSuccess),
       (prev, next) {
         if (next == true) {
           if (_sheetOpen) Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Inscripción exitosa')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Inscripción exitosa')));
           _showSuccessDialog();
         }
       },
@@ -118,7 +123,9 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
       coursesNotifierProvider(widget.param).select((s) => s.error),
       (prev, next) {
         if (next != null && next.isNotEmpty && state.courses.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(next)));
         }
       },
     );
@@ -135,29 +142,42 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
               onBack: _notifier.closeCourseDetails,
               onEnroll: () => _onEnroll(state.selectedCourseForDetails!),
             )
-          : Scaffold(
-              body: SafeArea(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+          : Stack(
+              children: [
+                Scaffold(
+                  body: SafeArea(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10),
-                          child: _CircleBackButton(onTap: () => context.pop()),
+                        Row(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 10),
+                              child: AppBackButton(
+                                onPressed: () => context.pop(),
+                              ),
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                child: Text(
+                                  'Cursos',
+                                  style: theme.textTheme.titleLarge,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('Cursos', style: theme.textTheme.titleLarge),
-                          ),
-                        ),
+                        Expanded(child: _body(context, state)),
                       ],
                     ),
-                    Expanded(child: _body(context, state)),
-                  ],
+                  ),
                 ),
-              ),
+                // Adorno de círculos de la esquina superior (`circles`).
+                const CirclesDecoration.branded(),
+              ],
             ),
     );
   }
@@ -174,18 +194,25 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.warning_amber_rounded,
-                  size: 48, color: theme.colorScheme.error),
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 48,
+                color: theme.colorScheme.error,
+              ),
               const SizedBox(height: 16),
-              Text('No se pudieron cargar los cursos.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium),
+              Text(
+                'No se pudieron cargar los cursos.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
-              Text(state.error ?? 'Error desconocido',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  )),
+              Text(
+                state.error ?? 'Error desconocido',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: _notifier.retryLoadCourses,
@@ -223,30 +250,6 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           onEnroll: () => _onEnroll(course),
         );
       },
-    );
-  }
-}
-
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.primary,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(40),
-        onTap: onTap,
-        child: SizedBox(
-          width: 35,
-          height: 35,
-          child: Icon(Icons.arrow_back_ios_new,
-              size: 18, color: theme.colorScheme.onPrimary),
-        ),
-      ),
     );
   }
 }

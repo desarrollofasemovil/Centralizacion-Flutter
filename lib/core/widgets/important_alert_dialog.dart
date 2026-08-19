@@ -42,7 +42,11 @@ class ImportantAlertDialog extends StatelessWidget {
             width: double.infinity,
             color: _redColor,
             padding: const EdgeInsets.only(
-                top: 10, bottom: 20, left: 12, right: 12),
+              top: 10,
+              bottom: 20,
+              left: 12,
+              right: 12,
+            ),
             child: Stack(
               children: [
                 Center(
@@ -74,11 +78,13 @@ class ImportantAlertDialog extends StatelessWidget {
                         height: 25,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border:
-                              Border.all(color: Colors.white, width: 1.5),
+                          border: Border.all(color: Colors.white, width: 1.5),
                         ),
-                        child: const Icon(Icons.close,
-                            color: Colors.white, size: 18),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                     ),
                   ),
