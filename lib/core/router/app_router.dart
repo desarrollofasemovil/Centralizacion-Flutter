@@ -13,6 +13,7 @@ import '../../features/onboarding/presentation/splash_screen.dart';
 import '../../features/municipality/presentation/select_municipality_screen.dart';
 import '../../features/auth/presentation/signup_wizard.dart';
 import '../../features/auth/presentation/recovery_password_screen.dart';
+import '../../features/auth/presentation/change_password_reset_screen.dart';
 import '../../features/home/presentation/main_screen.dart';
 import '../../features/home/presentation/main_screen_skeleton.dart';
 import '../../features/news/presentation/news_screen.dart';
@@ -104,6 +105,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.recoverPassword,
         builder: (_, _) => const RecoveryPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.changePasswordReset,
+        builder: (_, _) => const ChangePasswordResetScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {

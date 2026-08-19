@@ -85,6 +85,21 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 > conserva el valor viejo, así que el campo nunca podía volver a quedar en `null`. El Kotlin original
 > no tiene este problema porque `data class.copy()` sí acepta `null` explícito. Arreglado con un flag
 > `clearCurrentUser` (mismo patrón que ya usan `clearModalMode`/`clearPendingUrl`/`clearUrlToOpen`).
+>
+> 🐛 **Recuperación de contraseña incompleta (2026-08-19)**: `RecoveryPasswordScreen` enviaba el
+> código de verificación por correo (`sendEmailValidationCode`) pero nunca migró el paso siguiente —
+> no existía ningún lugar donde introducirlo, ni la pantalla final para fijar la nueva contraseña.
+> Faltaban los equivalentes de `ShowModalVerificationCode.kt`/`VerificationCodeInput.kt` (hoja modal
+> de 6 dígitos) y `ChangeOnlyPasswordScreen.kt`. Se portó el flujo completo y fiel: `RecoveryPasswordNotifier`
+> (envío + validación local del código contra el `extraData` que devuelve el backend — no hay endpoint
+> de verificación en servidor, ver `BACKEND.md §3.12`, bloqueo de 5 min tras 3 intentos), la hoja
+> `VerificationCodeSheet`/`VerificationCodeInput`, y `ChangePasswordResetScreen`/`ChangePasswordResetNotifier`
+> (`PUT api/User/updatePasswordByForget/{userId}`). Rutas nuevas en `app_routes.dart`/`app_router.dart`.
+>
+> _Nota de fidelidad de puerto:_ Kotlin resetea a `MAIN_NAV_GRAPH` (`popUpTo(0)`) al terminar; en
+> go_router (rutas empujadas con `push`, no un grafo separado) el equivalente correcto es deshacer la
+> pila de rutas del flujo (`while (context.canPop()) context.pop()`), lo que devuelve a la pantalla de
+> origen con la sesión ya activa — incluido en la implementación.
 
 ## Fase 3 — Módulos core
 
