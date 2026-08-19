@@ -15,9 +15,11 @@ class NotificationsConfigSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final notifier = ref.read(userSettingsNotifierProvider.notifier);
     final remindersActive = ref.watch(
-        userSettingsNotifierProvider.select((s) => s.remindersActive));
+      userSettingsNotifierProvider.select((s) => s.remindersActive),
+    );
     final sendEmailActive = ref.watch(
-        userSettingsNotifierProvider.select((s) => s.sendEmailActive));
+      userSettingsNotifierProvider.select((s) => s.sendEmailActive),
+    );
     final isLoggedIn = ref.watch(sessionProvider)?.loginStatus == true;
 
     return Padding(
@@ -38,8 +40,9 @@ class NotificationsConfigSheet extends ConsumerWidget {
           Text(
             'Elige cómo quieres recibir las alertas de tus trámites.',
             textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 24),
           _NotificationSwitchItem(
@@ -116,12 +119,18 @@ class _NotificationSwitchItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(color: theme.colorScheme.onSurface)),
-                    Text(subtitle,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -153,8 +162,9 @@ class _GuestNotificationInfo extends StatelessWidget {
           Expanded(
             child: Text(
               'Inicia sesión para activar los recordatorios por correo electrónico.',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],

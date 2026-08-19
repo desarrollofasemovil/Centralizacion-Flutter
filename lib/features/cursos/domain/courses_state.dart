@@ -75,11 +75,13 @@ class RegistrationFormState {
           ? null
           : (documentNumberError ?? this.documentNumberError),
       firstName: firstName ?? this.firstName,
-      firstNameError:
-          clearFirstNameError ? null : (firstNameError ?? this.firstNameError),
+      firstNameError: clearFirstNameError
+          ? null
+          : (firstNameError ?? this.firstNameError),
       lastName: lastName ?? this.lastName,
-      lastNameError:
-          clearLastNameError ? null : (lastNameError ?? this.lastNameError),
+      lastNameError: clearLastNameError
+          ? null
+          : (lastNameError ?? this.lastNameError),
       age: age ?? this.age,
       ageError: clearAgeError ? null : (ageError ?? this.ageError),
       email: email ?? this.email,
@@ -131,8 +133,9 @@ class CoursesUiState {
       isLoading: isLoading ?? this.isLoading,
       courses: courses ?? this.courses,
       error: clearError ? null : (error ?? this.error),
-      selectedCourse:
-          clearSelectedCourse ? null : (selectedCourse ?? this.selectedCourse),
+      selectedCourse: clearSelectedCourse
+          ? null
+          : (selectedCourse ?? this.selectedCourse),
       registrationSuccess: registrationSuccess ?? this.registrationSuccess,
       selectedCourseForDetails: clearDetails
           ? null

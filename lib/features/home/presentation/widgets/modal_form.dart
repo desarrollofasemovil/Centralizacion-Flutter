@@ -31,7 +31,7 @@ class ModalForm extends ConsumerStatefulWidget {
 
 class _ModalFormState extends ConsumerState<ModalForm> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late final TextEditingController _identificacionController;
   late final TextEditingController _nombresApellidosController;
   late final TextEditingController _telefonoController;
@@ -57,13 +57,15 @@ class _ModalFormState extends ConsumerState<ModalForm> {
     final loggedInUser = ref.read(sessionProvider);
     final prefs = ref.read(userPreferencesProvider);
     final guestJson = prefs.getGuestUserDataJson();
-    
+
     UserDTO? guestUser;
     if (guestJson != null) {
       try {
         guestUser = UserDTO.fromJson(
           Map<String, dynamic>.from(
-            Uri.splitQueryString(guestJson), // O JSON decode normal si es JSON string
+            Uri.splitQueryString(
+              guestJson,
+            ), // O JSON decode normal si es JSON string
           ),
         );
       } catch (_) {
@@ -74,7 +76,8 @@ class _ModalFormState extends ConsumerState<ModalForm> {
     final user = loggedInUser ?? guestUser;
     if (user != null) {
       _identificacionController.text = user.nationalId;
-      _nombresApellidosController.text = "${user.firstName} ${user.lastName}".trim();
+      _nombresApellidosController.text = "${user.firstName} ${user.lastName}"
+          .trim();
       _telefonoController.text = user.phoneNumber;
       _correoController.text = user.email;
     }
@@ -97,7 +100,9 @@ class _ModalFormState extends ConsumerState<ModalForm> {
     if (!_formKey.currentState!.validate()) return;
     if (!_aceptaPoliticas || !_aceptaCondiciones) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes aceptar las políticas y condiciones')),
+        const SnackBar(
+          content: Text('Debes aceptar las políticas y condiciones'),
+        ),
       );
       return;
     }
@@ -120,7 +125,9 @@ class _ModalFormState extends ConsumerState<ModalForm> {
         // Crear un DTO guest dummy para pasar a la confirmación
         final nameParts = _nombresApellidosController.text.trim().split(' ');
         final firstName = nameParts.isNotEmpty ? nameParts.first : '';
-        final lastName = nameParts.length > 1 ? nameParts.skip(1).join(' ') : '';
+        final lastName = nameParts.length > 1
+            ? nameParts.skip(1).join(' ')
+            : '';
 
         final guestUser = UserDTO(
           id: 0,
@@ -150,9 +157,7 @@ class _ModalFormState extends ConsumerState<ModalForm> {
         );
       }
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -206,7 +211,9 @@ class _ModalFormState extends ConsumerState<ModalForm> {
                     fillColor: theme.colorScheme.surfaceContainerHighest,
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty || value.trim().length < 4) {
+                    if (value == null ||
+                        value.trim().isEmpty ||
+                        value.trim().length < 4) {
                       return "Ingrese una identificación válida (mínimo 4 caracteres)";
                     }
                     return null;
@@ -249,7 +256,9 @@ class _ModalFormState extends ConsumerState<ModalForm> {
                     fillColor: theme.colorScheme.surfaceContainerHighest,
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty || value.trim().length < 10) {
+                    if (value == null ||
+                        value.trim().isEmpty ||
+                        value.trim().length < 10) {
                       return "El teléfono debe tener al menos 10 caracteres";
                     }
                     return null;
@@ -284,9 +293,11 @@ class _ModalFormState extends ConsumerState<ModalForm> {
                 const SizedBox(height: 16),
                 PolicyCheckboxes(
                   dataPolicyChecked: _aceptaPoliticas,
-                  onDataPolicyChange: (val) => setState(() => _aceptaPoliticas = val),
+                  onDataPolicyChange: (val) =>
+                      setState(() => _aceptaPoliticas = val),
                   privacyPolicyChecked: _aceptaCondiciones,
-                  onPrivacyPolicyChange: (val) => setState(() => _aceptaCondiciones = val),
+                  onPrivacyPolicyChange: (val) =>
+                      setState(() => _aceptaCondiciones = val),
                   dataPolicyUrl: widget.dataPolicyUrl,
                   privacyPolicyUrl: widget.privacyPolicyUrl,
                 ),

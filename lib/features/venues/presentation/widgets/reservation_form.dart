@@ -52,7 +52,9 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
     );
     if (picked != null) {
       String two(int n) => n.toString().padLeft(2, '0');
-      notifier.onDateChange('${picked.year}-${two(picked.month)}-${two(picked.day)}');
+      notifier.onDateChange(
+        '${picked.year}-${two(picked.month)}-${two(picked.day)}',
+      );
     }
   }
 
@@ -95,8 +97,9 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 4),
             Divider(color: Colors.grey.shade300),
@@ -106,7 +109,8 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
               label: 'Nombre',
               formatters: [
                 FilteringTextInputFormatter.allow(
-                    RegExp(r'[A-Za-zÁÉÍÓÚáéíóúÑñ ]')),
+                  RegExp(r'[A-Za-zÁÉÍÓÚáéíóúÑñ ]'),
+                ),
               ],
               onChanged: notifier.onFirstNameChange,
               error: form.firstNameError,
@@ -116,7 +120,8 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
               label: 'Apellido',
               formatters: [
                 FilteringTextInputFormatter.allow(
-                    RegExp(r'[A-Za-zÁÉÍÓÚáéíóúÑñ ]')),
+                  RegExp(r'[A-Za-zÁÉÍÓÚáéíóúÑñ ]'),
+                ),
               ],
               onChanged: notifier.onLastNameChange,
               error: form.lastNameError,
@@ -166,8 +171,10 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
             if (dateTimeError != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8, left: 16),
-                child: Text(dateTimeError,
-                    style: TextStyle(color: theme.colorScheme.error)),
+                child: Text(
+                  dateTimeError,
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
               ),
             const SizedBox(height: 12),
             Row(
@@ -188,7 +195,9 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
                         )
                       : const Text('Reservar'),
                 ),

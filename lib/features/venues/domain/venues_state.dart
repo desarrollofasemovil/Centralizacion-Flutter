@@ -88,11 +88,13 @@ class ReservationFormState {
   }) {
     return ReservationFormState(
       firstName: firstName ?? this.firstName,
-      firstNameError:
-          clearFirstNameError ? null : (firstNameError ?? this.firstNameError),
+      firstNameError: clearFirstNameError
+          ? null
+          : (firstNameError ?? this.firstNameError),
       lastName: lastName ?? this.lastName,
-      lastNameError:
-          clearLastNameError ? null : (lastNameError ?? this.lastNameError),
+      lastNameError: clearLastNameError
+          ? null
+          : (lastNameError ?? this.lastNameError),
       documentType: documentType ?? this.documentType,
       documentNumber: documentNumber ?? this.documentNumber,
       documentNumberError: clearDocumentNumberError
@@ -151,8 +153,9 @@ class VenuesUiState {
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
       venues: venues ?? this.venues,
-      selectedVenue:
-          clearSelectedVenue ? null : (selectedVenue ?? this.selectedVenue),
+      selectedVenue: clearSelectedVenue
+          ? null
+          : (selectedVenue ?? this.selectedVenue),
       activeReservation: clearActiveReservation
           ? null
           : (activeReservation ?? this.activeReservation),

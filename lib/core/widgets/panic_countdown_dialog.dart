@@ -55,9 +55,7 @@ class _PanicCountdownDialogState extends State<PanicCountdownDialog> {
     final theme = Theme.of(context);
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -71,9 +69,7 @@ class _PanicCountdownDialogState extends State<PanicCountdownDialog> {
             const SizedBox(height: 10),
             Text(
               "Esta alerta se comunica con la estación de policía más cercana.",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontSize: 16,
-              ),
+              style: theme.textTheme.bodyMedium?.copyWith(fontSize: 16),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -97,9 +93,7 @@ class _PanicCountdownDialogState extends State<PanicCountdownDialog> {
             const SizedBox(height: 16),
             Text(
               "El uso indebido de este servicio puede acarrear sanciones \n (Ley 1801 de 2016) .",
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontSize: 14,
-              ),
+              style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),

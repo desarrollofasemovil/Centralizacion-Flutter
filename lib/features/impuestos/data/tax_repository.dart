@@ -59,13 +59,21 @@ class TaxRepository {
     required String integrationType,
   }) async {
     if (bankName.toLowerCase() == 'coopcentral') {
-      return _processFintechTransaction(tax, email, municipalityId, integrationType);
+      return _processFintechTransaction(
+        tax,
+        email,
+        municipalityId,
+        integrationType,
+      );
     } else {
       return _processBancolombiaTransaction(tax, email);
     }
   }
 
-  Future<PaymentGatewayInfo> _processBancolombiaTransaction(Tax tax, String email) async {
+  Future<PaymentGatewayInfo> _processBancolombiaTransaction(
+    Tax tax,
+    String email,
+  ) async {
     final request = BancolombiaGatewayRequestDTO(
       reference: tax.reference,
       invoice: tax.reference,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_back_button.dart';
+
 /// Barra superior de la Home. Va dentro del `body` (no como `appBar`) para que el
 /// área de color primario llegue al borde superior y `SafeArea` inserte el
 /// contenido bajo la barra de estado en Android y bajo el notch / Dynamic Island
@@ -36,22 +38,11 @@ class MainTopBar extends StatelessWidget {
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: GestureDetector(
-                    onTap: onBackClicked,
-                    child: Container(
-                      width: 35,
-                      height: 35,
-                      margin: const EdgeInsets.all(5),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.arrow_back_ios_new,
-                        color: primaryColor,
-                        size: 20,
-                      ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(5),
+                    child: AppBackButton(
+                      onPressed: onBackClicked,
+                      style: AppBackButtonStyle.light,
                     ),
                   ),
                 ),

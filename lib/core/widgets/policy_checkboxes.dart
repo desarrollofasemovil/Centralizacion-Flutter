@@ -26,7 +26,8 @@ class PolicyCheckboxes extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         PolicyCheckboxRow(
-          text: "Acepto y autorizo la política de tratamiento de datos personales",
+          text:
+              "Acepto y autorizo la política de tratamiento de datos personales",
           linkText: "tratamiento de datos personales",
           url: dataPolicyUrl,
           checked: dataPolicyChecked,
@@ -65,16 +66,13 @@ class PolicyCheckboxRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final linkIndex = text.indexOf(linkText);
-    
+
     final TextSpan span;
     if (linkIndex != -1) {
       final before = text.substring(0, linkIndex);
       final after = text.substring(linkIndex + linkText.length);
       span = TextSpan(
-        style: TextStyle(
-          fontSize: 12,
-          color: theme.colorScheme.onSurface,
-        ),
+        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface),
         children: [
           TextSpan(text: before),
           TextSpan(
@@ -99,10 +97,7 @@ class PolicyCheckboxRow extends StatelessWidget {
     } else {
       span = TextSpan(
         text: text,
-        style: TextStyle(
-          fontSize: 12,
-          color: theme.colorScheme.onSurface,
-        ),
+        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface),
       );
     }
 
@@ -114,11 +109,7 @@ class PolicyCheckboxRow extends StatelessWidget {
           onChanged: (val) => onChanged(val ?? false),
           activeColor: theme.colorScheme.primary,
         ),
-        Expanded(
-          child: RichText(
-            text: span,
-          ),
-        ),
+        Expanded(child: RichText(text: span)),
       ],
     );
   }

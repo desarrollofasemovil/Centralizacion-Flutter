@@ -9,7 +9,9 @@ import 'package:intl/intl.dart';
 
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
 import 'package:tramiapp_flutter/core/utils/formatters.dart';
+import 'package:tramiapp_flutter/core/widgets/app_back_button.dart';
 import 'package:tramiapp_flutter/core/widgets/policy_checkboxes.dart';
+import 'package:tramiapp_flutter/core/widgets/step_indicator.dart';
 import 'package:tramiapp_flutter/core/widgets/validation_error_dialog.dart';
 import 'package:tramiapp_flutter/features/auth/application/auth_providers.dart';
 import 'package:tramiapp_flutter/features/auth/application/signup_providers.dart';
@@ -19,7 +21,7 @@ import '../application/psv_notifier.dart';
 /// `FormButtons`). Asistente de 3 pasos para el Pago Sin Validación (PSV).
 ///
 /// El diseño (cabecera `primary` con badge circular, hoja redondeada,
-/// [_StepIndicator] con checks, campos con borde y tarjeta roja "Importante")
+/// [StepIndicator] con checks, campos con borde y tarjeta roja "Importante")
 /// replica el original de Compose. Al pagar se registra el historial y se crea
 /// la transacción, igual que `onPayClicked` del `PsvPaymentViewModel`.
 class PsvWizard extends ConsumerStatefulWidget {
@@ -73,8 +75,7 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
   @override
   void initState() {
     super.initState();
-    _paymentDateTime =
-        DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+    _paymentDateTime = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
     _taxNameCtrl = TextEditingController(text: widget.taxName);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -83,7 +84,9 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
 
       // Banco del municipio (para enrutar la pasarela), igual que loadInitialData.
       ref.read(municipalityProvider(widget.municipalityId)).whenData((mun) {
-        notifier.updateField((s) => s.copyWith(selectedBank: mun.bank.nameBank));
+        notifier.updateField(
+          (s) => s.copyWith(selectedBank: mun.bank.nameBank),
+        );
       });
 
       // Autorrelleno con el usuario logueado (autofillUserData del original).
@@ -134,9 +137,9 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
 
   // --- Íconos por impuesto: 1 → predial, 2/3 → ica (when(taxId) del original) ---
   String get _taxIconAsset => switch (widget.taxId) {
-        2 || 3 => 'assets/images/icoica.svg',
-        _ => 'assets/images/icopredial.svg',
-      };
+    2 || 3 => 'assets/images/icoica.svg',
+    _ => 'assets/images/icopredial.svg',
+  };
 
   String get _rawAmount => _amountCtrl.text.replaceAll(RegExp(r'\D'), '');
   int get _amountValue => int.tryParse(_rawAmount) ?? 0;
@@ -203,8 +206,9 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
     // Datos del municipio: banco (enruta la pasarela) y procedimiento del
     // impuesto (integrationType + id para el historial).
     final mun = ref.read(municipalityProvider(widget.municipalityId)).value;
-    final matches = (mun?.municipalityProcedures ?? const [])
-        .where((p) => p.procedures.id == widget.taxId);
+    final matches = (mun?.municipalityProcedures ?? const []).where(
+      (p) => p.procedures.id == widget.taxId,
+    );
     final matched = matches.isNotEmpty ? matches.first : null;
     final integrationType = matched?.integrationType ?? 'psv';
     final procedureId = matched?.id ?? 0;
@@ -212,16 +216,19 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
 
     final notifier = ref.read(psvFormNotifierProvider.notifier);
     final fullName =
-        '${_firstNameCtrl.text.trim()} ${_firstLastNameCtrl.text.trim()}'.trim();
-    notifier.updateField((s) => s.copyWith(
-          documentNumber: _documentCtrl.text.trim(),
-          fullName: fullName,
-          email: _emailCtrl.text.trim(),
-          phone: _phoneCtrl.text.trim(),
-          invoiceNumber: _invoiceCtrl.text.trim(),
-          amount: _amountValue,
-          selectedBank: bankName.isNotEmpty ? bankName : null,
-        ));
+        '${_firstNameCtrl.text.trim()} ${_firstLastNameCtrl.text.trim()}'
+            .trim();
+    notifier.updateField(
+      (s) => s.copyWith(
+        documentNumber: _documentCtrl.text.trim(),
+        fullName: fullName,
+        email: _emailCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim(),
+        invoiceNumber: _invoiceCtrl.text.trim(),
+        amount: _amountValue,
+        selectedBank: bankName.isNotEmpty ? bankName : null,
+      ),
+    );
 
     try {
       // 1. Historial de pago (createHistoryPay del original).
@@ -313,8 +320,9 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
               ),
             ],
             body: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
               child: Container(
                 color: scheme.surface,
                 child: GestureDetector(
@@ -327,7 +335,7 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: _StepIndicator(currentStep: _currentStep),
+                          child: StepIndicator(currentStep: _currentStep),
                         ),
                         const SizedBox(height: 32),
                         AnimatedSwitcher(
@@ -357,12 +365,9 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
                           },
                           layoutBuilder: (currentChild, previousChildren) =>
                               Stack(
-                            alignment: Alignment.topCenter,
-                            children: [
-                              ...previousChildren,
-                              ?currentChild,
-                            ],
-                          ),
+                                alignment: Alignment.topCenter,
+                                children: [...previousChildren, ?currentChild],
+                              ),
                           child: KeyedSubtree(
                             key: ValueKey<int>(_currentStep),
                             child: _buildStep(theme, scheme),
@@ -520,7 +525,8 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
   // ------------------------------------------------------------------ Paso 3
   Widget _buildStep3(ThemeData theme, ColorScheme scheme) {
     final usuario =
-        '${_firstNameCtrl.text.trim()} ${_firstLastNameCtrl.text.trim()}'.trim();
+        '${_firstNameCtrl.text.trim()} ${_firstLastNameCtrl.text.trim()}'
+            .trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -545,8 +551,9 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
                 _SummaryRow(label: 'Fecha y hora:', value: _paymentDateTime),
                 const SizedBox(height: 8),
                 _SummaryRow(
-                    label: 'No. de factura:',
-                    value: _invoiceCtrl.text.trim()),
+                  label: 'No. de factura:',
+                  value: _invoiceCtrl.text.trim(),
+                ),
                 const SizedBox(height: 8),
                 _SummaryRow(
                   label: 'Valor a pagar:',
@@ -574,8 +581,11 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.warning_rounded,
-                        color: Colors.white, size: 36),
+                    const Icon(
+                      Icons.warning_rounded,
+                      color: Colors.white,
+                      size: 36,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Importante',
@@ -620,11 +630,14 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
 
   // -------------------------------------------------------------- decoración
   InputDecoration _fieldDecoration(
-      ThemeData theme, ColorScheme scheme, String label) {
+    ThemeData theme,
+    ColorScheme scheme,
+    String label,
+  ) {
     OutlineInputBorder border(Color color) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: color),
-        );
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: color),
+    );
     return InputDecoration(
       labelText: label,
       labelStyle: theme.textTheme.bodySmall,
@@ -650,7 +663,9 @@ class _ThousandsInputFormatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) {
       return const TextEditingValue(text: '');
@@ -687,14 +702,16 @@ class _PsvCollapsingHeader extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     // t: 1 = expandido, 0 = colapsado (leído del propio SliverAppBar).
-    final settings =
-        context.dependOnInheritedWidgetOfExactType<FlexibleSpaceBarSettings>();
+    final settings = context
+        .dependOnInheritedWidgetOfExactType<FlexibleSpaceBarSettings>();
     double t = 1;
     if (settings != null) {
       final delta = settings.maxExtent - settings.minExtent;
       if (delta > 0) {
-        t = ((settings.currentExtent - settings.minExtent) / delta)
-            .clamp(0.0, 1.0);
+        t = ((settings.currentExtent - settings.minExtent) / delta).clamp(
+          0.0,
+          1.0,
+        );
       }
     }
 
@@ -709,7 +726,7 @@ class _PsvCollapsingHeader extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _CircularBackButton(onBack: onBack),
+          AppBackButton(onPressed: onBack, style: AppBackButtonStyle.light),
           const SizedBox(width: 8),
           Container(
             width: badgeSize,
@@ -719,7 +736,11 @@ class _PsvCollapsingHeader extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: SvgPicture.asset(iconAsset, width: iconSize, height: iconSize),
+            child: SvgPicture.asset(
+              iconAsset,
+              width: iconSize,
+              height: iconSize,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -757,94 +778,6 @@ class _PsvCollapsingHeader extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Botón de atrás circular blanco con la flecha en color `primary` (réplica del
-/// `navigationIcon` de `TopbarNavigation`).
-class _CircularBackButton extends StatelessWidget {
-  const _CircularBackButton({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onBack,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 35,
-          height: 35,
-          child: Icon(Icons.arrow_back_ios_new, size: 20, color: scheme.primary),
-        ),
-      ),
-    );
-  }
-}
-
-/// Indicador de 3 pasos ("Paso 1/2/3") con círculos que se rellenan y muestran
-/// un check al completarse, unidos por líneas. Réplica de `StepIndicator.kt`.
-class _StepIndicator extends StatelessWidget {
-  const _StepIndicator({required this.currentStep});
-
-  final int currentStep;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _item(context, 'Paso 1', currentStep >= 1),
-        _divider(scheme, currentStep > 1),
-        _item(context, 'Paso 2', currentStep >= 2),
-        _divider(scheme, currentStep > 2),
-        _item(context, 'Paso 3', currentStep >= 3),
-      ],
-    );
-  }
-
-  Widget _divider(ColorScheme scheme, bool active) => Expanded(
-        child: Container(
-          height: 1,
-          color: active ? scheme.primary : scheme.surfaceContainerHighest,
-        ),
-      );
-
-  Widget _item(BuildContext context, String text, bool active) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final labelColor =
-        active ? scheme.primary : scheme.onSurface.withValues(alpha: 0.5);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: active ? scheme.primary : Colors.transparent,
-            border: Border.all(
-              width: 2,
-              color: active
-                  ? scheme.primary
-                  : scheme.onSurface.withValues(alpha: 0.5),
-            ),
-          ),
-          alignment: Alignment.center,
-          child: active
-              ? Icon(Icons.check, size: 18, color: scheme.onPrimary)
-              : null,
-        ),
-        const SizedBox(height: 4),
-        Text(text, style: theme.textTheme.bodySmall?.copyWith(color: labelColor)),
-      ],
     );
   }
 }
@@ -895,9 +828,9 @@ class _PsvTextField extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     OutlineInputBorder border(Color color) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: color),
-        );
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: color),
+    );
     return TextField(
       controller: controller,
       enabled: enabled,
@@ -939,8 +872,10 @@ class _SummaryRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: theme.textTheme.bodySmall?.copyWith(color: Colors.black)),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.black),
+        ),
         const SizedBox(width: 16),
         Flexible(
           child: Text(
@@ -1013,10 +948,12 @@ class _FormButtons extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: scheme.primary,
                   foregroundColor: scheme.onPrimary,
-                  disabledBackgroundColor:
-                      scheme.primary.withValues(alpha: 0.4),
-                  disabledForegroundColor:
-                      scheme.onPrimary.withValues(alpha: 0.7),
+                  disabledBackgroundColor: scheme.primary.withValues(
+                    alpha: 0.4,
+                  ),
+                  disabledForegroundColor: scheme.onPrimary.withValues(
+                    alpha: 0.7,
+                  ),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/app_back_button.dart';
 import '../application/edit_profile_notifier.dart';
 
 /// Pantalla Editar Perfil. Port de `EditProfileScreen.kt`.
@@ -60,8 +61,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         } else if (next == false) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content:
-                    Text(state.errorMessage ?? 'Error al actualizar perfil')),
+              content: Text(state.errorMessage ?? 'Error al actualizar perfil'),
+            ),
           );
           notifier.resetUpdateStatus();
         }
@@ -75,11 +76,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         leadingWidth: 56,
         leading: Padding(
           padding: const EdgeInsets.only(left: 10),
-          child: _CircleBackButton(onTap: () => context.pop()),
+          child: AppBackButton(onPressed: () => context.pop()),
         ),
-        title: Text('Editar Perfil',
-            style: theme.textTheme.titleMedium
-                ?.copyWith(color: theme.colorScheme.onSurface)),
+        title: Text(
+          'Editar Perfil',
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
       ),
       body: SafeArea(
         top: false,
@@ -88,9 +92,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Datos Personales',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(color: theme.colorScheme.onSurface)),
+              Text(
+                'Datos Personales',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
               const SizedBox(height: 12),
               _field(
                 controller: _firstName,
@@ -118,9 +125,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               const SizedBox(height: 8),
               const Divider(),
               const SizedBox(height: 8),
-              Text('Contacto y Ubicación',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(color: theme.colorScheme.onSurface)),
+              Text(
+                'Contacto y Ubicación',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
               const SizedBox(height: 12),
               _field(
                 controller: _phone,
@@ -146,7 +156,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   onPressed: state.isLoading ? null : notifier.updateProfile,
                   style: FilledButton.styleFrom(
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: state.isLoading
                       ? SizedBox(
@@ -155,7 +166,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           child: CircularProgressIndicator.adaptive(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation(
-                                theme.colorScheme.onPrimary),
+                              theme.colorScheme.onPrimary,
+                            ),
                           ),
                         )
                       : Text('Guardar', style: theme.textTheme.titleMedium),
@@ -194,30 +206,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-}
-
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.primary,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(40),
-        onTap: onTap,
-        child: SizedBox(
-          width: 35,
-          height: 35,
-          child: Icon(Icons.arrow_back_ios_new,
-              size: 18, color: theme.colorScheme.onPrimary),
-        ),
       ),
     );
   }

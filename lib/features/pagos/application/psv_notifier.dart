@@ -74,8 +74,12 @@ class PsvFormNotifier extends Notifier<PsvFormState> {
       taxName: taxName,
       taxId: taxId,
       value: state.amount,
-      invoice: state.invoiceNumber.isNotEmpty ? state.invoiceNumber : 'PSV-${DateTime.now().millisecondsSinceEpoch}',
-      reference: state.invoiceNumber.isNotEmpty ? state.invoiceNumber : 'PSV-${DateTime.now().millisecondsSinceEpoch}',
+      invoice: state.invoiceNumber.isNotEmpty
+          ? state.invoiceNumber
+          : 'PSV-${DateTime.now().millisecondsSinceEpoch}',
+      reference: state.invoiceNumber.isNotEmpty
+          ? state.invoiceNumber
+          : 'PSV-${DateTime.now().millisecondsSinceEpoch}',
       dueDate: DateTime.now().add(const Duration(days: 1)).toIso8601String(),
       queryField: 'Manual',
     );
@@ -91,4 +95,6 @@ class PsvFormNotifier extends Notifier<PsvFormState> {
 }
 
 final psvFormNotifierProvider =
-    NotifierProvider.autoDispose<PsvFormNotifier, PsvFormState>(PsvFormNotifier.new);
+    NotifierProvider.autoDispose<PsvFormNotifier, PsvFormState>(
+      PsvFormNotifier.new,
+    );

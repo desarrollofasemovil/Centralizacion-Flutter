@@ -100,7 +100,9 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
         clearActiveReservation: active == null,
         dialog: (showWarning && active != null)
             ? ReservationDialog(
-                type: ReservationDialogType.warning, activeReservation: active)
+                type: ReservationDialogType.warning,
+                activeReservation: active,
+              )
             : null,
         clearDialog: !(showWarning && active != null),
       );
@@ -133,7 +135,9 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
     if (active != null) {
       state = state.copyWith(
         dialog: ReservationDialog(
-            type: ReservationDialogType.warning, activeReservation: active),
+          type: ReservationDialogType.warning,
+          activeReservation: active,
+        ),
       );
     } else {
       state = state.copyWith(selectedVenue: venue);
@@ -143,8 +147,10 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
   void onDismissBottomSheet() {
     state = state.copyWith(
       clearSelectedVenue: true,
-      formState: state.formState
-          .copyWith(clearDateError: true, clearTimeError: true),
+      formState: state.formState.copyWith(
+        clearDateError: true,
+        clearTimeError: true,
+      ),
     );
   }
 
@@ -168,12 +174,15 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
   }
 
   // --- Campos ---
-  void onFirstNameChange(String v) =>
-      _updateForm(state.formState.copyWith(firstName: v, clearFirstNameError: true));
-  void onLastNameChange(String v) =>
-      _updateForm(state.formState.copyWith(lastName: v, clearLastNameError: true));
+  void onFirstNameChange(String v) => _updateForm(
+    state.formState.copyWith(firstName: v, clearFirstNameError: true),
+  );
+  void onLastNameChange(String v) => _updateForm(
+    state.formState.copyWith(lastName: v, clearLastNameError: true),
+  );
   void onDocumentNumberChange(String v) => _updateForm(
-      state.formState.copyWith(documentNumber: v, clearDocumentNumberError: true));
+    state.formState.copyWith(documentNumber: v, clearDocumentNumberError: true),
+  );
   void onEmailChange(String v) =>
       _updateForm(state.formState.copyWith(email: v, clearEmailError: true));
   void onPhoneChange(String v) =>
@@ -233,7 +242,10 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
         dialog: ReservationDialog(
           type: ReservationDialogType.error,
           title: 'Aviso de Validación',
-          message: _message(e, 'La reserva se encuentra ocupada o hubo un error.'),
+          message: _message(
+            e,
+            'La reserva se encuentra ocupada o hubo un error.',
+          ),
         ),
       );
     }
@@ -305,5 +317,5 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
 
 final venuesNotifierProvider =
     NotifierProvider.family<VenuesNotifier, VenuesUiState, VenuesParam>(
-  VenuesNotifier.new,
-);
+      VenuesNotifier.new,
+    );

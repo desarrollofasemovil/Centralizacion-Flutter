@@ -54,12 +54,15 @@ class TaxResultsState {
       isLoading: isLoading ?? this.isLoading,
       loadingMessage: loadingMessage ?? this.loadingMessage,
       error: clearError ? null : (error ?? this.error),
-      fileToOpenPath:
-          clearFileToOpen ? null : (fileToOpenPath ?? this.fileToOpenPath),
-      fileToSharePath:
-          clearFileToShare ? null : (fileToSharePath ?? this.fileToSharePath),
-      genericUrlToOpen:
-          clearGenericUrl ? null : (genericUrlToOpen ?? this.genericUrlToOpen),
+      fileToOpenPath: clearFileToOpen
+          ? null
+          : (fileToOpenPath ?? this.fileToOpenPath),
+      fileToSharePath: clearFileToShare
+          ? null
+          : (fileToSharePath ?? this.fileToSharePath),
+      genericUrlToOpen: clearGenericUrl
+          ? null
+          : (genericUrlToOpen ?? this.genericUrlToOpen),
       validationCreatePayment: clearValidation
           ? null
           : (validationCreatePayment ?? this.validationCreatePayment),
@@ -87,7 +90,9 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
       clearError: true,
     );
     try {
-      final paymentInfo = await ref.read(taxRepositoryProvider).createTransaction(
+      final paymentInfo = await ref
+          .read(taxRepositoryProvider)
+          .createTransaction(
             tax: tax,
             email: email,
             bankName: bankName,
@@ -161,8 +166,9 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
       clearError: true,
     );
     try {
-      final path =
-          await ref.read(taxRepositoryProvider).downloadInvoiceFile(tax);
+      final path = await ref
+          .read(taxRepositoryProvider)
+          .downloadInvoiceFile(tax);
       state = state.copyWith(
         isLoading: false,
         loadingMessage: 'Cargando...',
@@ -185,8 +191,9 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
       clearError: true,
     );
     try {
-      final path =
-          await ref.read(taxRepositoryProvider).downloadInvoiceFile(tax);
+      final path = await ref
+          .read(taxRepositoryProvider)
+          .downloadInvoiceFile(tax);
       state = state.copyWith(
         isLoading: false,
         loadingMessage: 'Cargando...',
@@ -216,4 +223,5 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
 
 final taxResultsNotifierProvider =
     NotifierProvider.autoDispose<TaxResultsNotifier, TaxResultsState>(
-        TaxResultsNotifier.new);
+      TaxResultsNotifier.new,
+    );

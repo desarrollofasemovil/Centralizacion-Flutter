@@ -90,21 +90,29 @@ class MainUiState {
     return MainUiState(
       isLoading: isLoading ?? this.isLoading,
       currentUser: clearCurrentUser ? null : (currentUser ?? this.currentUser),
-      currentIdMunicipality: currentIdMunicipality ?? this.currentIdMunicipality,
-      currentMunicipalityName: currentMunicipalityName ?? this.currentMunicipalityName,
-      showLoginSuccessDialog: showLoginSuccessDialog ?? this.showLoginSuccessDialog,
+      currentIdMunicipality:
+          currentIdMunicipality ?? this.currentIdMunicipality,
+      currentMunicipalityName:
+          currentMunicipalityName ?? this.currentMunicipalityName,
+      showLoginSuccessDialog:
+          showLoginSuccessDialog ?? this.showLoginSuccessDialog,
       isSearchActive: isSearchActive ?? this.isSearchActive,
       searchText: searchText ?? this.searchText,
-      showInDevelopmentDialog: showInDevelopmentDialog ?? this.showInDevelopmentDialog,
-      pendingPanicAction: clearPendingPanicAction ? null : (pendingPanicAction ?? this.pendingPanicAction),
+      showInDevelopmentDialog:
+          showInDevelopmentDialog ?? this.showInDevelopmentDialog,
+      pendingPanicAction: clearPendingPanicAction
+          ? null
+          : (pendingPanicAction ?? this.pendingPanicAction),
       modalMode: clearModalMode ? null : (modalMode ?? this.modalMode),
       pendingUrl: clearPendingUrl ? null : (pendingUrl ?? this.pendingUrl),
       urlToOpen: clearUrlToOpen ? null : (urlToOpen ?? this.urlToOpen),
       showExitDialog: showExitDialog ?? this.showExitDialog,
       isDarkTheme: isDarkTheme ?? this.isDarkTheme,
       isSaved: isSaved ?? this.isSaved,
-      showChangeLocationDialog: showChangeLocationDialog ?? this.showChangeLocationDialog,
-      showPanicCountdownDialog: showPanicCountdownDialog ?? this.showPanicCountdownDialog,
+      showChangeLocationDialog:
+          showChangeLocationDialog ?? this.showChangeLocationDialog,
+      showPanicCountdownDialog:
+          showPanicCountdownDialog ?? this.showPanicCountdownDialog,
       isPqrdVisible: isPqrdVisible ?? this.isPqrdVisible,
       selectedRoute: selectedRoute ?? this.selectedRoute,
     );
@@ -211,10 +219,7 @@ class MainViewModel extends Notifier<MainUiState> {
   void showModalForm(ModalFormMode mode, {String? url}) {
     // La URL va a `pendingUrl` (dato almacenado), NO a `urlToOpen`: así el PT
     // NO se abre hasta que el usuario complete el formulario y pulse "Continuar".
-    state = state.copyWith(
-      modalMode: mode,
-      pendingUrl: url,
-    );
+    state = state.copyWith(modalMode: mode, pendingUrl: url);
   }
 
   void onModalDismissed() {
@@ -330,7 +335,8 @@ class MainViewModel extends Notifier<MainUiState> {
           ? "$lat,$lng"
           : "No disponible";
 
-      final message = "¡ALERTA DE PÁNICO!\n"
+      final message =
+          "¡ALERTA DE PÁNICO!\n"
           "Necesito ayuda urgente.\n"
           "Mis datos:\n"
           "- Nombre: $name\n"
@@ -339,7 +345,8 @@ class MainViewModel extends Notifier<MainUiState> {
           "$locationText";
 
       // Disparar WhatsApp URL
-      final whatsappUrl = "${action.baseWhatsappUrl}&text=${Uri.encodeComponent(message)}";
+      final whatsappUrl =
+          "${action.baseWhatsappUrl}&text=${Uri.encodeComponent(message)}";
       state = state.copyWith(urlToOpen: whatsappUrl);
 
       // Enviar Email de pánico si está configurado
@@ -369,6 +376,4 @@ class MainViewModel extends Notifier<MainUiState> {
 }
 
 final mainViewModelProvider =
-    NotifierProvider.family<MainViewModel, MainUiState, int>(
-  MainViewModel.new,
-);
+    NotifierProvider.family<MainViewModel, MainUiState, int>(MainViewModel.new);

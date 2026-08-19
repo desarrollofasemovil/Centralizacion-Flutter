@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/theme/theme_mode_provider.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
@@ -27,19 +28,21 @@ class UserSettingsScreen extends ConsumerWidget {
     final isDark = ref.watch(themeIsDarkProvider);
     final isLoggedIn = user != null && user.loginStatus;
     final isDeleting = ref.watch(
-        userSettingsNotifierProvider.select((s) => s.isDeleting));
+      userSettingsNotifierProvider.select((s) => s.isDeleting),
+    );
 
     // Mensajes transitorios → SnackBar.
-    ref.listen<String?>(
-      userSettingsNotifierProvider.select((s) => s.message),
-      (prev, next) {
-        if (next != null && next.isNotEmpty) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(next)));
-          notifier.consumeMessage();
-        }
-      },
-    );
+    ref.listen<String?>(userSettingsNotifierProvider.select((s) => s.message), (
+      prev,
+      next,
+    ) {
+      if (next != null && next.isNotEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(next)));
+        notifier.consumeMessage();
+      }
+    });
 
     // Navegación a Welcome (cambio de municipio, logout, cuenta eliminada).
     ref.listen<bool>(
@@ -66,11 +69,14 @@ class UserSettingsScreen extends ConsumerWidget {
         leadingWidth: 56,
         leading: Padding(
           padding: const EdgeInsets.only(left: 10),
-          child: _CircleBackButton(onTap: () => context.pop()),
+          child: AppBackButton(onPressed: () => context.pop()),
         ),
-        title: Text('Configuración',
-            style: theme.textTheme.titleMedium
-                ?.copyWith(color: theme.colorScheme.onSurface)),
+        title: Text(
+          'Configuración',
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
       ),
       body: SafeArea(
         top: false,
@@ -87,16 +93,20 @@ class UserSettingsScreen extends ConsumerWidget {
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.person,
-                    size: 64, color: theme.colorScheme.surface),
+                child: Icon(
+                  Icons.person,
+                  size: 64,
+                  color: theme.colorScheme.surface,
+                ),
               ),
               const SizedBox(height: 10),
               Text(
                 (user != null && user.loginStatus)
                     ? '${user.firstName} ${user.lastName}'
                     : 'Invitado',
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(color: theme.colorScheme.onSurface),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
               const SizedBox(height: 16),
               // Modo oscuro
@@ -137,7 +147,8 @@ class UserSettingsScreen extends ConsumerWidget {
                 TextButton.icon(
                   onPressed: () => _confirmDeleteAccount(context, notifier),
                   style: TextButton.styleFrom(
-                      foregroundColor: theme.colorScheme.error),
+                    foregroundColor: theme.colorScheme.error,
+                  ),
                   icon: const Icon(Icons.warning_amber_rounded, size: 24),
                   label: const Text('Eliminar mi cuenta'),
                 ),
@@ -167,7 +178,9 @@ class UserSettingsScreen extends ConsumerWidget {
   }
 
   void _openChangePassword(
-      BuildContext context, UserSettingsNotifier notifier) {
+    BuildContext context,
+    UserSettingsNotifier notifier,
+  ) {
     notifier.resetPasswordForm();
     showModalBottomSheet<void>(
       context: context,
@@ -181,7 +194,9 @@ class UserSettingsScreen extends ConsumerWidget {
   }
 
   void _confirmChangeLocation(
-      BuildContext context, UserSettingsNotifier notifier) {
+    BuildContext context,
+    UserSettingsNotifier notifier,
+  ) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -206,15 +221,20 @@ class UserSettingsScreen extends ConsumerWidget {
   }
 
   void _confirmDeleteAccount(
-      BuildContext context, UserSettingsNotifier notifier) {
+    BuildContext context,
+    UserSettingsNotifier notifier,
+  ) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: Icon(Icons.warning_amber_rounded,
-            color: Theme.of(ctx).colorScheme.error),
+        icon: Icon(
+          Icons.warning_amber_rounded,
+          color: Theme.of(ctx).colorScheme.error,
+        ),
         title: const Text('Eliminar Cuenta'),
         content: const Text(
-            'Esta acción eliminará todos tus datos de forma permanente.'),
+          'Esta acción eliminará todos tus datos de forma permanente.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -222,7 +242,8 @@ class UserSettingsScreen extends ConsumerWidget {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(ctx).colorScheme.error),
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
             onPressed: () {
               Navigator.of(ctx).pop();
               notifier.deleteAccount();
@@ -251,7 +272,11 @@ class _DarkModeRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(
-              left: 16, top: 14, right: 10, bottom: 6),
+            left: 16,
+            top: 14,
+            right: 10,
+            bottom: 6,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -259,9 +284,12 @@ class _DarkModeRow extends StatelessWidget {
                 children: [
                   _IconBubble(icon: Icons.dark_mode_outlined),
                   const SizedBox(width: 15),
-                  Text('Modo oscuro',
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(color: theme.colorScheme.onSurface)),
+                  Text(
+                    'Modo oscuro',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
                 ],
               ),
               Switch(value: value, onChanged: onChanged),
@@ -299,19 +327,24 @@ class _SettingItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
             child: Row(
               children: [
                 _IconBubble(icon: icon),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Text(title,
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(color: theme.colorScheme.onSurface)),
+                  child: Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
                 ),
-                Icon(Icons.arrow_forward_ios,
-                    size: 14, color: theme.colorScheme.onSurface),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: theme.colorScheme.onSurface,
+                ),
               ],
             ),
           ),
@@ -344,30 +377,6 @@ class _IconBubble extends StatelessWidget {
   }
 }
 
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.primary,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(40),
-        onTap: onTap,
-        child: SizedBox(
-          width: 35,
-          height: 35,
-          child: Icon(Icons.arrow_back_ios_new,
-              size: 18, color: theme.colorScheme.onPrimary),
-        ),
-      ),
-    );
-  }
-}
-
 class _FullScreenLoader extends StatelessWidget {
   const _FullScreenLoader({required this.message});
   final String message;
@@ -394,8 +403,9 @@ class _FullScreenLoader extends StatelessWidget {
               child: Text(
                 message,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.onSurface),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
             ),
           ],

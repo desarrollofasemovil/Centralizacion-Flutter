@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/important_alert_dialog.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../../core/widgets/policy_checkboxes.dart';
@@ -44,19 +45,18 @@ class _ConsultaImpuestoScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = ref.read(sessionProvider);
       if (user != null) {
-        ref.read(taxQueryNotifierProvider.notifier).prefill(
-              documentNumber: user.nationalId,
-              email: user.email,
-            );
+        ref
+            .read(taxQueryNotifierProvider.notifier)
+            .prefill(documentNumber: user.nationalId, email: user.email);
       }
     });
   }
 
   // Ícono según taxId, como el `when (taxId)` del original.
   String get _taxIconAsset => switch (widget.taxId) {
-        2 => 'assets/images/icoica.svg',
-        _ => 'assets/images/icopredial.svg',
-      };
+    2 => 'assets/images/icoica.svg',
+    _ => 'assets/images/icopredial.svg',
+  };
 
   void _showNoResultsDialog() {
     final notifier = ref.read(taxQueryNotifierProvider.notifier);
@@ -90,8 +90,7 @@ class _ConsultaImpuestoScreenState
           extra: {'taxes': taxes, 'email': next.email.trim()},
         );
       }
-      if (next.showNoResultsDialog &&
-          previous?.showNoResultsDialog != true) {
+      if (next.showNoResultsDialog && previous?.showNoResultsDialog != true) {
         _showNoResultsDialog();
       }
       final error = next.queryError;
@@ -111,9 +110,7 @@ class _ConsultaImpuestoScreenState
         automaticallyImplyLeading: false,
         leading: Padding(
           padding: const EdgeInsets.only(left: 10),
-          child: Center(
-            child: _CircularBackButton(onPressed: () => context.pop()),
-          ),
+          child: Center(child: AppBackButton(onPressed: () => context.pop())),
         ),
       ),
       body: asyncMun.maybeWhen(
@@ -204,14 +201,17 @@ class _ConsultaImpuestoScreenState
             ),
           );
         },
-        orElse: () =>
-            const Center(child: CircularProgressIndicator.adaptive()),
+        orElse: () => const Center(child: CircularProgressIndicator.adaptive()),
       ),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding:
-              const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 50),
+          padding: const EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 16,
+            bottom: 50,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -228,8 +228,9 @@ class _ConsultaImpuestoScreenState
                     ),
                     child: Text(
                       'Cancelar',
-                      style: theme.textTheme.labelLarge
-                          ?.copyWith(color: Colors.white),
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -240,13 +241,12 @@ class _ConsultaImpuestoScreenState
                   height: 50,
                   child: asyncMun.maybeWhen(
                     data: (munDto) => ElevatedButton(
-                      onPressed:
-                          state.isQueryButtonEnabled && !state.isLoading
-                              ? () => notifier.onQueryClicked(
-                                    entityCode: munDto.entityCode,
-                                    taxId: widget.taxId,
-                                  )
-                              : null,
+                      onPressed: state.isQueryButtonEnabled && !state.isLoading
+                          ? () => notifier.onQueryClicked(
+                              entityCode: munDto.entityCode,
+                              taxId: widget.taxId,
+                            )
+                          : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: scheme.primary,
                         foregroundColor: scheme.onPrimary,
@@ -263,10 +263,12 @@ class _ConsultaImpuestoScreenState
                                 color: Colors.white,
                               ),
                             )
-                          : Text('Consultar',
+                          : Text(
+                              'Consultar',
                               style: theme.textTheme.labelLarge?.copyWith(
                                 color: scheme.onPrimary,
-                              )),
+                              ),
+                            ),
                     ),
                     orElse: () => const SizedBox.shrink(),
                   ),
@@ -274,32 +276,6 @@ class _ConsultaImpuestoScreenState
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Botón circular de "atrás" del original (35dp, fondo primary).
-class _CircularBackButton extends StatelessWidget {
-  const _CircularBackButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.primary,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onPressed,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 35,
-          height: 35,
-          child: Icon(Icons.arrow_back_ios_new,
-              size: 20, color: scheme.onPrimary),
         ),
       ),
     );
@@ -328,8 +304,9 @@ class _CustomTextField extends StatefulWidget {
 }
 
 class _CustomTextFieldState extends State<_CustomTextField> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.value);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.value,
+  );
 
   @override
   void didUpdateWidget(covariant _CustomTextField oldWidget) {
@@ -373,8 +350,7 @@ class _CustomTextFieldState extends State<_CustomTextField> {
         border: border,
         enabledBorder: border,
         focusedBorder: border,
-        contentPadding:
-            const EdgeInsets.fromLTRB(16, 24, 16, 8),
+        contentPadding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       ),
     );
   }

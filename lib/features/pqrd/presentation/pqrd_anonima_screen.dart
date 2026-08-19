@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
 import 'package:tramiapp_flutter/core/theme/app_colors.dart';
 import 'package:tramiapp_flutter/core/widgets/pqrd_dropdown.dart';
-import 'package:tramiapp_flutter/core/widgets/pqrd_scaffold.dart';
+import 'package:tramiapp_flutter/core/widgets/top_bar_navigation.dart';
 import '../application/pqrd_notifier.dart';
 import '../domain/pqrd_state.dart';
 import 'pqrd_result_dialogs.dart';
@@ -106,7 +106,7 @@ class _PqrdAnonimaScreenState extends ConsumerState<PqrdAnonimaScreen> {
       );
     }
 
-    return PqrdScaffold(
+    return TopBarNavigationScaffold(
       iconAsset: 'assets/images/ico_pqrd_anonima.svg',
       title: 'PQRSD ANÓNIMA',
       description: 'Peticiones, quejas, reclamos y sugerencias',

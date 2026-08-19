@@ -109,8 +109,11 @@ class _CourseImage extends StatelessWidget {
     final placeholder = Container(
       color: theme.colorScheme.surfaceContainerHighest,
       alignment: Alignment.center,
-      child: Icon(Icons.school,
-          size: 48, color: theme.colorScheme.onSurfaceVariant),
+      child: Icon(
+        Icons.school,
+        size: 48,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
     );
     if (url == null || url!.isEmpty) return placeholder;
     return Image.network(
@@ -148,8 +151,9 @@ class _IconText extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           text,
-          style: theme.textTheme.bodySmall
-              ?.copyWith(fontWeight: bold ? FontWeight.bold : null),
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: bold ? FontWeight.bold : null,
+          ),
         ),
       ],
     );

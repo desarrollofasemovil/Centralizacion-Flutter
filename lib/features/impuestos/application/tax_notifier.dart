@@ -73,8 +73,9 @@ class TaxQueryState {
       isDropdownVisible: isDropdownVisible ?? this.isDropdownVisible,
       isLoading: isLoading ?? this.isLoading,
       queryError: clearQueryError ? null : (queryError ?? this.queryError),
-      querySuccess:
-          clearQuerySuccess ? null : (querySuccess ?? this.querySuccess),
+      querySuccess: clearQuerySuccess
+          ? null
+          : (querySuccess ?? this.querySuccess),
       showNoResultsDialog: showNoResultsDialog ?? this.showNoResultsDialog,
     );
   }
@@ -152,4 +153,5 @@ class TaxQueryNotifier extends Notifier<TaxQueryState> {
 
 final taxQueryNotifierProvider =
     NotifierProvider.autoDispose<TaxQueryNotifier, TaxQueryState>(
-        TaxQueryNotifier.new);
+      TaxQueryNotifier.new,
+    );

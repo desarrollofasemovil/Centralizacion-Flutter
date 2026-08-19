@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/course_dto.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../domain/courses_state.dart';
 
 /// Vista de detalles de un curso (dirigida por estado, no es una ruta). Port de
@@ -27,21 +28,7 @@ class CourseDetailsView extends StatelessWidget {
         backgroundColor: theme.colorScheme.surface,
         leading: Padding(
           padding: const EdgeInsets.only(left: 10),
-          child: Material(
-            color: theme.colorScheme.primary,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(40),
-              onTap: onBack,
-              child: SizedBox(
-                width: 35,
-                height: 35,
-                child: Icon(Icons.arrow_back_ios_new,
-                    size: 18, color: theme.colorScheme.onPrimary),
-              ),
-            ),
-          ),
+          child: AppBackButton(onPressed: onBack),
         ),
         title: Text('Detalles del Curso', style: theme.textTheme.titleMedium),
       ),
@@ -62,10 +49,7 @@ class CourseDetailsView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      course.title,
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    Text(course.title, style: theme.textTheme.titleMedium),
                     const SizedBox(height: 16),
                     if (parsed.detailsMap.isNotEmpty) ...[
                       for (final entry in parsed.detailsMap.entries)
@@ -78,22 +62,27 @@ class CourseDetailsView extends StatelessWidget {
                                 flex: 3,
                                 child: Text(
                                   entry.key,
-                                  style: theme.textTheme.titleSmall
-                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               Expanded(
                                 flex: 7,
-                                child: Text(entry.value,
-                                    style: theme.textTheme.bodyMedium),
+                                child: Text(
+                                  entry.value,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       const Divider(height: 32),
                     ],
-                    Text(parsed.mainDescription,
-                        style: theme.textTheme.bodyMedium),
+                    Text(
+                      parsed.mainDescription,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                     const SizedBox(height: 24),
                   ],
                 ),

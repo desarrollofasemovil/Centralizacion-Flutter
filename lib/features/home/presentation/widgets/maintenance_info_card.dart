@@ -59,8 +59,9 @@ class MaintenanceInfoCard extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Text(
                       status.message,
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: Colors.black.withValues(alpha: 0.8)),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.black.withValues(alpha: 0.8),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Align(
@@ -114,8 +115,9 @@ class MaintenanceInfoCard extends ConsumerWidget {
 
   Future<void> _openStore() async {
     final market = Uri.parse('market://details?id=$_appId');
-    final web =
-        Uri.parse('https://play.google.com/store/apps/details?id=$_appId');
+    final web = Uri.parse(
+      'https://play.google.com/store/apps/details?id=$_appId',
+    );
     try {
       if (!await launchUrl(market, mode: LaunchMode.externalApplication)) {
         await launchUrl(web, mode: LaunchMode.externalApplication);

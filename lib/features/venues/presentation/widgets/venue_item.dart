@@ -29,8 +29,11 @@ class VenueItem extends StatelessWidget {
                 errorBuilder: (_, _, _) => Container(
                   color: theme.colorScheme.surfaceContainerHighest,
                   alignment: Alignment.center,
-                  child: Icon(Icons.stadium,
-                      size: 48, color: theme.colorScheme.onSurfaceVariant),
+                  child: Icon(
+                    Icons.stadium,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 loadingBuilder: (context, child, progress) => progress == null
                     ? child
@@ -44,12 +47,15 @@ class VenueItem extends StatelessWidget {
               children: [
                 Text(
                   venue.title,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                Text(venue.description ?? 'Sin descripción',
-                    style: theme.textTheme.bodyMedium),
+                Text(
+                  venue.description ?? 'Sin descripción',
+                  style: theme.textTheme.bodyMedium,
+                ),
                 const SizedBox(height: 12),
                 _IconRow(
                   icon: Icons.location_on,
@@ -116,29 +122,45 @@ class ActiveReservationView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle,
-              size: 60, color: theme.colorScheme.secondary),
+          Icon(
+            Icons.check_circle,
+            size: 60,
+            color: theme.colorScheme.secondary,
+          ),
           const SizedBox(height: 16),
-          Text('Ya tienes una reserva activa',
-              textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
+          Text(
+            'Ya tienes una reserva activa',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium,
+          ),
           const SizedBox(height: 16),
-          Text('Escenario: ${reservation.venueName}',
-              style: theme.textTheme.titleMedium),
+          Text(
+            'Escenario: ${reservation.venueName}',
+            style: theme.textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
-          Text('Inicio: ${_format(reservation.startDate)}',
-              style: theme.textTheme.bodyMedium),
-          Text('Fin: ${_format(reservation.endDate)}',
-              style: theme.textTheme.bodyMedium),
+          Text(
+            'Inicio: ${_format(reservation.startDate)}',
+            style: theme.textTheme.bodyMedium,
+          ),
+          Text(
+            'Fin: ${_format(reservation.endDate)}',
+            style: theme.textTheme.bodyMedium,
+          ),
           const SizedBox(height: 8),
-          Text('Estado: ${reservation.status}',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(color: theme.colorScheme.secondary)),
+          Text(
+            'Estado: ${reservation.status}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.secondary,
+            ),
+          ),
           const SizedBox(height: 24),
           Text(
             'Recuerda que solo puedes realizar una reserva. Podrás realizar una nueva reserva cuando expire este periodo.',
             textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

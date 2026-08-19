@@ -76,6 +76,8 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
   }
 }
 
-final paymentProcessingNotifierProvider = NotifierProvider.autoDispose<
-    PaymentProcessingNotifier,
-    PaymentProcessingState>(PaymentProcessingNotifier.new);
+final paymentProcessingNotifierProvider =
+    NotifierProvider.autoDispose<
+      PaymentProcessingNotifier,
+      PaymentProcessingState
+    >(PaymentProcessingNotifier.new);

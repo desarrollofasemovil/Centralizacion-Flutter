@@ -80,11 +80,7 @@ class _OrbitPainter extends CustomPainter {
     );
 
     // 2 · Tres puntos orbitando, con tamaño y opacidad decrecientes
-    const dots = [
-      (-90.0, 5.0, 1.00),
-      (30.0, 4.0, 0.55),
-      (150.0, 3.0, 0.30),
-    ];
+    const dots = [(-90.0, 5.0, 1.00), (30.0, 4.0, 0.55), (150.0, 3.0, 0.30)];
     for (final (deg, dotRadius, alpha) in dots) {
       final rad = (deg + angleDegrees) * math.pi / 180;
       canvas.drawCircle(
