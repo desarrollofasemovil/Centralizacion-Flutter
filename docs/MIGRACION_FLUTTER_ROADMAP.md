@@ -78,6 +78,13 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 - [x] Módulo Noticias
 
 > ✅ **Fase 2 verificada**: Pantallas de onboarding, selector de municipios, login nativo y con Google, registro wizard en 3 pasos, recuperación de contraseña, pantalla principal (Home), módulo de noticias e integración de notificaciones push y locales completamente implementados.
+>
+> 🐛 **Bug de logout cerrado (PR #20, 2026-08-19)**: tras cerrar sesión, el side menu seguía mostrando
+> el saludo y "Cerrar sesión" del usuario anterior. Causa: `MainUiState.copyWith(currentUser: next)`
+> usaba `currentUser ?? this.currentUser` — con `next == null` (logout), `??` descarta el `null` y
+> conserva el valor viejo, así que el campo nunca podía volver a quedar en `null`. El Kotlin original
+> no tiene este problema porque `data class.copy()` sí acepta `null` explícito. Arreglado con un flag
+> `clearCurrentUser` (mismo patrón que ya usan `clearModalMode`/`clearPendingUrl`/`clearUrlToOpen`).
 
 ## Fase 3 — Módulos core
 
@@ -95,6 +102,17 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 > 🔧 **Repaso motor de trámites 2026-07-07 (acciones de botón)**: verificado que `toInfoTramite`/`toDomainModel` mapean las 8 reglas de `FRONTEND.md §6.3` (Pánico, PQRD nativo, Certificados, Servicios Públicos, **PT/portal tributario** `AbrirUrl`, PSV, Consulta de impuesto, Cursos/Escenarios). **Corregido el despacho del PT**: `AbrirUrl`/`AbrirUrlDirecto` ahora abren con el navegador in-app (`abrirUrl()` → Chrome Custom Tabs / Safari VC) tintado con el color del municipio, igual que `abrirURL(context, url, colorPrimario)` del original; antes usaban `launchUrl(externalApplication)`. Mismo cambio en las 3 URLs del Home (términos, noticias, portal `domain`).
 >
 > 🎨 **Fidelidad UI PSV 2026-07-17**: reescrito `psv_wizard.dart` para replicar fielmente `PsvScreen.kt` + `Step1/2/3` + `FormButtons`: cabecera `primary` con badge circular e ícono del impuesto ("Pago Seguros en Línea" + nombre), hoja redondeada, `StepIndicator` con checks, y los campos/títulos correctos por paso — Paso 1 "Datos del ciudadano o contribuyente" (tipo doc del backend + primer/segundo nombre y apellido), Paso 2 "Datos de pago" (tipo impuesto readonly, correo, teléfono, factura, valor con `$`/separadores + políticas), Paso 3 "Resumen de pago" (tarjeta gris + tarjeta roja "Importante"). Ahora consume el `ValidationErrorDialog` centralizado. **Transacción**: `onPay` registra el historial (`createHistoryPay` → `POST api/PaymentHistory`) y crea la transacción (`createTransaction`), igual que `onPayClicked` del `PsvPaymentViewModel`.
+>
+> 🐛 **Trámites inactivos navegaban igual (PR #20, 2026-08-19)**: un trámite con `isActive = false`
+> (p. ej. Cursos/Reserva de espacios en Amalfi) mostraba el diálogo "Próximamente disponible" **y**
+> abría la pantalla igual. Causa: `MainScreen.onTramiteClick` llamaba a
+> `notifier.onTramiteClicked(t)` (que sí corta en seco si `!isActive`) pero luego invocaba
+> `_handleNavigation(t)` sin condición, solo filtrando por tipo de `accion`. En el Kotlin original la
+> navegación es 100 % dirigida por evento desde el ViewModel y nunca se dispara para un trámite
+> inactivo. Se agregó el check de `isActive` que faltaba en las dos secciones (Trámites / Otros
+> trámites). De paso, el diálogo "Próximamente disponible" usaba un `AlertDialog` suelto en vez del
+> `ConfirmationDialog` centralizado (por eso el padding/ícono se veían distintos al resto de diálogos
+> de la app) — ya consume el componente compartido.
 
 ## Componentes compartidos (`core/widgets`) — `FRONTEND.md §5.15`
 
@@ -102,7 +120,7 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 - [x] Portados fielmente del codebase: `ErrorMunicipalityScreen` (cableado en `AlcaldiasScope`, reemplaza el stub), `ValidationErrorDialog`, `ConfirmationPoliciesDialog`.
 - [x] `AlcaldiasStateWrapper` → implementado como `AlcaldiasScope` (theming dinámico) en `core/router/placeholders.dart`.
 - [x] `RequestNotificationPermission`: cubierto por `core/notifications` (FCM `requestPermission` + locales `requestNotificationsPermission`) — no requiere widget.
-- [x] **Consumir los dialogs centralizados** — `ValidationErrorDialog` cableado en PSV y `ConfirmationPoliciesDialog` en PQRD paso 3. *(Certificados queda con SnackBars a propósito: el `ValidationErrorDialog` también está comentado en el `CertificatesNavScreen.kt` original, así que el port es fiel — no es una desviación.)*
+- [x] **Consumir los dialogs centralizados** — `ValidationErrorDialog` cableado en PSV y `ConfirmationPoliciesDialog` en PQRD paso 3. *(Certificados queda con SnackBars a propósito: el `ValidationErrorDialog` también está comentado en el `CertificatesNavScreen.kt` original, así que el port es fiel — no es una desviación.)* El diálogo "Próximamente disponible" de `MainScreen` (trámites inactivos) también consume `ConfirmationDialog` desde el 2026-08-19 (PR #20) — antes era un `AlertDialog` suelto, sin el padding/header/ícono del componente compartido.
 - [ ] `NoConnectionDialog`: requiere el observador de conectividad a nivel app (`connectivity_plus`, `FRONTEND.md §3`) antes de portar el diálogo. **`connectivity_plus` no está en `pubspec.yaml`** — ese es el primer paso.
 - [ ] `TopbarNavigation` compartido: hoy **18 pantallas** declaran su propio `AppBar`. Unificar en un componente común. Conviene hacerlo **antes** de abrir iOS: después habría que revalidar en dos plataformas.
 - [ ] `StepIndicator`: existe el canónico en `core/widgets/step_indicator.dart`, pero **siguen 2 copias** (`features/auth/.../signup_step_row.dart` y el `_StepIndicator` inline de `psv_wizard.dart`). Unificar (`FRONTEND.md §11.5`).
