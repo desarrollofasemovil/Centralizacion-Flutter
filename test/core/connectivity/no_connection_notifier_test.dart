@@ -45,7 +45,7 @@ void main() {
   test('sin conexión sostenida muestra el diálogo solo tras el debounce',
       () async {
     container = makeContainer();
-    container.listen(noConnectionDialogProvider, (_, __) {});
+    container.listen(noConnectionDialogProvider, (_, _) {});
 
     controller.add(ConnectivityStatus.unavailable);
     await _wait(5);
@@ -57,7 +57,7 @@ void main() {
 
   test('recuperar la red antes del debounce cancela la aparición', () async {
     container = makeContainer();
-    container.listen(noConnectionDialogProvider, (_, __) {});
+    container.listen(noConnectionDialogProvider, (_, _) {});
 
     controller.add(ConnectivityStatus.unavailable);
     await _wait(5);
@@ -69,7 +69,7 @@ void main() {
 
   test('intermitencia reinicia la ventana', () async {
     container = makeContainer();
-    container.listen(noConnectionDialogProvider, (_, __) {});
+    container.listen(noConnectionDialogProvider, (_, _) {});
 
     controller.add(ConnectivityStatus.unavailable);
     await _wait(12);
@@ -86,7 +86,7 @@ void main() {
 
   test('available con el diálogo visible lo oculta de inmediato', () async {
     container = makeContainer();
-    container.listen(noConnectionDialogProvider, (_, __) {});
+    container.listen(noConnectionDialogProvider, (_, _) {});
 
     controller.add(ConnectivityStatus.unavailable);
     await _wait(60);
@@ -102,7 +102,7 @@ void main() {
     // La emisión ocurre antes de que el notifier exista.
     controller.add(ConnectivityStatus.unavailable);
     container = makeContainer();
-    container.listen(noConnectionDialogProvider, (_, __) {});
+    container.listen(noConnectionDialogProvider, (_, _) {});
     await _wait(5);
     expect(visible(), isFalse);
 
@@ -112,7 +112,7 @@ void main() {
 
   test('show() lo muestra sin debounce y dismiss() lo oculta', () {
     container = makeContainer();
-    container.listen(noConnectionDialogProvider, (_, __) {});
+    container.listen(noConnectionDialogProvider, (_, _) {});
 
     container.read(noConnectionDialogProvider.notifier).show();
     expect(visible(), isTrue);
