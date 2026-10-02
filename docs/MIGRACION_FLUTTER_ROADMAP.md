@@ -42,7 +42,7 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 - [x] Configurar `build_runner` + `json_serializable` (verificado con `shield_dto`)
 - [x] Scaffold de flavors `municipios` y `manizales` (ver `FLAVORS.md`) — solo el `municipios` se desarrolla por ahora
 - [x] FlutterFire: `firebase_options_municipios.dart` apuntando al proyecto Firebase actual (`betaappcentralizate`, Android; iOS pendiente)
-- [x] Copiar `CLAUDE.md` y los `MIGRACION_FLUTTER_*.md` a la raíz del proyecto Flutter (ya viven en `tramiapp_flutter/` y `tramiapp_flutter/docs/`)
+- [x] Copiar `CLAUDE.md` y los `MIGRACION_FLUTTER_*.md` a la raíz del proyecto Flutter (ya viven en la raíz del repo y en `docs/`)
 - [ ] GitHub Actions: build APK + IPA por flavor (mac-runner)
 - [ ] **Iniciar Apple Developer Account** (proceso externo, puede tardar hasta 2 semanas) 🍎
 
