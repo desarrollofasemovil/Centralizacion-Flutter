@@ -1,17 +1,15 @@
-# tramiapp_flutter
+# Centralizacion-Flutter
 
-A new Flutter project.
+Migración de **Trami App Municipios** (Kotlin/Jetpack Compose) a **Flutter**, con flavors por municipio (`municipios`, `manizales`).
 
-## Getting Started
+- Empieza por [`CLAUDE.md`](CLAUDE.md): reglas de oro, mapa de documentos y flujo de trabajo.
+- Documentación de la migración en [`docs/`](docs/) (`MIGRACION_FLUTTER_*.md`).
+- El código Kotlin original (fuente de verdad del diseño) se espeja localmente en `codebase/` (no versionado); ver instrucciones en `CLAUDE.md`.
+- Traductor de DTOs Kotlin → Dart en [`migration-agent/`](migration-agent/).
 
-This project is a starting point for a Flutter application.
+```bash
+flutter pub get
+flutter run --flavor municipios -t lib/main_municipios.dart
+```
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+> El nombre del paquete Dart sigue siendo `tramiapp_flutter` (ver `pubspec.yaml`); no se renombra para no romper los imports.
