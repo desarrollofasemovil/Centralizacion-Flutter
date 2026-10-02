@@ -3,34 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tramiapp_flutter/core/notifications/local_reminder_scheduler.dart';
 import 'package:tramiapp_flutter/core/notifications/registration_notifications.dart';
 
-class _Shown {
-  _Shown(this.id, this.title, this.body, this.bigText);
-
-  final int id;
-  final String title;
-  final String body;
-  final String? bigText;
-}
-
-class _FakeScheduler extends LocalReminderScheduler {
-  _FakeScheduler() : super(FlutterLocalNotificationsPlugin());
-
-  final shown = <_Shown>[];
-  bool result = true;
-  Object? throwOnShow;
-
-  @override
-  Future<bool> showNow({
-    required int id,
-    required String title,
-    required String body,
-    String? bigText,
-  }) async {
-    if (throwOnShow != null) throw throwOnShow!;
-    shown.add(_Shown(id, title, body, bigText));
-    return result;
-  }
-}
+import '../../helpers/fake_local_reminder_scheduler.dart';
 
 void main() {
   group('contenido', () {
@@ -98,11 +71,11 @@ void main() {
   });
 
   group('servicio RegistrationNotifications', () {
-    late _FakeScheduler scheduler;
+    late FakeLocalReminderScheduler scheduler;
     late RegistrationNotifications service;
 
     setUp(() {
-      scheduler = _FakeScheduler();
+      scheduler = FakeLocalReminderScheduler();
       service = RegistrationNotifications(scheduler);
     });
 
