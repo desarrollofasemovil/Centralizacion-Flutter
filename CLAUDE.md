@@ -3,11 +3,11 @@
 > Este archivo dirige el trabajo de migración de **Trami App Municipios** (Kotlin/Compose) a **Flutter**. Está pensado para cargarse al inicio de cada sesión de Claude Code y enrutar a la documentación y tareas correctas.
 > Lee los archivos `MIGRACION_FLUTTER_*` en `docs/` (junto a este archivo).
 >
-> ⭐ **IMPORTANTE — Fuente de verdad = el código Kotlin original.** El proyecto Android completo (Kotlin + Jetpack Compose) está espejado en **`tramiapp_flutter/codebase/`**. El código de las pantallas y la lógica vive en `tramiapp_flutter/codebase/app/src/main/java/com/tramites1cero1/centralizacion/` (pantallas en `.../ui/screen/<feature>/`). **Antes de migrar o rediseñar CUALQUIER módulo, abre y lee su código real en `codebase/`.** Los `.md` describen el comportamiento, pero el código de `codebase/` manda: porta fielmente diseño y lógica, no reinterpretes.
+> ⭐ **IMPORTANTE — Fuente de verdad = el código Kotlin original.** El proyecto Android completo (Kotlin + Jetpack Compose) está espejado en **`codebase/`** (en la raíz de este repo). El código de las pantallas y la lógica vive en `codebase/app/src/main/java/com/tramites1cero1/centralizacion/` (pantallas en `.../ui/screen/<feature>/`). **Antes de migrar o rediseñar CUALQUIER módulo, abre y lee su código real en `codebase/`.** Los `.md` describen el comportamiento, pero el código de `codebase/` manda: porta fielmente diseño y lógica, no reinterpretes.
 >
 > ⚠️ **`codebase/` está en `.gitignore` (espejo local, NO se versiona).** Si no la tienes en tu copia local, clónala desde el repo Android original antes de trabajar:
 > ```bash
-> git clone https://github.com/desarrollofasemovil/Centralizacion.git tramiapp_flutter/codebase
+> git clone https://github.com/desarrollofasemovil/Centralizacion.git codebase
 > ```
 > Sin esta carpeta, cualquier migración de UI se basará solo en los `.md` y divergirá del diseño real (ya pasó en la Fase 2).
 
@@ -16,10 +16,11 @@
 ## Reglas de oro (no negociables)
 
 1. **El backend se consume sin cambios.** Las 6 base URLs y todos los endpoints están en `MIGRACION_FLUTTER_BACKEND.md`. No inventes endpoints ni cambies contratos.
+   > ⚠️ **Cambio en curso (desde 2026-08-13):** por el cambio de patrocinador va a haber cambios en el API. Hasta que lleguen la spec/colección de Postman nuevas, `BACKEND.md` sigue siendo la verdad. **No asumas el contrato nuevo: pídelo.** Ver [`docs/PRODUCTO_2_ALCANCE.md`](docs/PRODUCTO_2_ALCANCE.md) §7.
 2. **Colores, escudo y módulos los define el backend** (`GET /api/Municipality/GetInfoBy{id}`), nunca el código ni el flavor. Se aplican en runtime.
 3. **Dos caminos de autenticación:** login nativo (correo/clave) contra la API propia (NO usa Firebase Auth) + login con Google (único uso de Firebase Auth). Ver `BACKEND.md §5`.
 4. **Package / applicationId por ahora:** `com.tramites1cero1.centralizacion` (el mismo de Centralización).
-5. **Orden de trabajo:** primero migrar **Centralización completa**, después crear **Trami App Manizales** como flavor. No empezar Manizales antes de tiempo.
+5. **Orden de trabajo:** la migración de **Centralización está funcionalmente completa en Android** (los 21 paquetes de pantallas Kotlin tienen equivalente en Flutter). El foco actual es **pulir detalles visuales, cerrar deuda de componentes compartidos y abrir iOS**. **Manizales** va por la mitad, en la rama `claude/manizales-shield-flavor-apk-41c6c7` del repo anterior [`MultiplatformCentralizacion`](https://github.com/desarrollofasemovil/MultiplatformCentralizacion) (no se migró a este repo), aún sin mezclar. Estado medido y verificado en `MIGRACION_FLUTTER_ROADMAP.md`.
 6. **iOS = HTTPS siempre.** No portar `usesCleartextTraffic`; iOS bloquea HTTP. Confirmar que todos los endpoints son HTTPS.
 7. **Sigue las convenciones** de `MIGRACION_FLUTTER_CONVENCIONES.md` para que cada módulo migrado se vea igual. No improvises arquitectura por módulo. **La referencia visual de cada pantalla es su `*Screen.kt` original en `codebase/` — no rediseñes ni reinterpretes la UI.**
 8. **Actualiza el roadmap.** Al completar una tarea, marca su casilla en `MIGRACION_FLUTTER_ROADMAP.md`.
@@ -35,9 +36,28 @@
 | Apps individuales por municipio (Manizales) | [MIGRACION_FLUTTER_FLAVORS.md](MIGRACION_FLUTTER_FLAVORS.md) |
 | Arquitectura, estructura de carpetas, patrones de código | [MIGRACION_FLUTTER_CONVENCIONES.md](MIGRACION_FLUTTER_CONVENCIONES.md) |
 | Qué hacer y en qué orden (checklist) | [MIGRACION_FLUTTER_ROADMAP.md](MIGRACION_FLUTTER_ROADMAP.md) |
+| **Producto 2** (cambio de patrocinador): alcance, funcionalidades nuevas, decisiones abiertas | [PRODUCTO_2_ALCANCE.md](docs/PRODUCTO_2_ALCANCE.md) |
 | Visión general / índice | [MIGRACION_FLUTTER_README.md](MIGRACION_FLUTTER_README.md) |
 
-El código Kotlin original está en `tramiapp_flutter/codebase/app/src/main/java/com/tramites1cero1/centralizacion/` (pantallas en `.../ui/screen/<feature>/`). Úsalo como **fuente de verdad** del comportamiento **y del diseño** actual; ábrelo siempre antes de portar un módulo. Si la carpeta no existe localmente, clónala (ver nota al inicio de este archivo).
+El código Kotlin original está en `codebase/app/src/main/java/com/tramites1cero1/centralizacion/` (pantallas en `.../ui/screen/<feature>/`). Úsalo como **fuente de verdad** del comportamiento **y del diseño** actual; ábrelo siempre antes de portar un módulo. Si la carpeta no existe localmente, clónala (ver nota al inicio de este archivo).
+
+---
+
+## 🕸️ Grafo de conocimiento del código (graphify)
+
+El código Flutter está mapeado en un **grafo de conocimiento** (generado con [graphify](https://github.com/Graphify-Labs/graphify)): clases, widgets, providers, servicios API y DTOs con sus relaciones e imports, más los títulos de los `.md` de `docs/`. Vive en `graphify-out/` (ignorado por git, se regenera). **Al inicio de cualquier tarea de arquitectura o de "¿dónde está X? / ¿qué depende de Y?", consúltalo antes de hacer grep a ciegas.** No sustituye la Regla de oro: para el diseño y comportamiento de una pantalla la fuente de verdad sigue siendo el Kotlin en `codebase/`; el grafo mapea el código Flutter **ya migrado**.
+
+**Consultarlo** (desde la raíz del repo):
+```bash
+graphify query "cómo funciona la autenticación y la sesión"   # traversal BFS: contexto amplio
+graphify path "SessionNotifier" "UserPreferences"             # camino más corto entre dos nodos
+graphify explain "sessionProvider"                            # explica un nodo y sus vecinos
+```
+O lee el resumen curado en [`graphify-out/GRAPH_REPORT.md`](graphify-out/GRAPH_REPORT.md) (nodos-dios, conexiones sorprendentes, preguntas sugeridas) y abre `graphify-out/graph.html` para la vista interactiva.
+
+**Mantenerlo fresco:** tras cambiar código corre `graphify update .` — solo AST con tree-sitter, **sin LLM, sin API key, nada sale de tu máquina**; es incremental (ignora lo que no cambió). Si `graphify-out/` no existe (clon o worktree nuevo), reconstrúyelo con `/graphify .`.
+
+**Instalación** (una vez por máquina): `pip install graphifyy && graphify install`.
 
 ---
 
@@ -99,6 +119,22 @@ flutter analyze
 
 > _Why: Most feature sessions explicitly required AppTheme compliance and clean analyzer output as a success bar._
 
+## Componentes de UI compartidos (`core/widgets/`)
+- **No escribas una barra superior, un botón de "atrás" ni un indicador de pasos nuevo.** Usa
+  `TopBarNavigationScaffold` (port de `TopbarNavigation.kt`), `AppBackButton` (estilos `filled` /
+  `light`), `StepIndicator` y `CirclesDecoration` (adorno `circles` del original). Si el original
+  Kotlin de tu pantalla usa `TopbarNavigation`, la pantalla Flutter debe usar el scaffold compartido,
+  no un `AppBar` plano.
+
+> _Why: el botón circular de atrás llegó a estar duplicado en 7 pantallas con tamaños distintos, el
+> indicador de pasos en 3, y Certificados/Historial se habían quedado con un `AppBar` genérico que no
+> se parecía al original. Unificado el 2026-08-19._
+
+
+## State updates (`copyWith`)
+- For a nullable field, never write `field: field ?? this.field` alone — `??` silently keeps the old value whenever you pass `null`, so the field can never actually be cleared. Add a `bool clearField = false` flag and branch on it (see `MainUiState`, `UserSettingsState`, `PasswordFormState` for the pattern already in use across the codebase).
+
+> _Why: `MainUiState.copyWith(currentUser: next)` couldn't null out `currentUser` on logout — the session listener passed `null` through but the old user stuck around, so the side menu kept showing "Cerrar sesión" after logging out. Kotlin's `data class.copy()` doesn't have this problem (it accepts explicit `null`), so this is a translation-specific footgun to watch for in any other ported `copyWith`. Fixed in PR #20 (2026-08-19)._
 
 ## Branch & PR Targeting
 - Always confirm the target branch before opening a PR (default to `develop`, NOT `main`).

@@ -8,14 +8,14 @@ part 'municipality_social_media.g.dart';
 class MunicipalitySocialMedia {
   final int id;
   final bool isActive;
-  final Municipality municipality;
+  final Municipality? municipality;
   final SocialMediaType socialMediaType;
   final String url;
 
   MunicipalitySocialMedia({
     required this.id,
     required this.isActive,
-    required this.municipality,
+    this.municipality,
     required this.socialMediaType,
     required this.url,
   });

@@ -8,7 +8,7 @@ part of 'tax_dto.dart';
 
 TaxQueryResponseDTO _$TaxQueryResponseDTOFromJson(Map<String, dynamic> json) =>
     TaxQueryResponseDTO(
-      message: json['Mensaje'] as String,
+      message: json['Mensaje'] as String?,
       information: (json['Informacion'] as List<dynamic>?)
           ?.map((e) => TaxInfoDTO.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -22,24 +22,24 @@ Map<String, dynamic> _$TaxQueryResponseDTOToJson(
 };
 
 TaxInfoDTO _$TaxInfoDTOFromJson(Map<String, dynamic> json) => TaxInfoDTO(
-  entity: json['Entidad'] as String,
-  entityCode: json['CodigoEntidad'] as String,
-  document: json['Documento'] as String,
-  name: json['Nombre'] as String,
-  taxName: json['Impuesto'] as String,
-  taxId: (json['Id_Impuesto'] as num).toInt(),
-  value: (json['Valor'] as num).toInt(),
-  annualValue: (json['ValorAnual'] as num).toInt(),
-  semesterValue: (json['ValorSemestre'] as num).toInt(),
-  trimesterValue: (json['ValorTrimestre'] as num).toInt(),
-  partialValue: (json['ValorParcial'] as num).toInt(),
-  reference: json['Referencia'] as String,
-  dueDate: json['FechaVencimiento'] as String,
-  cadastralCode: json['CodigoCatastral'] as String,
+  entity: json['Entidad'] as String?,
+  entityCode: json['CodigoEntidad'] as String?,
+  document: json['Documento'] as String?,
+  name: json['Nombre'] as String?,
+  taxName: json['Impuesto'] as String?,
+  taxId: (json['Id_Impuesto'] as num?)?.toInt(),
+  value: (json['Valor'] as num?)?.toInt(),
+  annualValue: (json['ValorAnual'] as num?)?.toInt(),
+  semesterValue: (json['ValorSemestre'] as num?)?.toInt(),
+  trimesterValue: (json['ValorTrimestre'] as num?)?.toInt(),
+  partialValue: (json['ValorParcial'] as num?)?.toInt(),
+  reference: json['Referencia'] as String?,
+  dueDate: json['FechaVencimiento'] as String?,
+  cadastralCode: json['CodigoCatastral'] as String?,
   detail: json['Detalle'] == null
       ? null
       : DetalleDTO.fromJson(json['Detalle'] as Map<String, dynamic>),
-  facturaCode: json['Factura'] as String,
+  facturaCode: json['Factura'] as String?,
 );
 
 Map<String, dynamic> _$TaxInfoDTOToJson(TaxInfoDTO instance) =>
@@ -72,11 +72,11 @@ Map<String, dynamic> _$DetalleDTOToJson(DetalleDTO instance) =>
 
 TaxQueryRequestDTO _$TaxQueryRequestDTOFromJson(Map<String, dynamic> json) =>
     TaxQueryRequestDTO(
-      entityCode: json['CodigoEntidad'] as String,
-      queryData: json['DatoConsulta'] as String,
-      queryField: json['CampoConsulta'] as String,
-      taxId: (json['IDImpuesto'] as num).toInt(),
-      invoice: json['Factura'] as String,
+      entityCode: json['CodigoEntidad'] as String?,
+      queryData: json['DatoConsulta'] as String?,
+      queryField: json['CampoConsulta'] as String?,
+      taxId: (json['IDImpuesto'] as num?)?.toInt(),
+      invoice: json['Factura'] as String?,
     );
 
 Map<String, dynamic> _$TaxQueryRequestDTOToJson(TaxQueryRequestDTO instance) =>
@@ -91,18 +91,18 @@ Map<String, dynamic> _$TaxQueryRequestDTOToJson(TaxQueryRequestDTO instance) =>
 BancolombiaGatewayRequestDTO _$BancolombiaGatewayRequestDTOFromJson(
   Map<String, dynamic> json,
 ) => BancolombiaGatewayRequestDTO(
-  reference: json['Referencia'] as String,
-  invoice: json['Factura'] as String,
-  municipalityCode: json['CodigoMunicipio'] as String,
-  documentType: json['TipoDocumento'] as String,
-  identification: json['Identificacion'] as String,
-  name: json['Nombre'] as String,
-  total: (json['Total'] as num).toInt(),
-  taxId: (json['IDImpuesto'] as num).toInt(),
-  email: json['Email'] as String,
-  phone: json['Telefono'] as String,
-  paymentSource: (json['FuentePago'] as num).toInt(),
-  implementationType: (json['TipoImplementacion'] as num).toInt(),
+  reference: json['Referencia'] as String?,
+  invoice: json['Factura'] as String?,
+  municipalityCode: json['CodigoMunicipio'] as String?,
+  documentType: json['TipoDocumento'] as String?,
+  identification: json['Identificacion'] as String?,
+  name: json['Nombre'] as String?,
+  total: (json['Total'] as num?)?.toInt(),
+  taxId: (json['IDImpuesto'] as num?)?.toInt(),
+  email: json['Email'] as String?,
+  phone: json['Telefono'] as String?,
+  paymentSource: (json['FuentePago'] as num?)?.toInt(),
+  implementationType: (json['TipoImplementacion'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$BancolombiaGatewayRequestDTOToJson(
@@ -125,9 +125,9 @@ Map<String, dynamic> _$BancolombiaGatewayRequestDTOToJson(
 BancolombiaGatewayResponseDTO _$BancolombiaGatewayResponseDTOFromJson(
   Map<String, dynamic> json,
 ) => BancolombiaGatewayResponseDTO(
-  url: json['URL'] as String,
-  code: (json['Codigo'] as num).toInt(),
-  message: json['Mensaje'] as String,
+  url: json['URL'] as String?,
+  code: (json['Codigo'] as num?)?.toInt(),
+  message: json['Mensaje'] as String?,
 );
 
 Map<String, dynamic> _$BancolombiaGatewayResponseDTOToJson(
@@ -141,16 +141,18 @@ Map<String, dynamic> _$BancolombiaGatewayResponseDTOToJson(
 FintechTransactionRequestDTO _$FintechTransactionRequestDTOFromJson(
   Map<String, dynamic> json,
 ) => FintechTransactionRequestDTO(
-  idTramite: (json['idTramite'] as num).toInt(),
-  pagador: FintechPayerDTO.fromJson(json['pagador'] as Map<String, dynamic>),
+  idTramite: (json['idTramite'] as num?)?.toInt(),
+  pagador: json['pagador'] == null
+      ? null
+      : FintechPayerDTO.fromJson(json['pagador'] as Map<String, dynamic>),
   fuentePago: (json['fuentePago'] as num?)?.toInt() ?? 2,
   tipoImplementacion: (json['tipoImplementacion'] as num?)?.toInt() ?? 1,
   estadoUrl: json['estado_Url'] as bool? ?? true,
   url: json['url'] as String? ?? '',
-  valorPagar: (json['valorPagar'] as num).toInt(),
-  factura: json['factura'] as String,
-  referencia: json['referencia'] as String,
-  descripcion: json['descripcion'] as String,
+  valorPagar: (json['valorPagar'] as num?)?.toInt(),
+  factura: json['factura'] as String?,
+  referencia: json['referencia'] as String?,
+  descripcion: json['descripcion'] as String?,
 );
 
 Map<String, dynamic> _$FintechTransactionRequestDTOToJson(
@@ -170,16 +172,16 @@ Map<String, dynamic> _$FintechTransactionRequestDTOToJson(
 
 FintechPayerDTO _$FintechPayerDTOFromJson(Map<String, dynamic> json) =>
     FintechPayerDTO(
-      documento: json['documento'] as String,
-      tipoDocumento: (json['tipoDocumento'] as num).toInt(),
-      nombreCompleto: json['nombre_Completo'] as String,
+      documento: json['documento'] as String?,
+      tipoDocumento: (json['tipoDocumento'] as num?)?.toInt(),
+      nombreCompleto: json['nombre_Completo'] as String?,
       dv: (json['dv'] as num?)?.toInt() ?? 0,
-      primerNombre: json['primernombre'] as String,
+      primerNombre: json['primernombre'] as String?,
       segundoNombre: json['segundonombre'] as String? ?? '',
-      primerApellido: json['primerapellido'] as String,
+      primerApellido: json['primerapellido'] as String?,
       segundoApellido: json['segundoapellido'] as String? ?? '',
-      telefono: json['telefono'] as String,
-      email: json['email'] as String,
+      telefono: json['telefono'] as String?,
+      email: json['email'] as String?,
       direccion: json['direccion'] as String? ?? '',
     );
 
@@ -201,12 +203,12 @@ Map<String, dynamic> _$FintechPayerDTOToJson(FintechPayerDTO instance) =>
 FintechTransactionResponseDTO _$FintechTransactionResponseDTOFromJson(
   Map<String, dynamic> json,
 ) => FintechTransactionResponseDTO(
-  isSuccess: json['isSuccess'] as bool,
+  isSuccess: json['isSuccess'] as bool?,
   message: json['message'] as String?,
   result: json['result'] == null
       ? null
       : FintechResultDTO.fromJson(json['result'] as Map<String, dynamic>),
-  state: (json['state'] as num).toInt(),
+  state: (json['state'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$FintechTransactionResponseDTOToJson(
@@ -220,7 +222,7 @@ Map<String, dynamic> _$FintechTransactionResponseDTOToJson(
 
 FintechResultDTO _$FintechResultDTOFromJson(Map<String, dynamic> json) =>
     FintechResultDTO(
-      idTransaccion: (json['idTransaccion'] as num).toInt(),
+      idTransaccion: (json['idTransaccion'] as num?)?.toInt(),
       url: json['url'] as String?,
     );
 

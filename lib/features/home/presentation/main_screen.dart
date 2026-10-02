@@ -1,16 +1,30 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/models/municipality_dto.dart';
-import '../../../core/models/municipality_procedure.dart';
-import '../../../core/municipality/municipality_repository.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
+import '../../../core/utils/url_opener.dart';
 import '../../auth/application/auth_providers.dart';
-import '../../auth/application/registration_draft.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
+import '../../reminders/presentation/reminders_section.dart';
+import '../../tramites/application/tramite_mappers.dart';
+import '../../tramites/domain/info_tramite.dart';
+import '../application/main_viewmodel.dart';
+import 'widgets/animated_section.dart';
+import 'widgets/main_bottom_nav_bar.dart';
+import 'widgets/main_header.dart';
+import 'widgets/main_side_menu_options.dart';
+import 'widgets/main_top_bar.dart';
+import 'widgets/maintenance_info_card.dart';
+import 'widgets/modal_form.dart';
+import '../../../core/widgets/circles_decoration.dart';
+import '../../../core/widgets/confirmation_dialog.dart';
+import '../../../core/widgets/panic_countdown_dialog.dart';
+import 'widgets/tramites_section.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({required this.municipality, super.key});
@@ -22,363 +36,486 @@ class MainScreen extends ConsumerStatefulWidget {
 }
 
 class _MainScreenState extends ConsumerState<MainScreen> {
-  int _currentIndex = 0;
-  bool _loginSheetShown = false;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  @override
-  void initState() {
-    super.initState();
-    // Auto-show del bottom sheet de login cuando no hay sesión (paridad con la
-    // orquestación de MainScreen.kt).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowLogin());
-  }
+  void _handleNavigation(InfoTramite tramite) {
+    final name = tramite.nombre;
+    final action = tramite.accion;
 
-  void _maybeShowLogin() {
-    if (!mounted || _loginSheetShown) return;
-    if (ref.read(sessionProvider) == null) {
-      _loginSheetShown = true;
-      showLoginBottomSheet(context);
+    // Navegación "hacia adelante": usamos push para conservar la pila y que el
+    // gesto/botón Atrás regrese a la Home (equivalente a navController.navigate
+    // del original, que apila). Las vueltas a Home tras pagar/enviar siguen con go.
+    if (action is ShowPqrds) {
+      context.push(AppRoutes.pqrdPath(widget.municipality.id));
+    } else if (action is NavegarANativo) {
+      context.push(action.ruta);
+    } else if (action is NavegarAPagoSinValidacion) {
+      context.push(
+        AppRoutes.pagosPsvPath(widget.municipality.id),
+        extra: {
+          'taxId': action.taxId,
+          'taxName': action.taxName,
+          'entityCode': action.entityCode,
+          'dataPolicyUrl': action.dataPolicyUrl,
+          'privacyPolicyUrl': action.privacyPolicyUrl,
+        },
+      );
+    } else if (action is NavegarAConsultaImpuesto) {
+      context.push(
+        AppRoutes.taxesPath(widget.municipality.id),
+        extra: {
+          'taxId': action.taxId,
+          'title': name,
+          'dataPolicyUrl': action.dataPolicyUrl,
+          'privacyPolicyUrl': action.privacyPolicyUrl,
+        },
+      );
+    } else if (action is NavegarACursos) {
+      context.push(
+        AppRoutes.cursosPath(widget.municipality.id),
+        extra: {
+          'courseId': action.courseId,
+          'emailMunicipalities': action.emailMunicipalities,
+        },
+      );
+    } else if (action is NavegarAvenues) {
+      context.push(
+        AppRoutes.venuesPath(widget.municipality.id),
+        extra: {
+          'venueId': action.venueId,
+          'emailMunicipalities': action.emailMunicipalities,
+        },
+      );
+    } else {
+      // Si es un trámite no mapeado (Cursos, Reservas, etc.), mostrar diálogo de próximamente
+      ref
+          .read(mainViewModelProvider(widget.municipality.id).notifier)
+          .showInDevelopment();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final design = designFromMunicipality(widget.municipality);
-    final scheme = Theme.of(context).colorScheme;
-    final user = ref.watch(sessionProvider);
+    final state = ref.watch(mainViewModelProvider(widget.municipality.id));
+    final notifier = ref.read(
+      mainViewModelProvider(widget.municipality.id).notifier,
+    );
+    final theme = Theme.of(context);
+    final domainModel = widget.municipality.toDomainModel();
 
-    // Al volver del registro sin sesión, reabrir el sheet (flag del base).
-    ref.listen<bool>(registrationSuccessProvider, (prev, next) {
-      if (next) {
-        ref.read(registrationSuccessProvider.notifier).state = false;
-        _loginSheetShown = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) showLoginBottomSheet(context);
-        });
+    // Escuchar si hay alguna URL pendiente para abrir
+    ref.listen<
+      String?
+    >(mainViewModelProvider(widget.municipality.id).select((s) => s.urlToOpen), (
+      prev,
+      next,
+    ) async {
+      if (next != null && next.isNotEmpty) {
+        // Portal tributario / URLs de trámite: se abren en el navegador in-app
+        // (Chrome Custom Tabs / Safari VC) tintado con el color del municipio,
+        // igual que `abrirURL(context, url, colorPrimario)` del original.
+        await abrirUrl(next, toolbarColor: theme.colorScheme.primary);
+        notifier.clearUrlToOpen();
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: scheme.primary,
-        foregroundColor: scheme.onPrimary,
-        title: Row(
-          children: [
-            if (design.escudoUrl.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: design.escudoUrl,
-                width: 36,
-                height: 36,
-                errorWidget: (_, _, _) => const Icon(Icons.location_city),
-              ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    // Nota: el ModalForm NO se muestra automáticamente al entrar/iniciar sesión.
+    // Igual que en el original (MainViewModel.kt), solo lo dispara
+    // onTramiteClicked cuando el trámite requiere datos y no hay usuario.
+
+    // Escuchar cambios en la visibilidad del modal de formulario
+    ref.listen<ModalFormMode?>(
+      mainViewModelProvider(widget.municipality.id).select((s) => s.modalMode),
+      (prev, next) {
+        if (next != null) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            builder: (ctx) => ModalForm(
+              mode: next,
+              dataPolicyUrl: widget.municipality.dataProcessingPrivacy ?? "",
+              privacyPolicyUrl: widget.municipality.dataPrivacy ?? "",
+              onDismiss: () {
+                Navigator.of(ctx).pop();
+              },
+              onConfirm: (guestUser) {
+                Navigator.of(ctx).pop();
+                notifier.onModalConfirmed(guestUser);
+              },
+            ),
+          ).then((_) {
+            final currentMode = ref
+                .read(mainViewModelProvider(widget.municipality.id))
+                .modalMode;
+            if (currentMode == next) {
+              notifier.onModalDismissed();
+            }
+          });
+        }
+      },
+    );
+
+    // Escuchar cambios en la visibilidad del contador de pánico
+    ref.listen<bool>(
+      mainViewModelProvider(
+        widget.municipality.id,
+      ).select((s) => s.showPanicCountdownDialog),
+      (prev, next) {
+        if (next) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => PanicCountdownDialog(
+              onDismiss: () {
+                Navigator.of(ctx).pop();
+                notifier.cancelPanicAlert();
+              },
+              onConfirm: () {
+                Navigator.of(ctx).pop();
+                final lat = widget.municipality.latitude != null
+                    ? double.tryParse(widget.municipality.latitude!)
+                    : null;
+                final lng = widget.municipality.longitude != null
+                    ? double.tryParse(widget.municipality.longitude!)
+                    : null;
+                notifier.confirmAndSendPanicAlert(lat, lng);
+              },
+            ),
+          );
+        }
+      },
+    );
+
+    // Diálogos informativos
+    if (state.showInDevelopmentDialog) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => ConfirmationDialog(
+            title: '¡Próximamente disponible!',
+            message:
+                'Estamos trabajando para que esta función esté lista muy pronto. Te avisaremos cuando esté disponible. Síguenos en nuestras redes o visita nuestro sitio web.',
+            icon: Icons.construction,
+            confirmButtonText: 'Entendido',
+            onConfirm: () {
+              Navigator.of(ctx).pop();
+              notifier.onInDevelopmentDialogDismiss();
+            },
+            onDismiss: () {},
+          ),
+        );
+      });
+    }
+
+    if (state.showExitDialog) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          // `ConfirmationDialog` compartido (cabecera de color + ícono), igual
+          // que el original; antes era un `AlertDialog` suelto sin el estilo
+          // del resto de diálogos de la app.
+          builder: (ctx) => ConfirmationDialog(
+            title: 'Atención',
+            message: 'Estas a punto de salir de esta pantalla.',
+            icon: Icons.exit_to_app,
+            confirmButtonText: 'Si, salir',
+            dismissButtonText: 'No, cancelar',
+            onDismiss: () {
+              Navigator.of(ctx).pop();
+              notifier.onExitDialogDismissed();
+            },
+            onConfirm: () async {
+              Navigator.of(ctx).pop();
+              notifier.onExitDialogDismissed();
+              // Puerto de `onConfirmExit`: si no hay municipio guardado vuelve
+              // al Welcome; si lo hay, cierra la app (`MainEvent.FinishApp`).
+              final loc = ref.read(userPreferencesProvider).getSavedLocation();
+              if (!loc.guardado) {
+                context.go(AppRoutes.welcome);
+              } else {
+                await SystemNavigator.pop();
+              }
+            },
+          ),
+        );
+      });
+    }
+
+    // Home es la raíz del flujo de alcaldías: el gesto/botón Atrás del sistema no
+    // debe salir de la app, sino reproducir el BackHandler del original (cancelar
+    // PQRD si está visible o mostrar el diálogo de salida).
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        notifier.onBackPressed();
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        drawer: Drawer(
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.horizontal(right: Radius.circular(35)),
+          ),
+          child: MainSideMenuOptions(
+            user: state.currentUser,
+            currentMunicipalityName: state.currentMunicipalityName ?? "",
+            showChangeLocationDialog: state.showChangeLocationDialog,
+            onDismissDialog: notifier.onDismissChangeLocationDialog,
+            onConfirmChangeLocation: () {
+              notifier.onConfirmChangeLocation();
+              context.go(AppRoutes.welcome);
+            },
+            onLoginSuccess: () {
+              Navigator.pop(context); // Cerrar drawer
+              showLoginBottomSheet(context);
+            },
+            goToSettingsUser: () {
+              Navigator.pop(context);
+              context.push(AppRoutes.settingsPath(widget.municipality.id));
+            },
+            onTermsClick: () async {
+              Navigator.pop(context);
+              final url =
+                  widget.municipality.dataPrivacy ??
+                  "https://www.1cero1.com/tratamientos.html";
+              await abrirUrl(url, toolbarColor: theme.colorScheme.primary);
+            },
+            goToHelp: () {
+              Navigator.pop(context);
+              context.push(
+                AppRoutes.helpPath(widget.municipality.id),
+                extra: {
+                  'municipality': domainModel.nombreMunicipio,
+                  'portal': domainModel.domain,
+                },
+              );
+            },
+            onLogoutSuccess: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              Navigator.pop(context);
+              await ref.read(sessionProvider.notifier).logout();
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Sesión cerrada correctamente')),
+              );
+            },
+          ),
+        ),
+        // Un toque en cualquier zona vacía cierra el teclado, igual que el
+        // `clickable(indication = null) { focusManager.clearFocus() }` que
+        // envuelve el contenido en `MainScreenContent`.
+        body: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Stack(
+            children: [
+              Column(
                 children: [
-                  Text(
-                    design.nombreAlcaldia,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  MainTopBar(
+                    onMenuClicked: () {
+                      _scaffoldKey.currentState?.openDrawer();
+                    },
+                    onBackClicked: () {
+                      notifier.onBackPressed();
+                    },
                   ),
-                  Text(
-                    'Trámites y Servicios',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: scheme.onPrimary.withValues(alpha: 0.8),
+                  MainHeader(
+                    design: domainModel.design,
+                    departamento: domainModel.departamento,
+                    isLoading: state.isLoading,
+                  ),
+                  Expanded(
+                    child: Container(
+                      color: theme.colorScheme.primary,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                        child: Container(
+                          // Fondo de página = `background` del original (White /
+                          // Gray1000), no `surface` (ese es el fondo de las cards).
+                          color: theme.colorScheme.surfaceContainerLowest,
+                          child: SingleChildScrollView(
+                            // contentPadding + verticalArrangement.spacedBy(10.dp) del
+                            // LazyColumn original: 16 a los lados, 10 arriba y 10
+                            // entre secciones.
+                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                            child: Column(
+                              children: [
+                                const MaintenanceInfoCard(),
+                                if (ref
+                                    .read(userPreferencesProvider)
+                                    .remindersIsVisible()) ...[
+                                  AnimatedSection(
+                                    child: RemindersSection(
+                                      procedures: widget
+                                          .municipality
+                                          .municipalityProcedures,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                if (domainModel
+                                        .tramitesPrincipales
+                                        .isNotEmpty ||
+                                    state.isLoading) ...[
+                                  AnimatedSection(
+                                    child: TramitesSection(
+                                      titulo: "Trámites",
+                                      tramites: domainModel.tramitesPrincipales,
+                                      searchText: state.searchText,
+                                      isSearchActive: state.isSearchActive,
+                                      isLoading: state.isLoading,
+                                      onSearchTextChanged:
+                                          notifier.onSearchTextChanged,
+                                      onSearchToggled: notifier.onSearchToggled,
+                                      onTramiteClick: (t) {
+                                        notifier.onTramiteClicked(t);
+                                        if (t.isActive &&
+                                            t.accion is! AbrirUrl &&
+                                            t.accion is! AbrirUrlDirecto &&
+                                            t.accion is! AbrirBotonPanico) {
+                                          _handleNavigation(t);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                if (domainModel.otrosTramites.isNotEmpty ||
+                                    state.isLoading) ...[
+                                  AnimatedSection(
+                                    delayMillis: 300,
+                                    child: TramitesSection(
+                                      titulo: "Otros trámites",
+                                      tramites: domainModel.otrosTramites,
+                                      searchText: state.searchText,
+                                      isSearchActive: false,
+                                      isSearchable: false,
+                                      isLoading: state.isLoading,
+                                      onSearchTextChanged: (_) {},
+                                      onSearchToggled: () {},
+                                      onTramiteClick: (t) {
+                                        notifier.onTramiteClicked(t);
+                                        if (t.isActive &&
+                                            t.accion is! AbrirUrl &&
+                                            t.accion is! AbrirUrlDirecto &&
+                                            t.accion is! AbrirBotonPanico) {
+                                          _handleNavigation(t);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                if (domainModel.socialLinks.isNotEmpty ||
+                                    state.isLoading) ...[
+                                  AnimatedSection(
+                                    delayMillis: 400,
+                                    child: TramitesSection(
+                                      titulo: "Canales",
+                                      tramites: domainModel.socialLinks,
+                                      searchText: state.searchText,
+                                      isSearchActive: false,
+                                      isSearchable: false,
+                                      isLoading: state.isLoading,
+                                      onSearchTextChanged: (_) {},
+                                      onSearchToggled: () {},
+                                      onTramiteClick: (t) {
+                                        notifier.onTramiteClicked(t);
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                const SizedBox(height: 10),
+                                AnimatedSection(
+                                  delayMillis: 100,
+                                  child: _FooterSponsors(
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notificaciones (Fase 2)')),
-              );
-            },
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            UserAccountsDrawerHeader(
-              decoration: BoxDecoration(color: scheme.primary),
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40, color: Colors.blue),
-              ),
-              accountName: Text(
-                user != null
-                    ? '${user.firstName} ${user.lastName}'
-                    : 'Usuario Invitado',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              accountEmail: Text(user?.email ?? 'invitado@tramiapp.gov.co'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.info),
-              title: const Text('Sobre el Municipio'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Alcaldía de ${widget.municipality.name}')),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.help),
-              title: const Text('Soporte y Ayuda'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Ayuda / Formulario (Fase 2)')),
-                );
-              },
-            ),
-            if (user != null)
-              ListTile(
-                leading: const Icon(Icons.logout),
-                title: const Text('Cerrar Sesión'),
-                onTap: () async {
-                  await ref.read(sessionProvider.notifier).logout();
-                  if (context.mounted) {
-                    context.go(AppRoutes.welcome);
-                  }
-                },
-              ),
-            if (user == null)
-              ListTile(
-                leading: const Icon(Icons.login),
-                title: const Text('Iniciar Sesión'),
-                onTap: () {
-                  Navigator.pop(context);
-                  showLoginBottomSheet(context);
-                },
-              ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.swap_horiz),
-              title: const Text('Cambiar Municipio'),
-              onTap: () async {
-                final prefs = ref.read(userPreferencesProvider);
-                await prefs.clearCurrentMunicipality();
-                if (context.mounted) {
-                  context.go(AppRoutes.welcome);
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-      body: _currentIndex == 0
-          ? _buildHomeTab(context, scheme)
-          : _currentIndex == 1
-              ? const Center(child: Text('Mis Trámites (Fase 2)'))
-              : _currentIndex == 2
-                  ? const Center(child: Text('Noticias (Fase 2)'))
-                  : const Center(child: Text('Perfil (Fase 2)')),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: scheme.primary,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Servicios'),
-          BottomNavigationBarItem(icon: Icon(Icons.newspaper), label: 'Noticias'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Mi Perfil'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHomeTab(BuildContext context, ColorScheme scheme) {
-    final procedures = widget.municipality.municipalityProcedures;
-
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Banner or Welcome Message
-          Container(
-            padding: const EdgeInsets.all(20),
-            color: scheme.primary.withValues(alpha: 0.05),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '¿Qué deseas hacer hoy?',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Elige entre los trámites tributarios y de atención ciudadana del municipio.',
-                  style: TextStyle(color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-          // Grid of Procedures
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: procedures.isEmpty
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text('No hay trámites habilitados por el momento.'),
-                    ),
-                  )
-                : GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1.25,
-                    ),
-                    itemCount: procedures.length,
-                    itemBuilder: (context, index) {
-                      final proc = procedures[index];
-                      return _buildProcedureCard(context, proc, scheme);
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProcedureCard(
-    BuildContext context,
-    MunicipalityProcedure proc,
-    ColorScheme scheme,
-  ) {
-    final id = proc.procedures.id;
-    final name = proc.procedures.name;
-
-    // Resolve icons and colors based on ID (Motor de trámites FRONTEND §6)
-    IconData icon = Icons.receipt;
-    Color iconColor = scheme.primary;
-
-    switch (id) {
-      case 1: // Predial
-        icon = Icons.home;
-        iconColor = Colors.orange;
-        break;
-      case 2: // ICA
-        icon = Icons.business;
-        iconColor = Colors.purple;
-        break;
-      case 3: // Declaración
-        icon = Icons.article;
-        iconColor = Colors.blue;
-        break;
-      case 4: // PQRSDF
-        icon = Icons.question_answer;
-        iconColor = Colors.teal;
-        break;
-      case 5: // Servicios públicos
-        icon = Icons.water_drop;
-        iconColor = Colors.cyan;
-        break;
-      case 6: // Vehículos
-        icon = Icons.directions_car;
-        iconColor = Colors.indigo;
-        break;
-      case 7: // Retención ICA
-        icon = Icons.percent;
-        iconColor = Colors.deepOrange;
-        break;
-      case 10: // Botón Pánico
-        icon = Icons.emergency;
-        iconColor = Colors.red;
-        break;
-      default:
-        icon = Icons.arrow_forward_ios;
-        iconColor = Colors.grey;
-    }
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _handleProcedureTap(context, proc),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 36, color: iconColor),
-              const Spacer(),
-              Text(
-                name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+              // Adorno de círculos de la esquina superior derecha (`circles`).
+              const CirclesDecoration.home(),
             ],
           ),
         ),
+        bottomNavigationBar: MainBottomNavBar(
+          selectedRoute: state.selectedRoute,
+          onTap: (index) async {
+            if (index == 0) {
+              notifier.onRouteChanged("inicio");
+            } else if (index == 1) {
+              final url = domainModel.newsUrl;
+              if (url.isNotEmpty) {
+                await abrirUrl(url, toolbarColor: theme.colorScheme.primary);
+              }
+            } else if (index == 2) {
+              final url = domainModel.domain;
+              if (url.isNotEmpty) {
+                await abrirUrl(url, toolbarColor: theme.colorScheme.primary);
+              }
+            } else if (index == 3) {
+              context.push(AppRoutes.pagosHistoryPath(widget.municipality.id));
+            }
+          },
+        ),
       ),
     );
   }
+}
 
-  void _handleProcedureTap(BuildContext context, MunicipalityProcedure proc) {
-    final id = proc.procedures.id;
-    final name = proc.procedures.name;
+/// Puerto de `FooterSponsors.kt`: ambos logos son vectores monocromos que el
+/// original tinta con el color recibido (`Icon(tint = color)`) dentro de un
+/// Row de 30dp de alto. Sin tinte, los SVG (fill blanco) se ven blancos.
+class _FooterSponsors extends StatelessWidget {
+  const _FooterSponsors({required this.color});
+  final Color color;
 
-    // Decision motor mapping (FRONTEND §6.3)
-    if (id == 10 || name.toLowerCase().contains('pánico')) {
-      // Panic Button Trigger
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Botón de pánico presionado (Fase 2)')),
-      );
-      return;
-    }
-
-    if (proc.integrationType.isEmpty && id == 4) {
-      // PQRSDF native
-      context.go(AppRoutes.pqrdPath(widget.municipality.id));
-      return;
-    }
-
-    if (proc.integrationType.isNotEmpty) {
-      if (proc.integrationType.startsWith('http')) {
-        // Open URL
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Abriendo enlace externo: ${proc.integrationType}')),
-        );
-        return;
-      }
-    }
-
-    // Default redirection
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Accediendo a: $name (Fase 3)')),
+  @override
+  Widget build(BuildContext context) {
+    final tint = ColorFilter.mode(color, BlendMode.srcIn);
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: SizedBox(
+        height: 30,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              'assets/images/icobancolombia.svg',
+              width: 102,
+              colorFilter: tint,
+              fit: BoxFit.contain,
+            ),
+            Container(
+              width: 1,
+              height: 30,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: color,
+            ),
+            SvgPicture.asset(
+              'assets/images/ico101software.svg',
+              width: 100,
+              colorFilter: tint,
+              fit: BoxFit.contain,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

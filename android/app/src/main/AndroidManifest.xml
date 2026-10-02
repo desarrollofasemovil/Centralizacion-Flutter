@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Recordatorios locales (flutter_local_notifications / AlarmManager) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- SCHEDULE_EXACT_ALARM se pide en runtime (ver LocalReminderScheduler).
+         NO declarar USE_EXACT_ALARM: se concede solo, pero la política de Google
+         Play lo restringe a apps de alarma o calendario y Trami App no lo es;
+         declararlo puede costar el rechazo del envío. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
@@ -30,6 +39,23 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Receivers de flutter_local_notifications. El plugin (v22) NO los declara
+             en su propio manifest: la app debe registrarlos o las notificaciones
+             PROGRAMADAS nunca se publican (la alarma se dispara pero el broadcast se
+             descarta al no haber receiver). Las inmediatas sí funcionan sin esto. -->
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

@@ -9,6 +9,14 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  # `codebase/` es el espejo local del proyecto Android original (~23.600 archivos
+  # Kotlin/Gradle, en .gitignore). Sin excluirlo, el analizador lo recorre entero en
+  # cada corrida: `flutter analyze` tardaba 806 s. No contiene Dart, no aporta nada.
+  exclude:
+    - codebase/**
+    - build/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

@@ -514,194 +514,31 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   fontSize: 12,
                 ),
               ),
-              const SizedBox(height: 8),
-            ],
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: IndexedStack(
-                  index: _currentStep,
-                  children: [
-                    // Step 1: Personal Info
-                    Form(
-                      key: _formKeyStep1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Text(
-                            'Datos Personales',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _firstNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Primer Nombre',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => v!.isEmpty ? 'Requerido' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _middleNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Segundo Nombre (Opcional)',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _lastNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Primer Apellido',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => v!.isEmpty ? 'Requerido' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _secondLastNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Segundo Apellido (Opcional)',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<DocumentTypeDTO>(
-                            decoration: const InputDecoration(
-                              labelText: 'Tipo de Documento',
-                              border: OutlineInputBorder(),
-                            ),
-                            initialValue: _selectedDocType,
-                            items: _docTypes.map((type) {
-                              return DropdownMenuItem(
-                                value: type,
-                                child: Text(type.name),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              setState(() {
-                                _selectedDocType = val;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _nationalIdController,
-                            decoration: const InputDecoration(
-                              labelText: 'Número de Documento',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => v!.isEmpty ? 'Requerido' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            icon: const Icon(Icons.calendar_month),
-                            label: Text(
-                              _birthDate == null
-                                  ? 'Fecha de Nacimiento'
-                                  : 'F. Nac: ${_birthDate!.day}/${_birthDate!.month}/${_birthDate!.year}',
-                            ),
-                            onPressed: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime(2000),
-                                firstDate: DateTime(1900),
-                                lastDate: DateTime.now(),
-                              );
-                              if (picked != null) {
-                                setState(() {
-                                  _birthDate = picked;
-                                });
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Step 2: Contact Info
-                    Form(
-                      key: _formKeyStep2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Text(
-                            'Datos de Contacto',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              labelText: 'Correo Electrónico',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => v!.isEmpty ? 'Requerido' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                              labelText: 'Celular / Teléfono',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => v!.isEmpty ? 'Requerido' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _addressController,
-                            decoration: const InputDecoration(
-                              labelText: 'Dirección de Residencia',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => v!.isEmpty ? 'Requerido' : null,
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Step 3: Password setup
-                    Form(
-                      key: _formKeyStep3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Text(
-                            'Seguridad',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Contraseña (mínimo 8 caracteres)',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) =>
-                                v!.length < 8 ? 'Mínimo 8 caracteres' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _confirmPasswordController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Confirmar Contraseña',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => v != _passwordController.text
-                                ? 'Las contraseñas no coinciden'
-                                : null,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildButtons() {
+    final isLast = _currentStep == 2;
+    // Botones a ancho completo (como el base) — `stretch` evita que se ajusten
+    // al tamaño del texto.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 54,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : (isLast ? _finish : _next),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.registerAccent,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor:
+                  AppColors.registerAccent.withValues(alpha: 0.5),
+              disabledForegroundColor: Colors.white70,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: Text(

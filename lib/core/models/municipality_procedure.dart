@@ -9,14 +9,14 @@ class MunicipalityProcedure {
   final int id;
   final String integrationType;
   final bool isActive;
-  final Municipality municipality;
+  final Municipality? municipality;
   final Procedures procedures;
 
   MunicipalityProcedure({
     required this.id,
     required this.integrationType,
     required this.isActive,
-    required this.municipality,
+    this.municipality,
     required this.procedures,
   });
 

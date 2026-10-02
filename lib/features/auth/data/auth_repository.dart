@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import '../../../core/api/services/auth_api_service.dart';
 import '../../../core/models/login_dto.dart';
+import '../../../core/models/update_password_by_forget_dto.dart';
 import '../../../core/models/user_dto.dart';
+import '../../../core/models/validation_response_dto.dart';
 import '../../../core/storage/user_preferences.dart';
 
 /// Resultado del login nativo.
@@ -72,4 +74,23 @@ class AuthRepository {
   }
 
   Future<void> logout() => _prefs.clearUserSession();
+
+  /// Usuario completo por correo — usado en recuperación de contraseña tras
+  /// validar el código (`RecoveryPasswordViewModel.validateCode`).
+  Future<UserDTO?> getUserByEmail(String email) => _api.getUserByEmail(email);
+
+  /// Cambia `loginStatus` del usuario (sesión única) — equivalente a
+  /// `AuthRepository.getOutUser` del original.
+  Future<ValidationResponseDTO> setLoginStatus(int userId, bool status) =>
+      _api.changeStatusUser(userId, status);
+
+  /// Recuperación por olvido — `updatePasswordUserByForget` del original.
+  Future<ValidationResponseDTO> updatePasswordByForget(
+    int userId,
+    String newPassword,
+  ) =>
+      _api.updatePasswordByForget(
+        userId,
+        UpdatePasswordByForgetDto(newPassword: newPassword),
+      );
 }

@@ -7,7 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../application/auth_providers.dart';
 import '../application/login_options_controller.dart';
 import '../application/registration_draft.dart';
-import 'widgets/footer_sponsors.dart';
+import '../../../core/widgets/footer_sponsors.dart';
 
 /// Resultado con el que se cierra el sheet, para que el llamador navegue/avise
 /// usando el contexto de la página (no el del sheet, que ya no existe tras pop).
@@ -73,9 +73,17 @@ class _LoginSheetContentState extends ConsumerState<_LoginSheetContent> {
       ),
       child: SafeArea(
         top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: _showEmail ? _buildEmailView() : _buildOptionsView(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(child: _dragHandle()),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: _showEmail ? _buildEmailView() : _buildOptionsView(),
+              ),
+            ),
+          ],
         ),
       ),
     );

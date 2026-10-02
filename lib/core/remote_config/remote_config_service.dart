@@ -4,13 +4,16 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/app_status.dart';
+import '../utils/app_info.dart';
 import '../models/app_global_config_dto.dart';
 import '../models/welcome_carousel_image_dto.dart';
+import '../models/tourism_contribution_dto.dart';
 
 /// Número de build actual de la app, usado por `force_update`.
-/// TODO(fase-1): leer de `package_info_plus` en vez de esta constante. Se deja
-/// alto para no disparar force_update por accidente en desarrollo.
-const int kAppBuildNumber = 999999;
+/// Lo real lo aporta `AppInfo.buildNumber` (leído del bundle nativo en el
+/// arranque); este alias existe para no romper llamadores y como valor por
+/// defecto seguro si la lectura nativa falla.
+int get kAppBuildNumber => AppInfo.buildNumber;
 
 /// Lectura de Firebase Remote Config (BACKEND §6.1). Mantiene EXACTAS las 4
 /// keys porque las define el mismo backoffice compartido entre apps.
@@ -62,12 +65,26 @@ class RemoteConfigService {
     }
   }
 
+  TourismTaxConfigDTO getTourismTaxRates() {
+    final raw = _rc.getString(keyTourismTaxRates);
+    if (raw.isEmpty) return TourismTaxConfigDTO();
+    try {
+      return TourismTaxConfigDTO.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (_) {
+      return TourismTaxConfigDTO();
+    }
+  }
+
 
   /// Traduce el config remoto a un [AppStatus]. Regla de oro (§6.1): primero
   /// `force_update` por versión, luego `maintenance`/`server_error`.
-  AppStatus toAppStatus({int currentBuildNumber = kAppBuildNumber}) {
+  /// [currentBuildNumber] se puede inyectar en tests; en producción sale de
+  /// `AppInfo.buildNumber`, que no es constante y por eso no puede ir como valor
+  /// por defecto del parámetro.
+  AppStatus toAppStatus({int? currentBuildNumber}) {
+    final build = currentBuildNumber ?? kAppBuildNumber;
     final cfg = appGlobalConfig();
-    if (currentBuildNumber < cfg.minVersionCode) {
+    if (build < cfg.minVersionCode) {
       return AppStatus(
         type: AppStatusType.forceUpdate,
         title: cfg.title,

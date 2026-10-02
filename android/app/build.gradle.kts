@@ -1,11 +1,10 @@
 import java.io.FileInputStream
 import java.util.Properties
+import org.gradle.api.tasks.Copy
 
 plugins {
     id("com.android.application")
-    // El plugin de Google Services debe ir después de los de Android/Kotlin.
     id("com.google.gms.google-services")
-    // El plugin de Flutter debe aplicarse al final (también aplica Kotlin).
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -37,6 +36,9 @@ android {
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        ndk {
+            abiFilters.add("arm64-v8a")
+        }
     }
 
     // AGP 9 desactiva resValues por defecto; se requiere para `resValue(...)`.
@@ -79,6 +81,8 @@ android {
             }
         }
     }
+
+
 }
 
 kotlin {
@@ -89,6 +93,60 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+val flutterProjectRoot = rootProject.projectDir.parentFile
+val flutterApkOutputDir = File(flutterProjectRoot, "build/app/outputs/flutter-apk")
+
+android.applicationVariants.all {
+    val variantName = name
+    val variantTaskName = "package${variantName.replaceFirstChar { it.uppercase() }}"
+    val variantFlavor = flavorName
+    val variantBuildType = buildType.name
+    val sourceFileName = if (variantFlavor.isNullOrEmpty()) {
+        "app-${variantBuildType}.apk"
+    } else {
+        "app-${variantFlavor}-${variantBuildType}.apk"
+    }
+    val sourceFile = File(
+        projectDir,
+        "build/outputs/apk/${if (variantFlavor.isNullOrEmpty()) "" else "$variantFlavor/"}${variantBuildType}/${sourceFileName}"
+    )
+
+    tasks.register<Copy>("copy${variantName.replaceFirstChar { it.uppercase() }}FlutterApk") {
+        dependsOn(variantTaskName)
+        from(sourceFile)
+        into(flutterApkOutputDir)
+        rename { sourceFileName }
+        doFirst {
+            if (!sourceFile.exists()) {
+                throw GradleException("No se encontró el APK generado en ${sourceFile}")
+            }
+        }
+    }
+
+    tasks.named(variantTaskName) {
+        finalizedBy("copy${variantName.replaceFirstChar { it.uppercase() }}FlutterApk")
+    }
+}
+
+tasks.register<Copy>("copyDefaultDebugFlutterApk") {
+    dependsOn("packageMunicipiosDebug")
+    val sourceFile = File(projectDir, "build/outputs/apk/municipios/debug/app-municipios-debug.apk")
+    from(sourceFile)
+    into(flutterApkOutputDir)
+    rename { "app-debug.apk" }
+    doFirst {
+        if (!sourceFile.exists()) {
+            throw GradleException("No se encontró el APK de fallback en ${sourceFile}")
+        }
+    }
+}
+
+tasks.whenTaskAdded {
+    if (name == "assembleMunicipiosDebug") {
+        finalizedBy("copyDefaultDebugFlutterApk")
+    }
 }
 
 dependencies {

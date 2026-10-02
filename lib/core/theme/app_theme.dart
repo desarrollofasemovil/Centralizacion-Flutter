@@ -12,8 +12,10 @@ const _brandPrimary = Color(0xFF181E31); // primarycolor
 const _white = Color(0xFFFFFFFF);
 const _black = Color(0xFF000000);
 const _gray100 = Color(0xFFF5F5F5);
+const _gray400 = Color(0xFF9CA3AF);
 const _gray600 = Color(0xFF7E7E7E);
 const _gray900 = Color(0xFF212121);
+const _gray1000 = Color(0xFF121212);
 const _surfaceColor = Color(0xFFF3F4F6);
 const _colorTextPrimary = Color(0xFF2C2E35);
 const _darkRed = Color(0xFF7B1E3A);
@@ -21,6 +23,12 @@ const _lightRed = Color(0xFFFF1710);
 const _red = Color(0xFFE53935);
 
 /// Equivalente a `BrandLightColorScheme`.
+///
+/// Nota de mapeo M3: Compose distingue `background` (White, fondo de página)
+/// de `surface` (F3F4F6, fondo de tarjetas/secciones). El ColorScheme de
+/// Flutter ya no tiene `background`, así que ese rol se porta como
+/// `surfaceContainerLowest`. El `surfaceContainer` de Compose (Gray400,
+/// bordes de secciones) se porta al rol homónimo.
 final ColorScheme _brandLight = const ColorScheme.light().copyWith(
   primary: _brandPrimary,
   onPrimary: _white,
@@ -30,6 +38,8 @@ final ColorScheme _brandLight = const ColorScheme.light().copyWith(
   surface: _surfaceColor,
   onSurface: _colorTextPrimary,
   onSurfaceVariant: _gray600,
+  surfaceContainerLowest: _white, // Compose `background`
+  surfaceContainer: _gray400, // Compose `surfaceContainer`
   error: _darkRed,
   onError: _lightRed,
 );
@@ -44,6 +54,8 @@ final ColorScheme _brandDark = const ColorScheme.dark().copyWith(
   surface: _gray900,
   onSurface: _white,
   onSurfaceVariant: _gray100,
+  surfaceContainerLowest: _gray1000, // Compose `background`
+  surfaceContainer: _gray600, // Compose `surfaceContainer`
   error: _lightRed,
   onError: _black,
 );

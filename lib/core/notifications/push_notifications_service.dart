@@ -61,7 +61,7 @@ class PushNotificationsService {
 
     // 3. Inicializar notificaciones locales para interacción al hacer click
     const initSettings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('ic_stat_reminder'),
       iOS: DarwinInitializationSettings(),
     );
 

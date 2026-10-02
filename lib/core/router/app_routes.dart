@@ -8,6 +8,7 @@ class AppRoutes {
   static const selectMunicipality = '/select-municipality/:departmentId';
   static const signup = '/signup';
   static const recoverPassword = '/recover-password';
+  static const changePasswordReset = '/recover-password/change';
 
   /// Home del municipio (orquestador "alcaldías"). `:id` = municipalityId.
   static const municipality = '/municipality/:id';
@@ -16,6 +17,22 @@ class AppRoutes {
   static const news = '/municipality/:id/news';
   static const taxes = '/municipality/:id/taxes';
   static const pqrd = '/municipality/:id/pqrd';
+  static const certificados = '/municipality/:id/certificados/:entityCode/:procedureId/:integrationType';
+  static const serviciosPublicosMenu = '/municipality/:id/servicios-publicos';
+  static const serviciosPublicosSelectEntity = '/municipality/:id/servicios-publicos/select-entity';
+  static const serviciosPublicosInstructions = '/municipality/:id/servicios-publicos/scanner-instructions';
+  static const serviciosPublicosScanner = '/municipality/:id/servicios-publicos/scanner';
+  static const serviciosPublicosForm = '/municipality/:id/servicios-publicos/form/:factura/:valor/:fechaVencimiento';
+  static const serviciosPublicosHistory = '/municipality/:id/servicios-publicos/history';
+  static const serviciosPublicosBillDetails = '/municipality/:id/servicios-publicos/bill-details';
+  static const pagosPsv = '/municipality/:id/pagos/psv';
+  static const pagosProcessing = '/municipality/:id/pagos/processing';
+  static const pagosHistory = '/municipality/:id/pagos/history';
+  static const cursos = '/municipality/:id/cursos';
+  static const venues = '/municipality/:id/venues';
+  static const help = '/municipality/:id/help';
+  static const settings = '/municipality/:id/settings';
+  static const editProfile = '/municipality/:id/edit-profile';
 
   static String selectMunicipalityPath(int departmentId) =>
       '/select-municipality/$departmentId';
@@ -24,5 +41,17 @@ class AppRoutes {
   static String newsPath(int id) => '/municipality/$id/news';
   static String taxesPath(int id) => '/municipality/$id/taxes';
   static String pqrdPath(int id) => '/municipality/$id/pqrd';
+  static String certificadosPath(int id, String entityCode, int procedureId, String integrationType) =>
+      '/municipality/$id/certificados/$entityCode/$procedureId/$integrationType';
+  static String serviciosPublicosMenuPath(int id) => '/municipality/$id/servicios-publicos';
+  static String pagosPsvPath(int id) => '/municipality/$id/pagos/psv';
+  static String pagosProcessingPath(int id) => '/municipality/$id/pagos/processing';
+  static String pagosHistoryPath(int id) => '/municipality/$id/pagos/history';
+  static String cursosPath(int id) => '/municipality/$id/cursos';
+  static String venuesPath(int id) => '/municipality/$id/venues';
+  static String helpPath(int id) => '/municipality/$id/help';
+  static String settingsPath(int id) => '/municipality/$id/settings';
+  static String editProfilePath(int id) => '/municipality/$id/edit-profile';
 }
+
 
