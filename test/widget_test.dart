@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tramiapp_flutter/app.dart';
+import 'package:tramiapp_flutter/core/connectivity/connectivity_observer.dart';
+import 'package:tramiapp_flutter/core/connectivity/connectivity_status.dart';
 import 'package:tramiapp_flutter/core/flavor/flavors.dart';
 import 'package:tramiapp_flutter/core/flavor/flavor_config.dart';
 import 'package:tramiapp_flutter/core/storage/user_preferences.dart';
@@ -15,6 +17,16 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 class FakeFirebaseRemoteConfig implements FirebaseRemoteConfig {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// El plugin real de `connectivity_plus` lanza `MissingPluginException` en test.
+class FakeConnectivityObserver implements ConnectivityObserver {
+  @override
+  Stream<ConnectivityStatus> observe() =>
+      Stream.value(ConnectivityStatus.available);
+
+  @override
+  Future<ConnectivityStatus> current() async => ConnectivityStatus.available;
 }
 
 class FakeRemoteConfigService extends RemoteConfigService {
@@ -52,6 +64,8 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           remoteConfigServiceProvider.overrideWithValue(FakeRemoteConfigService()),
+          connectivityObserverProvider
+              .overrideWithValue(FakeConnectivityObserver()),
         ],
         child: const TramiApp(),
       ),

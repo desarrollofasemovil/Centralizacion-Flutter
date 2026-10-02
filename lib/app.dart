@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/api/app_status.dart';
+import 'core/connectivity/connectivity_observer.dart';
+import 'core/connectivity/connectivity_status.dart';
+import 'core/connectivity/no_connection_notifier.dart';
 import 'core/flavor/flavor_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/no_connection_dialog.dart';
 
 /// Widget raíz. Navegación con go_router + tema neutro base (el tema del
 /// municipio se aplica en el subárbol de `AlcaldiasScope`). Sobre todo se monta
@@ -24,22 +28,102 @@ class TramiApp extends ConsumerWidget {
       darkTheme: buildInicialTheme(dark: true),
       routerConfig: router,
       builder: (context, child) =>
-          _GlobalStatusOverlay(child: child ?? const SizedBox.shrink()),
+          GlobalStatusOverlay(
+        backButtonDispatcher: router.backButtonDispatcher,
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }
 
-class _GlobalStatusOverlay extends ConsumerWidget {
-  const _GlobalStatusOverlay({required this.child});
+/// Capas globales sobre el árbol de navegación, por prioridad (FRONTEND §3):
+/// estado bloqueante > diálogo sin conexión > contenido normal.
+///
+/// El diálogo se **superpone** (no reemplaza) al contenido: así no se destruye
+/// el estado de go_router ni de los formularios. El `builder` de `MaterialApp`
+/// queda por encima del `Navigator`, por eso no se usa `showDialog`.
+class GlobalStatusOverlay extends ConsumerWidget {
+  const GlobalStatusOverlay({
+    required this.child,
+    this.backButtonDispatcher,
+    super.key,
+  });
 
   final Widget child;
+
+  /// Despachador de "atrás" del Router (`GoRouter.backButtonDispatcher`) en el
+  /// que el diálogo registra su callback para tragarse el botón atrás.
+  final BackButtonDispatcher? backButtonDispatcher;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(appStatusProvider);
+    final dialogVisible = ref.watch(noConnectionDialogProvider);
     if (status.isBlocking) return _BlockingStatusScreen(status: status);
-    return child;
+
+    final isConnectionRestored =
+        ref.watch(connectivityStatusProvider).value ==
+            ConnectivityStatus.available;
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          child,
+          if (dialogVisible) ...[
+            const ModalBarrier(dismissible: false, color: Colors.black54),
+            Material(
+              type: MaterialType.transparency,
+              child: _BackBlocker(
+                dispatcher: backButtonDispatcher,
+                child: Center(
+                  child: NoConnectionDialog(
+                    isConnectionRestored: isConnectionRestored,
+                    onDismiss:
+                        ref.read(noConnectionDialogProvider.notifier).dismiss,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
+}
+
+/// Traga el "atrás" del sistema mientras está montado (Kotlin:
+/// `onDismissRequest = {}`). El último callback registrado tiene prioridad
+/// sobre el del Router, que se registró al arrancar.
+class _BackBlocker extends StatefulWidget {
+  const _BackBlocker({required this.dispatcher, required this.child});
+
+  final BackButtonDispatcher? dispatcher;
+  final Widget child;
+
+  @override
+  State<_BackBlocker> createState() => _BackBlockerState();
+}
+
+class _BackBlockerState extends State<_BackBlocker> {
+  late final BackButtonDispatcher? _dispatcher = widget.dispatcher;
+
+  @override
+  void initState() {
+    super.initState();
+    _dispatcher?.addCallback(_swallowBack);
+  }
+
+  @override
+  void dispose() {
+    _dispatcher?.removeCallback(_swallowBack);
+    super.dispose();
+  }
+
+  Future<bool> _swallowBack() async => true;
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _BlockingStatusScreen extends StatelessWidget {
