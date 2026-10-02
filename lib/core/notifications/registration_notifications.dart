@@ -1,3 +1,8 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'local_reminder_scheduler.dart';
+
 /// Notificaciones locales de confirmación al enviar una inscripción a un curso
 /// o una reserva de escenario (port de `ui/components/NotificationHelper.kt`).
 
@@ -50,3 +55,58 @@ NotificationContent venueReservationContent({
         'validará la disponibilidad y se pondrá en contacto contigo pronto.',
   );
 }
+
+/// Publica las confirmaciones con el [LocalReminderScheduler] existente (mismo
+/// canal `reminders_channel`). Una notificación que falla **nunca** debe romper
+/// ni retrasar el envío: todo error (permiso denegado, web sin soporte) se
+/// traduce en `false`.
+class RegistrationNotifications {
+  RegistrationNotifications(this._scheduler);
+
+  final LocalReminderScheduler _scheduler;
+
+  Future<bool> showCourseRegistration({
+    required String courseTitle,
+    required String userName,
+  }) {
+    return _show(
+      kCourseNotificationId,
+      courseRegistrationContent(courseTitle: courseTitle, userName: userName),
+    );
+  }
+
+  Future<bool> showVenueReservation({
+    required String venueTitle,
+    required String userName,
+    required String date,
+    required String time,
+  }) {
+    return _show(
+      kVenueNotificationId,
+      venueReservationContent(
+        venueTitle: venueTitle,
+        userName: userName,
+        date: date,
+        time: time,
+      ),
+    );
+  }
+
+  Future<bool> _show(int id, NotificationContent content) async {
+    try {
+      return await _scheduler.showNow(
+        id: id,
+        title: content.title,
+        body: content.body,
+        bigText: content.bigText,
+      );
+    } catch (e) {
+      debugPrint('RegistrationNotifications error: $e');
+      return false;
+    }
+  }
+}
+
+final registrationNotificationsProvider = Provider<RegistrationNotifications>(
+  (ref) => RegistrationNotifications(ref.watch(localReminderSchedulerProvider)),
+);

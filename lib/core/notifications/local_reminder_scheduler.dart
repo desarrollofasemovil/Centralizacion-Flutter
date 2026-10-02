@@ -108,6 +108,25 @@ class LocalReminderScheduler {
     ),
   );
 
+  /// Detalles de la notificación. Con [bigText] el texto se puede expandir
+  /// (`BigTextStyle` del Kotlin); mismo canal, ícono e importancia que [_details].
+  @visibleForTesting
+  static NotificationDetails buildDetails({String? bigText}) {
+    if (bigText == null) return _details;
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDesc,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: 'ic_stat_reminder',
+        styleInformation: BigTextStyleInformation(bigText),
+      ),
+      iOS: _details.iOS,
+    );
+  }
+
   /// Pide el permiso de notificaciones (Android 13+). En iOS lo solicita el
   /// plugin al inicializar. Idempotente: si ya está concedido retorna al vuelo.
   Future<void> ensureNotificationPermission() async {
@@ -191,6 +210,7 @@ class LocalReminderScheduler {
     required int id,
     required String title,
     required String body,
+    String? bigText,
   }) async {
     try {
       await _ensureInitialized();
@@ -199,7 +219,7 @@ class LocalReminderScheduler {
         id: id,
         title: title,
         body: body,
-        notificationDetails: _details,
+        notificationDetails: buildDetails(bigText: bigText),
       );
       return true;
     } catch (e) {

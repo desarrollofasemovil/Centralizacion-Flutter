@@ -1,5 +1,36 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tramiapp_flutter/core/notifications/local_reminder_scheduler.dart';
 import 'package:tramiapp_flutter/core/notifications/registration_notifications.dart';
+
+class _Shown {
+  _Shown(this.id, this.title, this.body, this.bigText);
+
+  final int id;
+  final String title;
+  final String body;
+  final String? bigText;
+}
+
+class _FakeScheduler extends LocalReminderScheduler {
+  _FakeScheduler() : super(FlutterLocalNotificationsPlugin());
+
+  final shown = <_Shown>[];
+  bool result = true;
+  Object? throwOnShow;
+
+  @override
+  Future<bool> showNow({
+    required int id,
+    required String title,
+    required String body,
+    String? bigText,
+  }) async {
+    if (throwOnShow != null) throw throwOnShow!;
+    shown.add(_Shown(id, title, body, bigText));
+    return result;
+  }
+}
 
 void main() {
   group('contenido', () {
@@ -63,6 +94,113 @@ void main() {
       expect(kCourseNotificationId, 2000001);
       expect(kVenueNotificationId, 2000002);
       expect(kCourseNotificationId, isNot(kVenueNotificationId));
+    });
+  });
+
+  group('servicio RegistrationNotifications', () {
+    late _FakeScheduler scheduler;
+    late RegistrationNotifications service;
+
+    setUp(() {
+      scheduler = _FakeScheduler();
+      service = RegistrationNotifications(scheduler);
+    });
+
+    test('showCourseRegistration publica con id, título, cuerpo y bigText del curso',
+        () async {
+      final ok = await service.showCourseRegistration(
+        courseTitle: 'Yoga',
+        userName: 'Ana',
+      );
+
+      final expected = courseRegistrationContent(
+        courseTitle: 'Yoga',
+        userName: 'Ana',
+      );
+      expect(ok, isTrue);
+      expect(scheduler.shown, hasLength(1));
+      expect(scheduler.shown.single.id, kCourseNotificationId);
+      expect(scheduler.shown.single.title, expected.title);
+      expect(scheduler.shown.single.body, expected.body);
+      expect(scheduler.shown.single.bigText, expected.bigText);
+    });
+
+    test('showVenueReservation publica con kVenueNotificationId', () async {
+      final ok = await service.showVenueReservation(
+        venueTitle: 'Cancha 1',
+        userName: 'Ana',
+        date: '2026-10-10',
+        time: '15:00',
+      );
+
+      final expected = venueReservationContent(
+        venueTitle: 'Cancha 1',
+        userName: 'Ana',
+        date: '2026-10-10',
+        time: '15:00',
+      );
+      expect(ok, isTrue);
+      expect(scheduler.shown.single.id, kVenueNotificationId);
+      expect(scheduler.shown.single.title, expected.title);
+      expect(scheduler.shown.single.bigText, expected.bigText);
+    });
+
+    test('si showNow devuelve false (permiso denegado) el servicio devuelve false y no lanza',
+        () async {
+      scheduler.result = false;
+
+      final ok = await service.showCourseRegistration(
+        courseTitle: 'Yoga',
+        userName: 'Ana',
+      );
+
+      expect(ok, isFalse);
+    });
+
+    test('si showNow lanza, el servicio lo captura y devuelve false (p. ej. web)',
+        () async {
+      scheduler.throwOnShow = UnsupportedError('web');
+
+      final course = await service.showCourseRegistration(
+        courseTitle: 'Yoga',
+        userName: 'Ana',
+      );
+      final venue = await service.showVenueReservation(
+        venueTitle: 'Cancha 1',
+        userName: 'Ana',
+        date: '2026-10-10',
+        time: '15:00',
+      );
+
+      expect(course, isFalse);
+      expect(venue, isFalse);
+    });
+  });
+
+  group('LocalReminderScheduler.buildDetails', () {
+    test('con bigText usa BigTextStyleInformation con ese texto', () {
+      final details = LocalReminderScheduler.buildDetails(bigText: 'texto largo');
+
+      final style = details.android!.styleInformation;
+      expect(style, isA<BigTextStyleInformation>());
+      expect((style as BigTextStyleInformation).bigText, 'texto largo');
+    });
+
+    test('con bigText conserva canal, ícono e importancia de los recordatorios',
+        () {
+      final base = LocalReminderScheduler.buildDetails();
+      final big = LocalReminderScheduler.buildDetails(bigText: 'x');
+
+      expect(big.android!.channelId, base.android!.channelId);
+      expect(big.android!.icon, 'ic_stat_reminder');
+      expect(big.android!.importance, Importance.high);
+      expect(big.android!.priority, Priority.high);
+    });
+
+    test('sin bigText no cambia el estilo (retrocompatible)', () {
+      final details = LocalReminderScheduler.buildDetails();
+
+      expect(details.android!.styleInformation, isNull);
     });
   });
 }
