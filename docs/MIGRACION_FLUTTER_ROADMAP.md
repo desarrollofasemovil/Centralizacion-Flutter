@@ -43,7 +43,7 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 - [x] Scaffold de flavors `municipios` y `manizales` (ver `FLAVORS.md`) — solo el `municipios` se desarrolla por ahora
 - [x] FlutterFire: `firebase_options_municipios.dart` apuntando al proyecto Firebase actual (`betaappcentralizate`, Android; iOS pendiente)
 - [x] Copiar `CLAUDE.md` y los `MIGRACION_FLUTTER_*.md` a la raíz del proyecto Flutter (ya viven en la raíz del repo y en `docs/`)
-- [ ] GitHub Actions: build APK + IPA por flavor (mac-runner)
+- [~] GitHub Actions: build APK + IPA por flavor (mac-runner) — APK `municipios` hecho (ver [`CI_CD.md`](CI_CD.md)); faltan `manizales` e IPA
 - [ ] **Iniciar Apple Developer Account** (proceso externo, puede tardar hasta 2 semanas) 🍎
 
 > ✅ **Fase 0 verificada**: `flutter analyze` limpio + `assembleMunicipiosDebug` genera `app-municipios-debug.apk`. Notas: AGP 9 requirió habilitar `coreLibraryDesugaring` (lo pide `flutter_local_notifications`) y se quitó `flutter_inappwebview`. Firma release lista vía `key.properties` (pendiente la contraseña del keystore).
@@ -217,8 +217,9 @@ varios productos.
       600 ms y el splash espera 3600 ms, así que validaba el splash. (PR #17)
 - [ ] **Cobertura de tests**: 5 archivos para 31 k líneas, y solo `tramite_mappers_test.dart` cubre
       lógica de negocio real. Prioridad: mappers de trámites, validaciones de formularios, `AppStatus`.
-- [ ] **GitHub Actions**: no existe `.github/workflows/`. Cada APK se compila a mano. Con dos flavors
-      y dos tiendas esto se vuelve caro rápido.
+- [~] **GitHub Actions**: `ci.yml` (analyze + test en PRs a `develop`/`main`) y `release-apk.yml` (APK
+      firmado solo al fusionar `develop` → `main`) añadidos; ver [`CI_CD.md`](CI_CD.md). **Pendiente:** cargar
+      los secretos del repo (keystore y `google-services.json`), flavor `manizales` e iOS (IPA).
 - [ ] **Un test golpea la API real** (`GET /api/Department` devuelve 400 en la suite). Debe usar mock.
 
 ## Fase 5 — Ajuste iOS 🍎

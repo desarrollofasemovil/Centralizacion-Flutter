@@ -58,3 +58,6 @@ key.properties
 # agents claude
 *.env
 
+
+# graphify: grafo de conocimiento local (se regenera)
+/graphify-out/
