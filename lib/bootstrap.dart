@@ -50,9 +50,18 @@ Future<void> bootstrap(FlavorConfig config, FirebaseOptions options) async {
   // Notificaciones push (FCM) + locales + canales (permiso, listeners, canales).
   // Sin esta llamada el plugin nunca se inicializa: FCM en foreground no muestra
   // nada y los recordatorios locales quedan sin canal. (No bloqueante.)
-  try {
-    await container.read(pushNotificationsServiceProvider).init();
-  } catch (_) {}
+  //
+  // En web se salta: `PushNotificationsService.init()` usa `Platform.isAndroid`
+  // de `dart:io` (no existe en web) y `_messaging.requestPermission()` espera
+  // a que el usuario decida en el prompt nativo del navegador ANTES de que
+  // `runApp()` corra, dejando la pestaña en blanco hasta que se resuelve. Push
+  // web real necesita su propio service worker + VAPID key (no configurados
+  // todavía) — sacarlo de aquí es una tarea aparte.
+  if (!kIsWeb) {
+    try {
+      await container.read(pushNotificationsServiceProvider).init();
+    } catch (_) {}
+  }
 
   // Remote Config: 4 keys + estado global de la app (BACKEND §6.1).
   try {
