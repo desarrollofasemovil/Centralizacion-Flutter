@@ -46,7 +46,7 @@ for _stream in (sys.stdout, sys.stderr):
 # ─────────────────────────────────────────────────────────────────────────────
 
 # El script vive en:
-#   tramiapp_flutter/.claude/agents/migration-agent/dto_translator_agent.py
+#   .claude/agents/migration-agent/dto_translator_agent.py
 _SCRIPT_DIR = Path(__file__).resolve().parent
 
 # Carga las variables de entorno desde environmentkeys.env (junto al script).
