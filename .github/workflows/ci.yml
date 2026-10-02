@@ -1,0 +1,39 @@
+name: CI
+
+# Validación de cada PR hacia develop o main: análisis estático + tests.
+# No compila APK: eso solo ocurre al fusionar develop -> main (release-apk.yml).
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-and-test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.0
+          cache: true
+
+      - name: Dependencias
+        run: flutter pub get
+
+      # Los .g.dart están versionados: no hace falta build_runner en CI.
+      - name: Análisis estático
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
