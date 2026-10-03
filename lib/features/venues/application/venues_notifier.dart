@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/user_dto.dart';
 import '../../../core/models/venue_dto.dart';
+import '../../../core/notifications/registration_notifications.dart';
 import '../../auth/application/auth_providers.dart';
 import '../data/venues_repository.dart';
 import '../domain/venues_state.dart';
@@ -221,6 +224,7 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
 
     try {
       final response = await _repo.createReservation(request);
+      _notifyReservation(venue.title, request);
       state = state.copyWith(
         status: VenuesStatus.available,
         venues: venues,
@@ -248,6 +252,26 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
           ),
         ),
       );
+    }
+  }
+
+  /// Confirmación local (port de `showVenueReservationNotification`). Solo en la
+  /// rama de éxito; nunca debe romper ni retrasar la reserva.
+  void _notifyReservation(String venueTitle, ReservationRequestDTO request) {
+    try {
+      unawaited(
+        ref
+            .read(registrationNotificationsProvider)
+            .showVenueReservation(
+              venueTitle: venueTitle,
+              userName: request.firstName,
+              date: request.date,
+              time: request.time,
+            )
+            .catchError((_) => false),
+      );
+    } catch (e) {
+      debugPrint('VenuesNotifier._notifyReservation error: $e');
     }
   }
 

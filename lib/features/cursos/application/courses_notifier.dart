@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/course_dto.dart';
 import '../../../core/models/user_dto.dart';
+import '../../../core/notifications/registration_notifications.dart';
 import '../data/courses_repository.dart';
 import '../domain/courses_state.dart';
 
@@ -185,8 +188,28 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
     try {
       await _repo.registerForCourse(payload);
       state = state.copyWith(isLoading: false, registrationSuccess: true);
+      _notifyRegistration(courseTitle: course.title, userName: f.firstName);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: _message(e));
+    }
+  }
+
+  /// Confirmación local (port de `showCourseRegistrationNotification`). Nunca
+  /// debe romper ni retrasar la inscripción: no se espera y cualquier fallo se
+  /// descarta.
+  void _notifyRegistration({
+    required String courseTitle,
+    required String userName,
+  }) {
+    try {
+      unawaited(
+        ref
+            .read(registrationNotificationsProvider)
+            .showCourseRegistration(courseTitle: courseTitle, userName: userName)
+            .catchError((_) => false),
+      );
+    } catch (e) {
+      debugPrint('CoursesNotifier._notifyRegistration error: $e');
     }
   }
 
