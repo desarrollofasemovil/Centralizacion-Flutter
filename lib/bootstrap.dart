@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
@@ -14,6 +16,7 @@ import 'core/flavor/flavor_config.dart';
 import 'core/notifications/push_notifications_service.dart';
 import 'core/remote_config/remote_config_service.dart';
 import 'core/storage/user_preferences.dart';
+import 'core/update/in_app_update_service.dart';
 import 'core/utils/app_info.dart';
 
 /// Inicialización común a todos los flavors. Cada `main_<flavor>.dart` delega
@@ -77,9 +80,14 @@ Future<void> bootstrap(FlavorConfig config, FirebaseOptions options) async {
   } catch (_) {}
 
   runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const TramiApp(),
-    ),
+    UncontrolledProviderScope(container: container, child: const TramiApp()),
   );
+
+  // In-App Update de Play (MainActivity.kt): sin `await`, nunca retrasa el
+  // primer frame. En iOS/web/escritorio el servicio no hace nada.
+  final inAppUpdate = container.read(inAppUpdateServiceProvider);
+  WidgetsBinding.instance.addObserver(
+    InAppUpdateLifecycleObserver(inAppUpdate),
+  );
+  unawaited(inAppUpdate.checkOnStart());
 }
