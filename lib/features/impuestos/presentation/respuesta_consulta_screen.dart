@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/models/validation_response_dto.dart';
 import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/review/review_prompt_service.dart';
 import '../../../core/widgets/app_back_button.dart';
 import '../../../core/utils/url_opener.dart';
 import '../application/tax_results_notifier.dart';
@@ -138,68 +141,82 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
       }
     });
 
-    return Scaffold(
-      backgroundColor: scheme.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: Center(child: AppBackButton(onPressed: () => context.pop())),
-        ),
-        title: Text(
-          'Facturas Encontradas',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+    // Reseña de la tienda al volver atrás tras ver facturas (FSM-59). Solo en
+    // un pop: salir con `go` (p. ej. "Verificar estado" del pago) no cuenta,
+    // y no se interrumpe mientras revisa, descarga o paga.
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop && widget.taxes.isNotEmpty) {
+          unawaited(
+            ref
+                .read(reviewPromptServiceProvider)
+                .onPositiveMoment(ReviewTrigger.taxQueryResults),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: scheme.surface,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          centerTitle: true,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 10),
+            child: Center(child: AppBackButton(onPressed: () => context.pop())),
+          ),
+          title: Text(
+            'Facturas Encontradas',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
-      body: Stack(
-        children: [
-          if (asyncMun.isLoading)
-            const Center(child: CircularProgressIndicator.adaptive())
-          else if (asyncMun.hasError)
-            const Center(
-              child: Text('Error al cargar los datos del municipio.'),
+        body: Stack(
+          children: [
+            if (asyncMun.isLoading)
+              const Center(child: CircularProgressIndicator.adaptive())
+            else if (asyncMun.hasError)
+              const Center(
+                child: Text('Error al cargar los datos del municipio.'),
+              ),
+            ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: widget.taxes.length,
+              itemBuilder: (context, index) {
+                final tax = widget.taxes[index];
+                return _AnimatedEntry(
+                  delay: Duration(milliseconds: index * 100),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: TaxCard(
+                      tax: tax,
+                      isLoading: state.isLoading,
+                      onPayClick: _handlePay,
+                      onPdfClick: notifier.onOpenPdfClicked,
+                      onShareClick: notifier.onSharePdfClicked,
+                      onRegisterPayment: () => _handleRegisterPayment(tax),
+                    ),
+                  ),
+                );
+              },
             ),
-          ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: widget.taxes.length,
-            itemBuilder: (context, index) {
-              final tax = widget.taxes[index];
-              return _AnimatedEntry(
-                delay: Duration(milliseconds: index * 100),
+            // Alerta inferior con el resultado del registro en el historial.
+            if (state.validationCreatePayment != null)
+              Align(
+                alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: TaxCard(
-                    tax: tax,
-                    isLoading: state.isLoading,
-                    onPayClick: _handlePay,
-                    onPdfClick: notifier.onOpenPdfClicked,
-                    onShareClick: notifier.onSharePdfClicked,
-                    onRegisterPayment: () => _handleRegisterPayment(tax),
+                  padding: const EdgeInsets.all(16),
+                  child: _ValidationAlert(
+                    validation: state.validationCreatePayment!,
                   ),
                 ),
-              );
-            },
-          ),
-          // Alerta inferior con el resultado del registro en el historial.
-          if (state.validationCreatePayment != null)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: _ValidationAlert(
-                  validation: state.validationCreatePayment!,
-                ),
               ),
-            ),
-          // Diálogo modal de carga (DownloadingDialog del original).
-          if (state.isLoading)
-            _DownloadingDialog(message: state.loadingMessage),
-        ],
+            // Diálogo modal de carga (DownloadingDialog del original).
+            if (state.isLoading)
+              _DownloadingDialog(message: state.loadingMessage),
+          ],
+        ),
       ),
     );
   }

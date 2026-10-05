@@ -11,6 +11,9 @@ import 'package:tramiapp_flutter/features/venues/data/venues_repository.dart';
 import 'package:tramiapp_flutter/features/venues/domain/venues_state.dart';
 
 import '../../helpers/fake_local_reminder_scheduler.dart';
+import '../../support/spy_review_prompt_service.dart';
+import 'package:tramiapp_flutter/core/review/review_prompt_service.dart';
+
 
 const _venue = VenueDTO(id: 3, title: 'Cancha 1');
 
@@ -185,5 +188,36 @@ void main() {
 
     expect(scheduler.shown, hasLength(2));
     expect(scheduler.shown.map((s) => s.id).toSet(), {kVenueNotificationId});
+  });
+
+  group('reseña de la tienda', () {
+    test('al cerrar el diálogo de reserva exitosa se pide la reseña',
+        () async {
+      final spy = SpyReviewPromptService();
+      final c = await makeContainer(
+        extra: [reviewPromptServiceProvider.overrideWithValue(spy)],
+      );
+      final n = fillForm(c);
+      await n.submitReservation();
+      expect(spy.moments, isEmpty, reason: 'no mientras se ve el diálogo');
+
+      n.onDismissDialog();
+
+      expect(spy.moments, [ReviewTrigger.venueReservation]);
+    });
+
+    test('cerrar el diálogo de error no pide la reseña', () async {
+      final spy = SpyReviewPromptService();
+      repo.failReservation = true;
+      final c = await makeContainer(
+        extra: [reviewPromptServiceProvider.overrideWithValue(spy)],
+      );
+      final n = fillForm(c);
+      await n.submitReservation();
+
+      n.onDismissDialog();
+
+      expect(spy.moments, isEmpty);
+    });
   });
 }

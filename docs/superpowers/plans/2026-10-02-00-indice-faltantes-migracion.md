@@ -41,6 +41,13 @@ independiente con su propio PR contra `develop`:
 | 1 | En el Splash el diálogo espera "Entendido" | Se cierra solo al volver la red y el Splash continúa | Mismo notifier global para toda la app; mejor UX, mismo resultado |
 | 2 | IDs de notificación `1` y `2` | `2000001` y `2000002` | Los recordatorios usan el id del servidor (`created.id`); `1` y `2` podían pisar un recordatorio real |
 | 2 | Ícono `R.drawable.logo` | `ic_stat_reminder` (ya existente) | Es el ícono que ya usan todas las notificaciones locales de Flutter |
+| 3 | Reseña solo tras el 2.º login, una vez para siempre | 2.º login **y** momentos de éxito (PQRD, consulta de impuesto, curso/escenario, pago aprobado); un flujo por sesión | Decisión de producto 2026-10-05 (FSM-59): Google no informa si el diálogo se mostró, y "una vez para siempre" podía gastar la única oportunidad |
+
+## Faltante detectado después (pendiente de plan propio)
+- **Eventos de analítica de Firebase del Kotlin:** `MainViewModel.kt`, `LoginOptionsScreen.kt` y `AuthScreen.kt` registran
+  `clic_*` (`clic_consulta_impuesto`, `clic_pqrds`, `clic_cursos`, `clic_venues`, `clic_psv`, `clic_historial`, …),
+  `login`, `sign_up`, `ContinueWithGoogle` y `ContinueAsGuest`. En Flutter `AnalyticsService` existe pero solo se usa
+  para `fcm_subscribed`. Detectado el 2026-10-05 al planear los disparadores de la reseña; se hará en un plan aparte.
 
 ## Fuera de alcance (revisado y descartado)
 - `WebViewScreen`: el Kotlin lo define pero nunca lo usa.

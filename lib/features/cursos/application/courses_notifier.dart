@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/course_dto.dart';
 import '../../../core/models/user_dto.dart';
 import '../../../core/notifications/registration_notifications.dart';
+import '../../../core/review/review_prompt_service.dart';
 import '../data/courses_repository.dart';
 import '../domain/courses_state.dart';
 
@@ -104,6 +105,15 @@ class CoursesNotifier extends Notifier<CoursesUiState> {
       state = state.copyWith(selectedCourse: course);
 
   void onDialogDismiss() {
+    // Cierre del diálogo de éxito (también se llama al cerrar la hoja sin
+    // inscribirse): solo el primero pide la reseña de la tienda (FSM-59).
+    if (state.registrationSuccess) {
+      unawaited(
+        ref
+            .read(reviewPromptServiceProvider)
+            .onPositiveMoment(ReviewTrigger.courseRegistration),
+      );
+    }
     state = state.copyWith(
       clearSelectedCourse: true,
       registrationSuccess: false,

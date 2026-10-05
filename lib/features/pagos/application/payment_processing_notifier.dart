@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/services/api_providers.dart';
+import '../../../core/api/services/payment_history_api_service.dart';
+import '../../../core/models/payment_history_dto.dart';
+import '../../../core/review/review_prompt_service.dart';
 import '../../auth/application/auth_providers.dart';
 
 /// Segundos que se bloquea el botón "Verificar" (tiempo aprox. de un pago PSE).
@@ -61,10 +64,18 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
         final api = ref.read(paymentHistoryApiServiceProvider);
         final history = await api.getHistoryPaymentByUser(userId);
         if (history.isNotEmpty) {
-          final latestId = history
-              .map((h) => h.id)
-              .reduce((a, b) => a > b ? a : b);
-          await api.syncPaymentStatus(latestId);
+          final latest = history.reduce((a, b) => a.id > b.id ? a : b);
+          await api.syncPaymentStatus(latest.id);
+          // Reseña de la tienda si el pago pasó a aprobado con esta
+          // verificación (FSM-59). Si ya lo estaba, no se relee.
+          if (latest.idStatusType != kPaymentStatusApproved &&
+              await _isApproved(api, userId, latest.id)) {
+            unawaited(
+              ref
+                  .read(reviewPromptServiceProvider)
+                  .onPositiveMoment(ReviewTrigger.paymentApproved),
+            );
+          }
         }
       }
     } catch (_) {
@@ -73,6 +84,16 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
     }
     state = state.copyWith(isVerifying: false);
     return true;
+  }
+
+  Future<bool> _isApproved(
+    PaymentHistoryApiService api,
+    int userId,
+    int idHistory,
+  ) async {
+    final synced = await api.getHistoryPaymentByUser(userId);
+    return synced.where((h) => h.id == idHistory).firstOrNull?.idStatusType ==
+        kPaymentStatusApproved;
   }
 }
 
