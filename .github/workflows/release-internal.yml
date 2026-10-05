@@ -1,0 +1,269 @@
+# Compila el App Bundle firmado (flavor `municipios`) y lo publica en la pista
+# de PRUEBAS INTERNAS de Google Play. Adaptado del pipeline de 101Fintech.
+#
+# `main` es la única rama que publica: el flujo es develop → PR → main.
+# Producción sigue siendo MANUAL a propósito: este workflow no la toca nunca, y
+# la cuenta de servicio solo tiene permiso sobre los canales de prueba.
+#
+# Puesta en marcha (Google Cloud, Play Console, secretos):
+# docs/release/CONFIGURAR_PLAY_CI.md
+name: Publicar en pruebas internas
+
+on:
+  push:
+    branches: [main]
+  # Para reintentar una publicación que falló por causas externas (un 5xx de
+  # Play, un runner caído) sin tener que tocar `main`.
+  workflow_dispatch:
+    inputs:
+      solo_compilar:
+        description: 'Solo compilar el AAB, sin publicar (para subirlo a mano)'
+        type: boolean
+        default: false
+
+# Nunca se cancela una publicación a medias: entre la subida del bundle y el
+# commit del edit hay un estado intermedio en Play que no conviene interrumpir.
+concurrency:
+  group: publicacion-interna
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.0'
+  JAVA_VERSION: '17'
+  PACKAGE_NAME: 'com.tramites1cero1.centralizacion'
+  FLAVOR: 'municipios'
+
+jobs:
+  # ── 1. Guarda barata ──────────────────────────────────────────────────────
+  # Todo lo que puede fallar sin compilar, falla acá: ~1 minuto en vez de ~25.
+  guarda:
+    name: Guarda de versión
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # federación de identidades con Google (sin claves)
+    outputs:
+      version_code: ${{ steps.version.outputs.version_code }}
+      version_name: ${{ steps.version.outputs.version_name }}
+      version_full: ${{ steps.version.outputs.version_full }}
+      # Idiomas que la ficha de Play tiene dados de alta. Se consultan en vez de
+      # suponerlos: notas en un idioma que la ficha no declara hacen que Play
+      # rechace la subida, y eso pasaría DESPUÉS de compilar.
+      locales: ${{ steps.play.outputs.locales }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # `workflow_dispatch` se puede lanzar desde cualquier rama. Publicar algo
+      # que no está en `main` rompería el modelo de ramas en silencio.
+      - name: Solo se publica desde main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Este workflow solo publica desde 'main' (rama actual: ${{ github.ref }})."
+          exit 1
+
+      - name: Leer versión
+        id: version
+        run: bash .github/scripts/leer-version.sh
+
+      # En modo "solo compilar" no se habla con Play: es justo el modo que
+      # existe para cuando Play NO está disponible (permisos que aún se
+      # propagan, una caída, un scope mal puesto).
+      - name: Autenticarse en Google
+        id: auth
+        if: ${{ inputs.solo_compilar != true }}
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          # Obligatorio. Por defecto la action acuña el token con el scope
+          # `cloud-platform`, que la API de Play RECHAZA con un 403
+          # `ACCESS_TOKEN_SCOPE_INSUFFICIENT` — se lee como si faltaran
+          # permisos en Play Console y manda a buscar donde no es.
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+
+      - name: ¿El versionCode está libre en Play?
+        id: play
+        if: ${{ inputs.solo_compilar != true }}
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+        run: bash .github/scripts/comprobar-version-en-play.sh
+
+  # ── 2. Las mismas puertas que en cualquier PR ─────────────────────────────
+  verificacion:
+    name: Calidad
+    needs: guarda
+    uses: ./.github/workflows/ci.yml
+
+  # ── 3. Compilar y publicar ────────────────────────────────────────────────
+  publicar:
+    name: Compilar y publicar
+    needs: [guarda, verificacion]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # crear el tag y el Release de la versión
+      id-token: write
+
+    env:
+      VERSION_CODE: ${{ needs.guarda.outputs.version_code }}
+      VERSION_NAME: ${{ needs.guarda.outputs.version_name }}
+      VERSION_FULL: ${{ needs.guarda.outputs.version_full }}
+      AAB: build/app/outputs/bundle/municipiosRelease/app-municipios-release.aab
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Historial completo: las notas salen de los commits desde el último
+          # tag, y `git describe --tags` no ve nada en un checkout superficial.
+          fetch-depth: 0
+
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # `android/gradle.properties` pide -Xmx8G y 4 GB de metaspace (pensado
+      # para una máquina de desarrollo). `$GRADLE_USER_HOME/gradle.properties`
+      # tiene MÁS precedencia que el del proyecto: se ajusta aquí sin tocar la
+      # configuración local de nadie.
+      - name: Ajustar memoria de Gradle al runner
+        run: |
+          mkdir -p ~/.gradle
+          printf 'org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g\norg.gradle.daemon=false\n' > ~/.gradle/gradle.properties
+
+      # Sin key.properties Gradle firmaría el "release" con la debug key, y
+      # Play lo rechazaría. Si el base64 vino cortado o el alias no es el que
+      # se cree, el error de Gradle es críptico y llega 20 minutos después.
+      - name: Firma de subida y google-services.json
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          GOOGLE_SERVICES_B64: ${{ secrets.GOOGLE_SERVICES_MUNICIPIOS_JSON_B64 }}
+        run: |
+          missing=0
+          for v in KEYSTORE_B64 STORE_PASSWORD KEY_PASSWORD KEY_ALIAS GOOGLE_SERVICES_B64; do
+            if [ -z "${!v}" ]; then echo "::error::Falta el secreto asociado a $v (ver docs/CI_CD.md)"; missing=1; fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+
+          KEYSTORE="$RUNNER_TEMP/upload-keystore.jks"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$KEYSTORE"
+          mkdir -p "android/app/src/$FLAVOR"
+          printf '%s' "$GOOGLE_SERVICES_B64" | base64 -d > "android/app/src/$FLAVOR/google-services.json"
+
+          # `printf` y no un heredoc: una contraseña con `$` se expandiría.
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' \
+            "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" "$KEYSTORE" \
+            > android/key.properties
+
+          if ! keytool -list -keystore "$KEYSTORE" -alias "$KEY_ALIAS" -storepass "$STORE_PASSWORD" > /dev/null 2>&1; then
+            echo "::error::El keystore no se pudo abrir, o no contiene el alias indicado."
+            echo "Revisá ANDROID_KEYSTORE_BASE64 (¿se copió entero?), ANDROID_KEYSTORE_PASSWORD y ANDROID_KEY_ALIAS."
+            exit 1
+          fi
+
+      - name: Dependencias
+        run: flutter pub get
+
+      - name: Compilar el App Bundle
+        run: flutter build appbundle --release --flavor "$FLAVOR" -t "lib/main_$FLAVOR.dart"
+
+      # Repo PÚBLICO: el artefacto lo puede descargar cualquier usuario con
+      # sesión en GitHub (es el mismo binario que distribuye Play) y la
+      # retención máxima es de 90 días.
+      - name: Guardar el App Bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-bundle-${{ env.VERSION_FULL }}
+          path: ${{ env.AAB }}
+          retention-days: 90
+          if-no-files-found: error
+
+      # ── A partir de aquí, nada se ejecuta en modo "solo compilar" ─────────
+      - name: Qué hacer con el AAB (modo solo compilar)
+        if: ${{ inputs.solo_compilar == true }}
+        run: |
+          {
+            echo "## AAB listo para subir a mano"
+            echo
+            echo "**No se publicó nada.** Este run se lanzó en modo \`solo_compilar\`."
+            echo
+            echo "1. Descargá el artefacto **app-bundle-${VERSION_FULL}** de este run."
+            echo "2. Descomprimilo: dentro está \`app-municipios-release.aab\`, ya firmado."
+            echo "3. Play Console → Pruebas → Pruebas internas → Crear versión → subilo."
+            echo "4. Escribí las notas a mano (en este modo no se generan)."
+            echo
+            echo "⚠️ No se comprobó contra Play si el versionCode \`${VERSION_CODE}\`"
+            echo "está libre. Si ya estaba usado, Play rechazará la subida."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notas de la versión (solo pista interna)
+        if: ${{ inputs.solo_compilar != true }}
+        env:
+          DESTINO: ${{ runner.temp }}/whatsnew
+          LOCALES: ${{ needs.guarda.outputs.locales }}
+        run: bash .github/scripts/notas-de-version.sh
+
+      - name: Autenticarse en Google
+        id: auth
+        if: ${{ inputs.solo_compilar != true }}
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      # El mapping de R8 viaja DENTRO del .aab y Play lo recoge solo: no se
+      # pasa `mappingFile` para no duplicarlo.
+      - name: Publicar en la pista interna
+        if: ${{ inputs.solo_compilar != true }}
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJson: ${{ steps.auth.outputs.credentials_file_path }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: ${{ env.AAB }}
+          tracks: internal
+          status: completed
+          releaseName: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
+          whatsNewDirectory: ${{ runner.temp }}/whatsnew
+
+      # El tag marca qué commit se publicó; las notas de la siguiente versión
+      # se calculan desde él.
+      - name: Etiquetar la versión publicada
+        if: ${{ inputs.solo_compilar != true }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${VERSION_FULL}" \
+            --target "$GITHUB_SHA" \
+            --title "${VERSION_NAME} (${VERSION_CODE}) · pruebas internas" \
+            --notes "Publicado automáticamente en la pista de pruebas internas de Google Play.
+
+          Commit: ${GITHUB_SHA}"
+
+      - name: Resumen
+        if: ${{ inputs.solo_compilar != true }}
+        run: |
+          {
+            echo "### ${VERSION_NAME} (${VERSION_CODE}) publicada en pruebas internas"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- AAB: $(du -h "$AAB" | cut -f1), SHA-256 \`$(sha256sum "$AAB" | cut -d' ' -f1)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Limpiar credenciales
+        if: always()
+        run: rm -f android/key.properties "android/app/src/$FLAVOR/google-services.json" "$RUNNER_TEMP/upload-keystore.jks"
