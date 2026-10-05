@@ -10,6 +10,13 @@
 
 **Spec (Kotlin en `codebase/app/src/main/java/com/tramites1cero1/centralizacion/`):** `utils/InAppReviewManager.kt` (completo), `ui/screen/login/AuthViewModel.kt:128-142` (incremento y evento), consumidores del evento en `ui/screen/main/MainScreen.kt:309-318` y `ui/screen/history/HistoryPayScreen.kt:125-132`.
 
+> **Ampliación del 2026-10-05 (decisión de producto, FSM-59).** Se conserva la regla del login y se añaden
+> disparadores en momentos de éxito: PQRD radicada (al aceptar el diálogo del ticket, anónima o identificada),
+> volver atrás desde los resultados de la consulta de impuesto (con al menos una factura), cerrar la confirmación de
+> inscripción a curso o de reserva de escenario, y pago aprobado (tras "Verificar estado" o al sincronizar en el
+> historial). La frecuencia pasa de "una vez para siempre" a **como mucho un flujo completado por sesión de la app**;
+> la clave `in_app_review_prompt_shown` ya no se usa. Las Tasks 3b–3e se añadieron en la ejecución; ver el PR.
+
 ## Global Constraints
 
 - Rama desde `develop` (`feature/in-app-review`); PR contra `develop` (confirmar antes de abrirlo).
