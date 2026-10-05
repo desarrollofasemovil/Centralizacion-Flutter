@@ -219,9 +219,11 @@ varios productos.
       600 ms y el splash espera 3600 ms, así que validaba el splash. (PR #17)
 - [ ] **Cobertura de tests**: 5 archivos para 31 k líneas, y solo `tramite_mappers_test.dart` cubre
       lógica de negocio real. Prioridad: mappers de trámites, validaciones de formularios, `AppStatus`.
-- [~] **GitHub Actions**: `ci.yml` (analyze + test en PRs a `develop`/`main`) y `release-apk.yml` (APK
-      firmado solo al fusionar `develop` → `main`) añadidos; ver [`CI_CD.md`](CI_CD.md). **Pendiente:** cargar
-      los secretos del repo (keystore y `google-services.json`), flavor `manizales` e iOS (IPA).
+- [~] **GitHub Actions**: `ci.yml` (analyze + test en PRs a `develop`/`main`) y `release-internal.yml` (AAB
+      firmado publicado en la **pista interna de Play** en cada push a `main`, con guarda de `versionCode`; sustituye
+      a `release-apk.yml`); ver [`CI_CD.md`](CI_CD.md) y [`release/CONFIGURAR_PLAY_CI.md`](release/CONFIGURAR_PLAY_CI.md).
+      Versión `2.0.0+53` (Play iba en 52 / 1.5.0). **Pendiente:** primera publicación real, flavor `manizales`,
+      iOS (Codemagic, manual).
 - [ ] **Un test golpea la API real** (`GET /api/Department` devuelve 400 en la suite). Debe usar mock.
 
 ## Fase 5 — Ajuste iOS 🍎
