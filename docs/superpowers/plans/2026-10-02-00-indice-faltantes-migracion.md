@@ -39,7 +39,7 @@ independiente con su propio PR contra `develop`:
 | 1 | 4 estados (`Available/Unavailable/Losing/Lost`) | 2 (`available/unavailable`) | `connectivity_plus` no distingue `Losing/Lost` y el original solo reacciona a "Available vs. el resto" |
 | 1 | El diálogo **reemplaza** el contenido | Se **superpone** (`Stack`) | Reemplazar destruiría el árbol de navegación de `go_router` y el estado de formularios |
 | 1 | En el Splash el diálogo espera "Entendido" | Se cierra solo al volver la red y el Splash continúa | Mismo notifier global para toda la app; mejor UX, mismo resultado |
-| 2 | IDs de notificación `1` y `2` | `2000001` y `2000002` | Los recordatorios usan el id del servidor (`created.id`); `1` y `2` podían pisar un recordatorio real |
+| 2 | IDs de notificación `1` y `2` | `-1` y `-2` | Los recordatorios usan el id del servidor (`created.id` y `+1000000`, siempre positivos); `1` y `2` podían pisar un recordatorio real. Un rango alto fijo (`2000001`) también chocaba con `1000001 + 1000000` |
 | 2 | Ícono `R.drawable.logo` | `ic_stat_reminder` (ya existente) | Es el ícono que ya usan todas las notificaciones locales de Flutter |
 | 3 | Reseña solo tras el 2.º login, una vez para siempre | 2.º login **y** momentos de éxito (PQRD, consulta de impuesto, curso/escenario, pago aprobado); un flujo por sesión | Decisión de producto 2026-10-05 (FSM-59): Google no informa si el diálogo se mostró, y "una vez para siempre" podía gastar la única oportunidad |
 

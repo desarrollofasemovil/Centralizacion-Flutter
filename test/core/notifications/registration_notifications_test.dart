@@ -62,11 +62,21 @@ void main() {
       expect(venue.bigText, contains("reserva en '$long' para el"));
     });
 
-    test('ids distintos entre sí y fuera del rango de recordatorios del servidor',
-        () {
-      expect(kCourseNotificationId, 2000001);
-      expect(kVenueNotificationId, 2000002);
+    test('ids distintos entre sí', () {
       expect(kCourseNotificationId, isNot(kVenueNotificationId));
+    });
+
+    test(
+        'no chocan con ningún recordatorio (id del servidor ni id + 1000000), '
+        'sea cual sea el id', () {
+      // Ids reales del servidor (positivos), incluidos los que alcanzan el
+      // rango de las confirmaciones de recordatorio y el máximo de 32 bits.
+      const serverIds = [1, 999999, 1000001, 1000002, 2000001, 2147483647 - 1000000];
+      final reminderIds = {
+        for (final id in serverIds) ...[id, id + 1000000],
+      };
+      expect(reminderIds, isNot(contains(kCourseNotificationId)));
+      expect(reminderIds, isNot(contains(kVenueNotificationId)));
     });
   });
 
