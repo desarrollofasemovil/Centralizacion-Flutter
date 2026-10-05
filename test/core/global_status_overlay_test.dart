@@ -33,6 +33,7 @@ Future<void> _pump(
   WidgetTester tester, {
   required bool dialogVisible,
   AppStatus status = const AppStatus(),
+  FocusNode? focusNode,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -48,7 +49,12 @@ Future<void> _pump(
           backButtonDispatcher: RootBackButtonDispatcher(),
           child: child!,
         ),
-        home: const Scaffold(body: SizedBox.expand(key: _contentKey)),
+        home: Scaffold(
+          body: SizedBox.expand(
+            key: _contentKey,
+            child: Center(child: TextField(focusNode: focusNode)),
+          ),
+        ),
       ),
     ),
   );
@@ -87,6 +93,24 @@ void main() {
 
     expect(find.text('Mantenimiento'), findsOneWidget);
     expect(find.text(_title), findsNothing);
+  });
+
+  testWidgets('con el diálogo visible el contenido de abajo pierde el foco',
+      (tester) async {
+    final focusNode = FocusNode();
+    addTearDown(focusNode.dispose);
+    await _pump(tester, dialogVisible: false, focusNode: focusNode);
+    focusNode.requestFocus();
+    await tester.pump();
+    expect(focusNode.hasFocus, isTrue);
+
+    ProviderScope.containerOf(tester.element(find.byKey(_contentKey)))
+        .read(noConnectionDialogProvider.notifier)
+        .show();
+    await tester.pump();
+
+    expect(find.text(_title), findsOneWidget);
+    expect(focusNode.hasFocus, isFalse);
   });
 
   testWidgets('tocar la barrera no descarta el diálogo', (tester) async {
