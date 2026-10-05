@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/department.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../../core/widgets/footer_sponsors.dart';
@@ -221,7 +222,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       showDropdown: _searchFocused && filtered.isNotEmpty,
                       departments: filtered,
                       onSelected: _onDepartmentSelected,
-                      textColor: scheme.onSurface,
+                      textColor: AppColors.textPrimary,
                     ),
                   ),
                 ),

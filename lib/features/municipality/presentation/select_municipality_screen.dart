@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/models/municipality.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/app_colors.dart';
 import '../application/select_municipality_controller.dart';
 
 /// Selección de municipio — puerto fiel de `selectmunicipality/SelectMunScreen.kt`
@@ -129,7 +130,7 @@ class _SelectMunicipalityScreenState
                               _searchFocused && filtered.isNotEmpty,
                           municipalities: filtered,
                           onSelected: _onMunicipalitySelected,
-                          textColor: scheme.onSurface,
+                          textColor: AppColors.textPrimary,
                         ),
                         const SizedBox(height: 16),
                         _SaveCheckbox(
