@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/user_dto.dart';
 import '../../../core/models/venue_dto.dart';
 import '../../../core/notifications/registration_notifications.dart';
+import '../../../core/review/review_prompt_service.dart';
 import '../../auth/application/auth_providers.dart';
 import '../data/venues_repository.dart';
 import '../domain/venues_state.dart';
@@ -161,6 +162,12 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
     final wasSuccess = state.dialog?.type == ReservationDialogType.success;
     state = state.copyWith(clearDialog: true);
     if (wasSuccess) {
+      // Reseña de la tienda tras cerrar la confirmación (FSM-59).
+      unawaited(
+        ref
+            .read(reviewPromptServiceProvider)
+            .onPositiveMoment(ReviewTrigger.venueReservation),
+      );
       final doc = state.formState.documentNumber;
       if (doc.isNotEmpty) _silentFetchEligibility(doc);
     }

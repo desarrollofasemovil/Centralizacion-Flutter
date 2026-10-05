@@ -12,6 +12,9 @@ import 'package:tramiapp_flutter/features/cursos/application/courses_notifier.da
 import 'package:tramiapp_flutter/features/cursos/data/courses_repository.dart';
 
 import '../../helpers/fake_local_reminder_scheduler.dart';
+import '../../support/spy_review_prompt_service.dart';
+import 'package:tramiapp_flutter/core/review/review_prompt_service.dart';
+
 
 class _FakeCoursesRepository implements CoursesRepository {
   bool failRegistration = false;
@@ -200,5 +203,36 @@ void main() {
 
     expect(scheduler.shown, hasLength(2));
     expect(scheduler.shown.map((s) => s.id).toSet(), {kCourseNotificationId});
+  });
+
+  group('reseña de la tienda', () {
+    test('al cerrar el diálogo de inscripción exitosa se pide la reseña',
+        () async {
+      final spy = SpyReviewPromptService();
+      final c = await makeContainer(
+        extra: [reviewPromptServiceProvider.overrideWithValue(spy)],
+      );
+      final n = fillForm(c);
+      await n.submitRegistration();
+      expect(spy.moments, isEmpty, reason: 'no mientras se ve el diálogo');
+
+      n.onDialogDismiss();
+
+      expect(spy.moments, [ReviewTrigger.courseRegistration]);
+    });
+
+    test('cerrar la hoja sin inscribirse no pide la reseña', () async {
+      final spy = SpyReviewPromptService();
+      final c = await makeContainer(
+        extra: [reviewPromptServiceProvider.overrideWithValue(spy)],
+      );
+      repo.failRegistration = true;
+      final n = fillForm(c);
+      await n.submitRegistration();
+
+      n.onDialogDismiss();
+
+      expect(spy.moments, isEmpty);
+    });
   });
 }
