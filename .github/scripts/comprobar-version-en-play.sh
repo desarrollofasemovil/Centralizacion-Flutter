@@ -102,21 +102,31 @@ fi
 
 EDIT_ID=$(echo "$cuerpo" | jq -r '.id')
 
-respuesta=$(llamar -H "Authorization: Bearer ${ACCESS_TOKEN}" "${API}/edits/${EDIT_ID}/bundles")
-cuerpo="${respuesta%$'\t'*}"
-codigo="${respuesta##*$'\t'}"
+# versionCodes ya gastados por un artefacto del tipo indicado (`bundles` o
+# `apks`). Hay que mirar los DOS: la app Kotlin y cualquier subida a mano pueden
+# haber gastado números con APKs, que `/bundles` no lista.
+listar_version_codes() {
+  local tipo="$1" respuesta cuerpo codigo
+  respuesta=$(llamar -H "Authorization: Bearer ${ACCESS_TOKEN}" "${API}/edits/${EDIT_ID}/${tipo}")
+  cuerpo="${respuesta%$'	'*}"
+  codigo="${respuesta##*$'	'}"
+  if [[ "$codigo" != "200" ]]; then
+    echo "::error::No se pudo listar los ${tipo} ya subidos (HTTP $codigo)." >&2
+    echo "$cuerpo" >&2
+    return 1
+  fi
+  # `.bundles` / `.apks` no vienen si la app no tiene ninguno de ese tipo.
+  echo "$cuerpo" | jq -r ".${tipo}[]?.versionCode"
+}
 
-if [[ "$codigo" != "200" ]]; then
-  echo "::error::No se pudo listar los bundles ya subidos (HTTP $codigo)." >&2
-  echo "$cuerpo" >&2
-  exit 1
-fi
-
-# `.bundles` no viene si la app todavía no tiene ninguno.
-usados=$(echo "$cuerpo" | jq -r '.bundles[]?.versionCode' | sort -n)
+de_bundles=$(listar_version_codes bundles)
+de_apks=$(listar_version_codes apks)
+usados=$(printf '%s
+%s
+' "$de_bundles" "$de_apks" | grep -E '^[0-9]+$' | sort -n -u || true)
 
 if [[ -z "$usados" ]]; then
-  echo "Play no reporta bundles previos. Se publica el ${VERSION_CODE}."
+  echo "Play no reporta bundles ni APKs previos. Se publica el ${VERSION_CODE}."
   publicar_locales
   exit 0
 fi
