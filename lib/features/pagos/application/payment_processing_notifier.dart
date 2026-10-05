@@ -67,13 +67,16 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
           final latest = history.reduce((a, b) => a.id > b.id ? a : b);
           await api.syncPaymentStatus(latest.id);
           // Reseña de la tienda si el pago pasó a aprobado con esta
-          // verificación (FSM-59). Si ya lo estaba, no se relee.
-          if (latest.idStatusType != kPaymentStatusApproved &&
-              await _isApproved(api, userId, latest.id)) {
+          // verificación (FSM-59). Si ya lo estaba, no se relee. Sin `await`:
+          // la navegación al Historial no espera esa lectura extra.
+          if (latest.idStatusType != kPaymentStatusApproved) {
             unawaited(
-              ref
-                  .read(reviewPromptServiceProvider)
-                  .onPositiveMoment(ReviewTrigger.paymentApproved),
+              _reviewIfApproved(
+                api,
+                ref.read(reviewPromptServiceProvider),
+                userId,
+                latest.id,
+              ),
             );
           }
         }
@@ -86,14 +89,24 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
     return true;
   }
 
-  Future<bool> _isApproved(
+  /// Corre después de que la pantalla navegó (el notifier autoDispose ya
+  /// puede estar liberado): por eso recibe el servicio y la API, no `ref`.
+  static Future<void> _reviewIfApproved(
     PaymentHistoryApiService api,
+    ReviewPromptService review,
     int userId,
     int idHistory,
   ) async {
-    final synced = await api.getHistoryPaymentByUser(userId);
-    return synced.where((h) => h.id == idHistory).firstOrNull?.idStatusType ==
-        kPaymentStatusApproved;
+    try {
+      final synced = await api.getHistoryPaymentByUser(userId);
+      final status =
+          synced.where((h) => h.id == idHistory).firstOrNull?.idStatusType;
+      if (status == kPaymentStatusApproved) {
+        await review.onPositiveMoment(ReviewTrigger.paymentApproved);
+      }
+    } catch (_) {
+      // Best-effort: sin red, simplemente no se pide la reseña.
+    }
   }
 }
 
