@@ -85,9 +85,5 @@ Future<void> bootstrap(FlavorConfig config, FirebaseOptions options) async {
 
   // In-App Update de Play (MainActivity.kt): sin `await`, nunca retrasa el
   // primer frame. En iOS/web/escritorio el servicio no hace nada.
-  final inAppUpdate = container.read(inAppUpdateServiceProvider);
-  WidgetsBinding.instance.addObserver(
-    InAppUpdateLifecycleObserver(inAppUpdate),
-  );
-  unawaited(inAppUpdate.checkOnStart());
+  unawaited(container.read(inAppUpdateServiceProvider).checkOnStart());
 }
