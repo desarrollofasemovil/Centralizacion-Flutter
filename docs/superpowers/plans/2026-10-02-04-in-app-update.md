@@ -10,6 +10,12 @@
 
 **Spec (Kotlin en `codebase/app/src/main/java/com/tramites1cero1/centralizacion/`):** `MainActivity.kt`: `onCreate` (líneas 112-118), `checkForAppUpdate()` (251-270) y `onResume()` (272-285).
 
+> **Desviación en la ejecución (2026-10-05):** la QA en el Redmi mostró dos consultas a Play por cada vuelta a primer
+> plano. El plugin `in_app_update` 5.0.0 ya reanuda en nativo (`InAppUpdatePlugin.onActivityResumed`) una actualización
+> inmediata a medias en cuanto `performImmediateUpdate` se llamó en el proceso, así que el `onResume()` de Dart (Task 3)
+> duplicaba el flujo. Se quitaron `onResume()` y `InAppUpdateLifecycleObserver`; queda `checkOnStart()`, que cubre el
+> arranque en frío (ahí el plugin todavía no sabe que había un flujo inmediato).
+
 ## Global Constraints
 
 - Rama desde `develop` (`feature/in-app-update`); PR contra `develop` (confirmar antes de abrirlo).
