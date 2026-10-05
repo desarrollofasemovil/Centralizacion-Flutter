@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/services/api_providers.dart';
+import '../../../core/models/payment_history_dto.dart';
+import '../../../core/review/review_prompt_service.dart';
 import '../../auth/application/auth_providers.dart';
 
 /// Segundos que se bloquea el botón "Verificar" (tiempo aprox. de un pago PSE).
@@ -65,6 +67,17 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
               .map((h) => h.id)
               .reduce((a, b) => a > b ? a : b);
           await api.syncPaymentStatus(latestId);
+          // Reseña de la tienda si el pago quedó aprobado (FSM-59). El
+          // Historial ya muestra el estado real; esta lectura solo decide eso.
+          final synced = await api.getHistoryPaymentByUser(userId);
+          final latest = synced.where((h) => h.id == latestId).firstOrNull;
+          if (latest?.idStatusType == kPaymentStatusApproved) {
+            unawaited(
+              ref
+                  .read(reviewPromptServiceProvider)
+                  .onPositiveMoment(ReviewTrigger.paymentApproved),
+            );
+          }
         }
       }
     } catch (_) {
