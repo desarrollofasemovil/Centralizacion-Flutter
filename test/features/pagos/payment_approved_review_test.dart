@@ -117,6 +117,15 @@ void main() {
       expect(spy.moments, [ReviewTrigger.paymentApproved]);
     });
 
+    testWidgets('el último ya estaba aprobado antes de verificar: no se pide',
+        (tester) async {
+      final api = _FakeHistoryApi([_payment(4, _pending), _payment(7, _approved)]);
+
+      final spy = await verify(tester, api);
+
+      expect(spy.moments, isEmpty);
+    });
+
     testWidgets('el último pago sigue pendiente: no se pide', (tester) async {
       final api = _FakeHistoryApi([_payment(4, _approved), _payment(7, _pending)]);
 
