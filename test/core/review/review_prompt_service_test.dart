@@ -6,9 +6,7 @@ import 'package:tramiapp_flutter/core/review/review_prompt_service.dart';
 import 'package:tramiapp_flutter/core/storage/user_preferences.dart';
 
 class _FakeLauncher implements ReviewLauncher {
-  _FakeLauncher({this.result = true, this.error});
-
-  bool result;
+  bool result = true;
   Object? error;
   Completer<void>? gate;
   int calls = 0;
