@@ -64,30 +64,30 @@ class GlobalStatusOverlay extends ConsumerWidget {
     final isConnectionRestored =
         ref.watch(connectivityStatusProvider).value ==
             ConnectivityStatus.available;
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          child,
-          if (dialogVisible) ...[
-            const ModalBarrier(dismissible: false, color: Colors.black54),
-            Material(
-              type: MaterialType.transparency,
-              child: _BackBlocker(
-                dispatcher: backButtonDispatcher,
-                child: Center(
-                  child: NoConnectionDialog(
-                    isConnectionRestored: isConnectionRestored,
-                    onDismiss:
-                        ref.read(noConnectionDialogProvider.notifier).dismiss,
-                  ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Con el diálogo visible el contenido de abajo pierde el foco (cierra
+        // el teclado y no recibe teclas). Siempre montado para no recrear el
+        // subárbol al alternar.
+        ExcludeFocus(excluding: dialogVisible, child: child),
+        if (dialogVisible) ...[
+          const ModalBarrier(dismissible: false, color: Colors.black54),
+          Material(
+            type: MaterialType.transparency,
+            child: _BackBlocker(
+              dispatcher: backButtonDispatcher,
+              child: Center(
+                child: NoConnectionDialog(
+                  isConnectionRestored: isConnectionRestored,
+                  onDismiss:
+                      ref.read(noConnectionDialogProvider.notifier).dismiss,
                 ),
               ),
             ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -106,17 +106,24 @@ class _BackBlocker extends StatefulWidget {
 }
 
 class _BackBlockerState extends State<_BackBlocker> {
-  late final BackButtonDispatcher? _dispatcher = widget.dispatcher;
-
   @override
   void initState() {
     super.initState();
-    _dispatcher?.addCallback(_swallowBack);
+    widget.dispatcher?.addCallback(_swallowBack);
+  }
+
+  @override
+  void didUpdateWidget(_BackBlocker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.dispatcher != widget.dispatcher) {
+      oldWidget.dispatcher?.removeCallback(_swallowBack);
+      widget.dispatcher?.addCallback(_swallowBack);
+    }
   }
 
   @override
   void dispose() {
-    _dispatcher?.removeCallback(_swallowBack);
+    widget.dispatcher?.removeCallback(_swallowBack);
     super.dispose();
   }
 

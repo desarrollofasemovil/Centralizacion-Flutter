@@ -35,10 +35,21 @@ class _FakeObserver implements ConnectivityObserver {
   }
 }
 
+class _FailingObserver implements ConnectivityObserver {
+  @override
+  Future<ConnectivityStatus> current() async => throw StateError('plugin');
+
+  @override
+  Stream<ConnectivityStatus> observe() => Stream.error(StateError('plugin'));
+}
+
 const _welcomeKey = Key('welcome');
 const _title = 'No estás conectado a internet';
 
-Future<void> _pumpSplash(WidgetTester tester, _FakeObserver observer) async {
+Future<void> _pumpSplash(
+  WidgetTester tester,
+  ConnectivityObserver observer,
+) async {
   FlavorConfig.instance = flavorMunicipios;
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -116,6 +127,18 @@ void main() {
     expect(find.byKey(_welcomeKey), findsNothing);
 
     await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+
+    expect(find.byKey(_welcomeKey), findsOneWidget);
+    expect(find.text(_title), findsNothing);
+    await _disposeApp(tester);
+  });
+
+  testWidgets('si el stream de conectividad falla, navega igual',
+      (tester) async {
+    await _pumpSplash(tester, _FailingObserver());
+
+    await tester.pump(const Duration(milliseconds: 3600));
     await tester.pump();
 
     expect(find.byKey(_welcomeKey), findsOneWidget);

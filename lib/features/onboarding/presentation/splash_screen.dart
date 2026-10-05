@@ -45,7 +45,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   Future<void> _proceed() async {
     if (!mounted || _navigated) return;
-    final status = await ref.read(connectivityObserverProvider).current();
+    // Se decide con el mismo stream que luego cierra el diálogo: si diera
+    // `unavailable`, la vuelta de la red llega como una emisión nueva. Con una
+    // lectura aparte (`checkConnectivity`) el diálogo podía quedar abierto sin
+    // que nada lo cerrara.
+    final status = await _currentStatus();
     if (!mounted || _navigated) return;
     if (status == ConnectivityStatus.unavailable) {
       ref.read(noConnectionDialogProvider.notifier).show();
@@ -57,6 +61,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       prefs: ref.read(userPreferencesProvider),
     );
     context.go(destination);
+  }
+
+  /// Último estado del stream. Se lee síncrono porque `_proceed` también corre
+  /// dentro de la notificación que acaba de cambiarlo, cuando `.future` aún
+  /// devuelve el valor anterior; solo se espera `.future` mientras carga.
+  /// Si el plugin falla no se bloquea el arranque: las llamadas al API ya
+  /// muestran sus propios errores de red.
+  Future<ConnectivityStatus> _currentStatus() async {
+    final current = ref.read(connectivityStatusProvider);
+    if (current.hasValue) return current.requireValue;
+    if (current.hasError) return ConnectivityStatus.available;
+    try {
+      return await ref.read(connectivityStatusProvider.future);
+    } catch (_) {
+      return ConnectivityStatus.available;
+    }
   }
 
   @override

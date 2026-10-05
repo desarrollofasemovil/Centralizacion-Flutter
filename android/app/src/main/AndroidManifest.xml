@@ -8,10 +8,17 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- enableOnBackInvokedCallback="false": con targetSdk 36 Android 16 activa
+         el "atrás" predictivo por defecto, y entonces Flutter solo reclama el
+         atrás si el Navigator puede hacer pop. En una ruta raíz el sistema
+         cerraría la app aunque esté visible el diálogo "sin conexión"
+         (GlobalStatusOverlay en lib/app.dart), que bloquea el atrás desde el
+         BackButtonDispatcher del Router. -->
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
