@@ -128,6 +128,9 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+          # Caché de Gradle (distribución + dependencias de Android): sin ella
+          # cada publicación las vuelve a descargar (varios minutos).
+          cache: gradle
 
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
@@ -242,12 +245,20 @@ jobs:
           whatsNewDirectory: ${{ runner.temp }}/whatsnew
 
       # El tag marca qué commit se publicó; las notas de la siguiente versión
-      # se calculan desde él.
+      # se calculan desde él. Es contabilidad, no parte de la publicación: la
+      # versión YA está en Play, así que un fallo aquí (tag existente, error de
+      # la API de GitHub) no debe dejar el run en rojo ni invitar a relanzarlo
+      # (la guarda lo bloquearía igual: el versionCode ya está gastado).
       - name: Etiquetar la versión publicada
         if: ${{ inputs.solo_compilar != true }}
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if gh release view "v${VERSION_FULL}" > /dev/null 2>&1; then
+            echo "::warning::El tag v${VERSION_FULL} ya existía; no se recrea."
+            exit 0
+          fi
           gh release create "v${VERSION_FULL}" \
             --target "$GITHUB_SHA" \
             --title "${VERSION_NAME} (${VERSION_CODE}) · pruebas internas" \

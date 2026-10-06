@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tramiapp_flutter/core/api/services/api_providers.dart';
@@ -39,12 +41,25 @@ class _FakeHistoryApi implements PaymentHistoryApiService {
   List<PaymentHistoryDTO> items;
   final Map<int, int> statusAfterSync = {};
 
+  /// Si existe, las lecturas posteriores a una sincronización esperan a que se
+  /// complete (red lenta).
+  Completer<void>? readAfterSyncGate;
+
+  /// Si existe, TODAS las lecturas esperan a que se complete.
+  Completer<void>? readGate;
+  bool _synced = false;
+
   @override
-  Future<PaymentHistoryListDTO> getHistoryPaymentByUser(int id) async =>
-      List.of(items);
+  Future<PaymentHistoryListDTO> getHistoryPaymentByUser(int id) async {
+    final snapshot = List.of(items);
+    if (readGate != null) await readGate!.future;
+    if (_synced && readAfterSyncGate != null) await readAfterSyncGate!.future;
+    return _synced ? List.of(items) : snapshot;
+  }
 
   @override
   Future<ValidationResponseDTO> syncPaymentStatus(int idHistory) async {
+    _synced = true;
     final next = statusAfterSync[idHistory];
     if (next != null) {
       items = [
@@ -104,8 +119,38 @@ void main() {
           .read(paymentProcessingNotifierProvider.notifier)
           .onCheckStatusClick();
       expect(navigate, isTrue);
+      await tester.pump();
       return spy;
     }
+
+    testWidgets(
+        'navega sin esperar la relectura; la reseña llega aunque la pantalla ya no exista',
+        (tester) async {
+      final api = _FakeHistoryApi([_payment(7, _pending)])
+        ..statusAfterSync[7] = _approved
+        ..readAfterSyncGate = Completer<void>();
+      final (:container, :spy) = _container(api);
+      final sub =
+          container.listen(paymentProcessingNotifierProvider, (_, _) {});
+      await tester.pump(const Duration(seconds: 31));
+
+      var navigated = false;
+      unawaited(
+        container
+            .read(paymentProcessingNotifierProvider.notifier)
+            .onCheckStatusClick()
+            .then((v) => navigated = v),
+      );
+      await tester.pump();
+      expect(navigated, isTrue, reason: 'no debe esperar la relectura');
+
+      sub.close(); // la pantalla se fue: el notifier autoDispose se libera
+      await tester.pump();
+      api.readAfterSyncGate!.complete();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(spy.moments, [ReviewTrigger.paymentApproved]);
+    });
 
     testWidgets('el último pago queda aprobado: se pide la reseña',
         (tester) async {
@@ -158,6 +203,24 @@ void main() {
       final api = _FakeHistoryApi([_payment(7, _approved)]);
 
       final spy = await sync(api, 7);
+
+      expect(spy.moments, isEmpty);
+    });
+
+    test('sincronizar mientras la lista se recarga no confunde un pago ya aprobado',
+        () async {
+      final api = _FakeHistoryApi([_payment(7, _approved)]);
+      final (:container, :spy) = _container(api);
+      container.listen(historyPayNotifierProvider, (_, _) {});
+      final notifier = container.read(historyPayNotifierProvider.notifier);
+      await notifier.fetchHistory();
+
+      api.readGate = Completer<void>();
+      final reload = notifier.fetchHistory(); // queda en loading
+      final syncing = notifier.syncPayment(7);
+      api.readGate!.complete();
+      await reload;
+      await syncing;
 
       expect(spy.moments, isEmpty);
     });

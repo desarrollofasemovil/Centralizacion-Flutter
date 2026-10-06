@@ -10,10 +10,15 @@ import 'local_reminder_scheduler.dart';
 /// aquí los recordatorios usan el id del servidor (`created.id`, y `+1000000`
 /// para la confirmación): `1` y `2` podían pisar un recordatorio real.
 ///
+/// Son **negativos** porque los de los recordatorios siempre son positivos, así
+/// que no chocan sea cual sea el id del servidor (Android y el plugin aceptan
+/// cualquier entero de 32 bits). Un rango alto fijo, como el `2000001` que se
+/// usó antes, coincidía con `id + 1000000` del recordatorio `1000001`.
+///
 /// Dos envíos seguidos del mismo tipo comparten id, así que el segundo
 /// reemplaza al primero (igual que en el Kotlin).
-const int kCourseNotificationId = 2000001;
-const int kVenueNotificationId = 2000002;
+const int kCourseNotificationId = -1;
+const int kVenueNotificationId = -2;
 
 class NotificationContent {
   const NotificationContent({

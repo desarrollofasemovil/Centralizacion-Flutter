@@ -8,6 +8,11 @@ import '../../../core/review/review_prompt_service.dart';
 import '../../auth/application/auth_providers.dart';
 
 class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
+  /// Última lista recibida. `fetchHistory` pone el estado en `loading` sin
+  /// valor previo, así que el estado no sirve para saber cómo estaba un pago
+  /// antes de sincronizarlo.
+  PaymentHistoryListDTO _lastLoaded = const [];
+
   @override
   AsyncValue<PaymentHistoryListDTO> build() {
     _fetchHistoryInitial();
@@ -31,6 +36,7 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
     state = const AsyncValue.loading();
     try {
       final list = await _apiService.getHistoryPaymentByUser(userId);
+      _lastLoaded = list;
       state = AsyncValue.data(list);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
@@ -72,10 +78,8 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
     }
   }
 
-  int? _statusOf(int idHistory) => state.value
-      ?.where((item) => item.id == idHistory)
-      .firstOrNull
-      ?.idStatusType;
+  int? _statusOf(int idHistory) =>
+      _lastLoaded.where((item) => item.id == idHistory).firstOrNull?.idStatusType;
 }
 
 final historyPayNotifierProvider =
