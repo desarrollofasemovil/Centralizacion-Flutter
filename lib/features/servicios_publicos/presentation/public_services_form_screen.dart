@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tramiapp_flutter/core/router/app_routes.dart';
 import '../application/public_services_form_notifier.dart';
 import 'servicios_publicos_theme.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 class PublicServicesFormScreen extends ConsumerStatefulWidget {
   const PublicServicesFormScreen({
@@ -157,15 +158,10 @@ class _PublicServicesFormScreenState extends ConsumerState<PublicServicesFormScr
     return Theme(
       data: activeTheme,
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
-          title: const Text(
-            'Resumen de cobro',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+        appBar: AppTopBar(
+          title: 'Resumen de cobro',
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onBack: () => context.pop(),
         ),
         body: state.isLoading
             ? const Center(child: CircularProgressIndicator())

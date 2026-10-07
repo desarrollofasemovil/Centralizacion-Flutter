@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/municipality_dto.dart';
 import '../../../core/utils/url_opener.dart';
+import '../../../core/widgets/app_top_bar.dart';
+import '../../../core/widgets/app_back_button.dart';
 
 class NewsScreen extends ConsumerWidget {
   const NewsScreen({required this.municipality, super.key});
@@ -26,10 +28,12 @@ class NewsScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Noticias locales'),
+      appBar: AppTopBar(
+        title: 'Noticias locales',
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
+        backStyle: AppBackButtonStyle.light,
+        onBack: () => Navigator.of(context).maybePop(),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),

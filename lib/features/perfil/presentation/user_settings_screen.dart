@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
-import '../../../core/widgets/app_back_button.dart';
 import '../../../core/theme/theme_mode_provider.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../application/user_settings_notifier.dart';
 import 'widgets/change_password_sheet.dart';
 import 'widgets/notifications_config_sheet.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 /// Pantalla de Configuración de usuario. Port de `UserSettingsScreen.kt`.
 ///
@@ -63,20 +63,10 @@ class UserSettingsScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppTopBar(
+        title: 'Configuración',
         backgroundColor: theme.colorScheme.surface,
-        elevation: 0,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: AppBackButton(onPressed: () => context.pop()),
-        ),
-        title: Text(
-          'Configuración',
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
+        onBack: () => context.pop(),
       ),
       body: SafeArea(
         top: false,

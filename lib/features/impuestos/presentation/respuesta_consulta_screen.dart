@@ -9,12 +9,12 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/models/validation_response_dto.dart';
 import '../../../core/municipality/municipality_repository.dart';
 import '../../../core/review/review_prompt_service.dart';
-import '../../../core/widgets/app_back_button.dart';
 import '../../../core/utils/url_opener.dart';
 import '../../../core/widgets/enter_transition.dart';
 import '../application/tax_results_notifier.dart';
 import '../domain/tax.dart';
 import 'widgets/tax_card.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 /// Puerto de `TaxResultsScreen` (RespuestaConsultaScreen.kt): lista de
 /// facturas encontradas con pago PSE, descarga y compartir de PDF.
@@ -157,21 +157,12 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
       },
       child: Scaffold(
         backgroundColor: scheme.surface,
-        appBar: AppBar(
+        appBar: AppTopBar(
+          title: 'Facturas Encontradas',
           backgroundColor: Colors.transparent,
-          elevation: 0,
-          automaticallyImplyLeading: false,
           centerTitle: true,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: 10),
-            child: Center(child: AppBackButton(onPressed: () => context.pop())),
-          ),
-          title: Text(
-            'Facturas Encontradas',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onBack: () => context.pop(),
         ),
         body: Stack(
           children: [

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../domain/barcode_parser.dart';
 import 'servicios_publicos_theme.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 class BarcodeInstructionsScreen extends StatefulWidget {
   const BarcodeInstructionsScreen({required this.municipalityId, super.key});
@@ -148,15 +149,10 @@ class _BarcodeInstructionsScreenState extends State<BarcodeInstructionsScreen> {
     return Theme(
       data: activeTheme,
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
-          title: const Text(
-            'Escanear factura',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+        appBar: AppTopBar(
+          title: 'Escanear factura',
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onBack: () => context.pop(),
         ),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 22),
