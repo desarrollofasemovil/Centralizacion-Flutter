@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/models/municipality_dto.dart';
+import '../../../core/utils/url_opener.dart';
 
 class NewsScreen extends ConsumerWidget {
   const NewsScreen({required this.municipality, super.key});
@@ -10,10 +10,8 @@ class NewsScreen extends ConsumerWidget {
   final MunicipalityDTO municipality;
 
   Future<void> _openNews(BuildContext context, String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    final toolbarColor = Theme.of(context).colorScheme.primary;
+    if (!await abrirUrl(url, toolbarColor: toolbarColor)) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se pudo abrir la página de noticias.')),

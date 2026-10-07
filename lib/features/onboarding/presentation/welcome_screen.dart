@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/url_opener.dart';
 
 import '../../../core/models/department.dart';
 import '../../../core/router/app_routes.dart';
@@ -398,16 +398,10 @@ class _Carousel extends StatelessWidget {
                   );
                 },
                 child: GestureDetector(
-                  onTap: () async {
-                    final url = item.clickUrl;
-                    if (url.isNotEmpty) {
-                      final uri = Uri.tryParse(url);
-                      if (uri != null) {
-                        await launchUrl(uri,
-                            mode: LaunchMode.externalApplication);
-                      }
-                    }
-                  },
+                  onTap: () => abrirUrl(
+                    item.clickUrl,
+                    toolbarColor: Theme.of(context).colorScheme.primary,
+                  ),
                   child: Card(
                     elevation: 5,
                     clipBehavior: Clip.antiAlias,

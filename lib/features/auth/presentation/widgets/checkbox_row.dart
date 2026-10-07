@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/utils/url_opener.dart';
 
 /// Checkbox con texto y enlace — puerto de `CheckboxRow`: checkbox + texto donde
 /// [linkText] es un enlace subrayado que abre [url] en el navegador. Toda la fila
@@ -45,12 +45,7 @@ class CheckboxRow extends StatelessWidget {
             decoration: TextDecoration.underline,
           ),
           recognizer: TapGestureRecognizer()
-            ..onTap = () async {
-              final uri = Uri.tryParse(url);
-              if (uri != null) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            },
+            ..onTap = () => abrirUrl(url, toolbarColor: linkColor),
         ),
       );
       spans.add(TextSpan(text: text.substring(start + linkText.length)));
