@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,8 +24,7 @@ class RemindersSection extends ConsumerStatefulWidget {
 }
 
 class _RemindersSectionState extends ConsumerState<RemindersSection> {
-  final PageController _pageController =
-      PageController(viewportFraction: 0.92);
+  final PageController _pageController = PageController(viewportFraction: 0.92);
   int _currentPage = 0;
 
   @override
@@ -133,55 +134,82 @@ class _RemindersSectionState extends ConsumerState<RemindersSection> {
           if (reminders.isNotEmpty) ...[
             SizedBox(
               height: 160,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: reminders.length,
-                onPageChanged: (i) => setState(() => _currentPage = i),
-                itemBuilder: (context, index) {
-                  final reminder = reminders[index];
-                  final isExpired = state.expiredReminders
-                      .any((r) => r.id == reminder.id);
-                  final isActivated =
-                      state.activatedReminders.contains(reminder.id);
-                  final hasWarning =
-                      state.remindersToDeleteWarning.contains(reminder.id);
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  children: [
+                    PageView.builder(
+                      controller: _pageController,
+                      itemCount: reminders.length,
+                      onPageChanged: (i) => setState(() => _currentPage = i),
+                      itemBuilder: (context, index) {
+                        final reminder = reminders[index];
+                        final isExpired = state.expiredReminders.any(
+                          (r) => r.id == reminder.id,
+                        );
+                        final isActivated = state.activatedReminders.contains(
+                          reminder.id,
+                        );
+                        final hasWarning = state.remindersToDeleteWarning
+                            .contains(reminder.id);
 
-                  return AnimatedBuilder(
-                    animation: _pageController,
-                    builder: (context, child) {
-                      double page = _currentPage.toDouble();
-                      if (_pageController.hasClients &&
-                          _pageController.position.haveDimensions) {
-                        page = _pageController.page ?? page;
-                      }
-                      final delta = (index - page).abs();
-                      final scale = 1 - (delta * 0.1).clamp(0.0, 0.1);
-                      final opacity = 1 - (delta * 0.3).clamp(0.0, 0.3);
-                      return Opacity(
-                        opacity: opacity,
-                        child: Transform.scale(scale: scale, child: child),
-                      );
-                    },
-                    child: SwipeUpDismissBox(
-                      onDismiss: () => _confirmDelete(reminder.id!),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 4),
-                        child: _ReminderCard(
-                          reminder: reminder,
-                          isExpired: isExpired,
-                          isActivated: isActivated,
-                          isActiveSendEmail: state.isActiveSendEmail,
-                          showAutoDeleteWarning: hasWarning,
-                          onTap: () => ref
-                              .read(remindersNotifierProvider.notifier)
-                              .onReminderClicked(reminder),
-                          onDelete: () => _confirmDelete(reminder.id!),
-                        ),
-                      ),
+                        return AnimatedBuilder(
+                          animation: _pageController,
+                          builder: (context, child) {
+                            double page = _currentPage.toDouble();
+                            if (_pageController.hasClients &&
+                                _pageController.position.haveDimensions) {
+                              page = _pageController.page ?? page;
+                            }
+                            final pageOffset = page - index;
+                            final delta = pageOffset.abs();
+                            final scale = 1 - (delta * 0.1).clamp(0.0, 0.1);
+                            final opacity = 1 - (delta * 0.3).clamp(0.0, 0.3);
+                            // graphicsLayer { rotationY = pageOffset * 10f }
+                            return Opacity(
+                              opacity: opacity,
+                              child: Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.identity()
+                                  ..setEntry(3, 2, 0.001)
+                                  ..rotateY(pageOffset * 10 * math.pi / 180)
+                                  ..scaleByDouble(scale, scale, 1, 1),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: SwipeUpDismissBox(
+                            onDismiss: () => _confirmDelete(reminder.id!),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 4,
+                              ),
+                              child: _ReminderCard(
+                                reminder: reminder,
+                                isExpired: isExpired,
+                                isActivated: isActivated,
+                                isActiveSendEmail: state.isActiveSendEmail,
+                                showAutoDeleteWarning: hasWarning,
+                                onTap: () => ref
+                                    .read(remindersNotifierProvider.notifier)
+                                    .onReminderClicked(reminder),
+                                onDelete: () => _confirmDelete(reminder.id!),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
+                    // Flechas de ayuda (ScrollIndicatorLeft/Right).
+                    if (reminders.length > 1) ...[
+                      if (_currentPage > 0)
+                        const _ScrollIndicator(direction: _ArrowSide.left),
+                      if (_currentPage < reminders.length - 1)
+                        const _ScrollIndicator(direction: _ArrowSide.right),
+                    ],
+                  ],
+                ),
               ),
             ),
             if (reminders.length > 1)
@@ -224,8 +252,9 @@ class _ReminderCard extends StatelessWidget {
     final nombreAlcaldia = (muniName != null && muniName.trim().isNotEmpty)
         ? 'Alcaldía de $muniName'
         : 'Alcaldía';
-    final timeText =
-        reminder.reminderTime != null ? 'a las ${reminder.reminderTime}' : '';
+    final timeText = reminder.reminderTime != null
+        ? 'a las ${reminder.reminderTime}'
+        : '';
 
     final onVariant = theme.colorScheme.onSurfaceVariant;
 
@@ -254,7 +283,9 @@ class _ReminderCard extends StatelessWidget {
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 25, vertical: 10),
+                      horizontal: 25,
+                      vertical: 10,
+                    ),
                     child: Row(
                       children: [
                         Container(
@@ -264,8 +295,9 @@ class _ReminderCard extends StatelessWidget {
                             shape: BoxShape.circle,
                             color: isExpired
                                 ? AppColors.gray600
-                                : theme.colorScheme.primary
-                                    .withValues(alpha: 0.15),
+                                : theme.colorScheme.primary.withValues(
+                                    alpha: 0.15,
+                                  ),
                           ),
                           child: Icon(
                             isExpired
@@ -301,27 +333,31 @@ class _ReminderCard extends StatelessWidget {
                                   nav?.procedures.name ?? 'Trámite',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall
-                                      ?.copyWith(color: onVariant),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: onVariant,
+                                  ),
                                 ),
                               Text(
                                 nombreAlcaldia,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodyMedium
-                                    ?.copyWith(color: onVariant),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: onVariant,
+                                ),
                               ),
                               Text(
                                 'Vencimiento: ${reminder.vigenciaDate ?? 'N/A'}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodyMedium
-                                    ?.copyWith(color: onVariant),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: onVariant,
+                                ),
                               ),
                               Text(
                                 'Hora: $timeText',
-                                style: theme.textTheme.bodyMedium
-                                    ?.copyWith(color: onVariant),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: onVariant,
+                                ),
                               ),
                               if (isActiveSendEmail)
                                 Text(
@@ -346,8 +382,9 @@ class _ReminderCard extends StatelessWidget {
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: theme.colorScheme.error),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
                       ),
                     ),
                 ],
@@ -398,7 +435,9 @@ class _PagerDots extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: activeIndex == i ? AppColors.loginBlue : Colors.grey.shade300,
+                color: activeIndex == i
+                    ? AppColors.loginBlue
+                    : Colors.grey.shade300,
               ),
             ),
         ],
@@ -426,6 +465,65 @@ class _ErrorOrEmptyBox extends StatelessWidget {
       child: Text(
         text,
         style: theme.textTheme.bodyMedium?.copyWith(color: border),
+      ),
+    );
+  }
+}
+
+enum _ArrowSide { left, right }
+
+/// Flecha que rebota 5 dp en bucle (600 ms lineal, ida y vuelta) en el borde
+/// del carrusel. Port de `ScrollIndicatorLeft` / `ScrollIndicatorRight`.
+class _ScrollIndicator extends StatefulWidget {
+  const _ScrollIndicator({required this.direction});
+
+  final _ArrowSide direction;
+
+  @override
+  State<_ScrollIndicator> createState() => _ScrollIndicatorState();
+}
+
+class _ScrollIndicatorState extends State<_ScrollIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 600),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLeft = widget.direction == _ArrowSide.left;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final bob = 5 * _controller.value;
+        return Positioned(
+          // Izquierda: offset x = 0..5. Derecha: offset x = -10..-5.
+          left: isLeft ? bob : null,
+          right: isLeft ? null : 10 - bob,
+          top: 0,
+          bottom: 0,
+          child: Center(child: child),
+        );
+      },
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black.withValues(alpha: 0.3),
+        ),
+        child: Icon(
+          isLeft ? Icons.keyboard_arrow_left : Icons.keyboard_arrow_right,
+          size: 24,
+          color: Colors.white.withValues(alpha: 0.7),
+        ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../flavor/flavor_config.dart';
 import '../storage/user_preferences.dart';
 import '../municipality/municipality_repository.dart';
 import 'app_routes.dart';
+import 'app_transitions.dart';
 import 'placeholders.dart';
 
 import '../../features/onboarding/presentation/welcome_screen.dart';
@@ -84,16 +85,27 @@ String computeStartDestination({
   return AppRoutes.welcome;
 }
 
+/// `GoRoute` con las transiciones de Compose (ver [appPage]).
+GoRoute _route({
+  required String path,
+  required Widget Function(BuildContext, GoRouterState) builder,
+  NavTransition enter = NavTransition.standard,
+  NavTransition exit = NavTransition.standard,
+}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) =>
+        appPage(state, builder(context, state), enter: enter, exit: exit),
+  );
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
     routes: [
       GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
-      GoRoute(
-        path: AppRoutes.welcome,
-        builder: (_, _) => const WelcomeScreen(),
-      ),
-      GoRoute(
+      _route(path: AppRoutes.welcome, builder: (_, _) => const WelcomeScreen()),
+      _route(
         path: AppRoutes.selectMunicipality,
         builder: (context, state) {
           final departmentId =
@@ -101,12 +113,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           return SelectMunicipalityScreen(departmentId: departmentId);
         },
       ),
-      GoRoute(path: AppRoutes.signup, builder: (_, _) => const SignUpScreen()),
-      GoRoute(
+      _route(
+        path: AppRoutes.signup,
+        enter: NavTransition.parallax,
+        exit: NavTransition.parallax,
+        builder: (_, _) => const SignUpScreen(),
+      ),
+      _route(
         path: AppRoutes.recoverPassword,
         builder: (_, _) => const RecoveryPasswordScreen(),
       ),
-      GoRoute(
+      _route(
         path: AppRoutes.changePasswordReset,
         builder: (_, _) => const ChangePasswordResetScreen(),
       ),
@@ -116,14 +133,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           return AlcaldiasScope(municipalityId: id, child: child);
         },
         routes: [
-          GoRoute(
+          _route(
             path: AppRoutes.municipality,
+            exit: NavTransition.parallax,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return _MainScreenContainer(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.news,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
@@ -131,21 +149,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           // PQRD sub-routes
-          GoRoute(
+          _route(
             path: AppRoutes.pqrd,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return PqrdsChoiceScreen(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: '/municipality/:id/pqrd/identificada',
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return PqrdIdentificacionScreen(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: '/municipality/:id/pqrd/anonima',
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
@@ -153,8 +171,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           // Impuestos sub-routes
-          GoRoute(
+          _route(
             path: AppRoutes.taxes,
+            enter: NavTransition.parallax,
+            exit: NavTransition.parallax,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               final extra = state.extra as Map<String, dynamic>?;
@@ -172,8 +192,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               );
             },
           ),
-          GoRoute(
+          _route(
             path: '/municipality/:id/taxes/results',
+            enter: NavTransition.parallax,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               final extra = state.extra as Map<String, dynamic>?;
@@ -187,7 +208,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           // Certificados sub-route
-          GoRoute(
+          _route(
             path: AppRoutes.certificados,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
@@ -205,36 +226,41 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           // Servicios Publicos sub-routes
-          GoRoute(
+          _route(
             path: AppRoutes.serviciosPublicosMenu,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return PublicServicesMenuScreen(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.serviciosPublicosSelectEntity,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return SelectEntityScreen(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.serviciosPublicosInstructions,
+            enter: NavTransition.parallax,
+            exit: NavTransition.parallax,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return BarcodeInstructionsScreen(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.serviciosPublicosScanner,
+            enter: NavTransition.parallax,
+            exit: NavTransition.parallax,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return ScannerScreen(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.serviciosPublicosForm,
+            enter: NavTransition.parallax,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               final factura = state.pathParameters['factura'] ?? '';
@@ -249,14 +275,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               );
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.serviciosPublicosHistory,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return PublicServicesHistoryScreen(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.serviciosPublicosBillDetails,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
@@ -268,7 +294,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           // Pagos sub-routes
-          GoRoute(
+          _route(
             path: AppRoutes.pagosPsv,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
@@ -289,8 +315,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               );
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.pagosProcessing,
+            enter: NavTransition.parallax,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               final extra = state.extra as Map<String, dynamic>?;
@@ -301,14 +328,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               );
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.pagosHistory,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return HistoryPayScreen(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.cursos,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
@@ -323,7 +350,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               );
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.venues,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
@@ -338,7 +365,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               );
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.help,
             builder: (context, state) {
               final extra = state.extra as Map<String, dynamic>?;
@@ -348,14 +375,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               );
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.settings,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return UserSettingsScreen(municipalityId: id);
             },
           ),
-          GoRoute(
+          _route(
             path: AppRoutes.editProfile,
             builder: (context, state) => const EditProfileScreen(),
           ),

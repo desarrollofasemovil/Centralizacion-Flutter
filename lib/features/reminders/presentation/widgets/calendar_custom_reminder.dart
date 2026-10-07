@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/slide_switcher.dart';
+
 /// Calendario mensual embebido con navegación por deslizamiento. Port de
 /// `ui/components/CalendarCustomReminder.kt`.
 class CalendarCustomReminder extends StatefulWidget {
@@ -18,8 +20,18 @@ class CalendarCustomReminder extends StatefulWidget {
 
 class _CalendarCustomReminderState extends State<CalendarCustomReminder> {
   static const _months = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
   ];
 
   late DateTime _viewMonth; // primer día del mes visible
@@ -65,8 +77,9 @@ class _CalendarCustomReminderState extends State<CalendarCustomReminder> {
                 ),
                 Text(
                   '${_months[_viewMonth.month - 1]} ${_viewMonth.year}',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 IconButton(
                   onPressed: () => _changeMonth(1),
@@ -75,10 +88,15 @@ class _CalendarCustomReminderState extends State<CalendarCustomReminder> {
               ],
             ),
             const SizedBox(height: 16),
-            _CalendarGrid(
-              yearMonth: _viewMonth,
-              selectedDate: widget.selectedDate,
-              onDateSelected: widget.onDateSelected,
+            // AnimatedContent "calendar_month_animation" (solo slide).
+            SlideSwitcher(
+              index: _viewMonth.year * 12 + _viewMonth.month,
+              fade: false,
+              child: _CalendarGrid(
+                yearMonth: _viewMonth,
+                selectedDate: widget.selectedDate,
+                onDateSelected: widget.onDateSelected,
+              ),
             ),
           ],
         ),
@@ -120,8 +138,9 @@ class _CalendarGrid extends StatelessWidget {
                   child: Text(
                     d,
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: theme.colorScheme.onSecondary),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSecondary,
+                    ),
                   ),
                 ),
             ],
@@ -132,8 +151,11 @@ class _CalendarGrid extends StatelessWidget {
               children: [
                 for (int col = 0; col < 7; col++)
                   Expanded(
-                    child: _dayCell(context, row * 7 + col - offset + 1,
-                        daysInMonth),
+                    child: _dayCell(
+                      context,
+                      row * 7 + col - offset + 1,
+                      daysInMonth,
+                    ),
                   ),
               ],
             ),
@@ -148,7 +170,8 @@ class _CalendarGrid extends StatelessWidget {
     }
     final theme = Theme.of(context);
     final date = DateTime(yearMonth.year, yearMonth.month, dayValue);
-    final isSelected = date.year == selectedDate.year &&
+    final isSelected =
+        date.year == selectedDate.year &&
         date.month == selectedDate.month &&
         date.day == selectedDate.day;
 
@@ -161,14 +184,15 @@ class _CalendarGrid extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : Colors.transparent,
             ),
             alignment: Alignment.center,
             child: Text(
               '$dayValue',
               style: theme.textTheme.bodySmall?.copyWith(
-                color:
-                    isSelected ? Colors.white : theme.colorScheme.onSurface,
+                color: isSelected ? Colors.white : theme.colorScheme.onSurface,
               ),
             ),
           ),

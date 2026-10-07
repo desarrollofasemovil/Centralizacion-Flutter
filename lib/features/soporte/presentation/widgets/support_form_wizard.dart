@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/widgets/slide_switcher.dart';
 
 import '../../application/help_notifier.dart';
 import '../../domain/help_state.dart';
@@ -20,28 +21,13 @@ class SupportFormWizard extends ConsumerWidget {
       helpNotifierProvider(municipality).select((s) => s.formState),
     );
     final notifier = ref.read(helpNotifierProvider(municipality).notifier);
-    final forward = form.step == FormStep.fillDetails;
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      transitionBuilder: (child, animation) {
-        final begin =
-            forward ? const Offset(1, 0) : const Offset(-1, 0);
-        return SlideTransition(
-          position: Tween(begin: begin, end: Offset.zero).animate(animation),
-          child: FadeTransition(opacity: animation, child: child),
-        );
-      },
+    // AnimatedContent: slideIn/Out horizontal + fade según la dirección.
+    return SlideSwitcher(
+      index: form.step == FormStep.fillDetails ? 1 : 0,
       child: form.step == FormStep.selectCategory
-          ? _CategorySelectionStep(
-              key: const ValueKey('select_category'),
-              onCategorySelected: notifier.selectCategory,
-            )
-          : _DetailsStep(
-              key: const ValueKey('fill_details'),
-              form: form,
-              notifier: notifier,
-            ),
+          ? _CategorySelectionStep(onCategorySelected: notifier.selectCategory)
+          : _DetailsStep(form: form, notifier: notifier),
     );
   }
 }
@@ -50,7 +36,7 @@ class SupportFormWizard extends ConsumerWidget {
 // PASO 1: Selección de categoría
 // =============================================================================
 class _CategorySelectionStep extends StatelessWidget {
-  const _CategorySelectionStep({super.key, required this.onCategorySelected});
+  const _CategorySelectionStep({required this.onCategorySelected});
 
   final ValueChanged<String> onCategorySelected;
 
@@ -62,14 +48,16 @@ class _CategorySelectionStep extends StatelessWidget {
       children: [
         Text(
           '¿En qué podemos ayudarte?',
-          style: theme.textTheme.titleMedium
-              ?.copyWith(color: theme.colorScheme.onSurface),
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 12),
         Text(
           'Selecciona el tipo de solicitud para que podamos atenderte más rápido.',
-          style: theme.textTheme.bodyMedium
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 20),
         _CategoryOptionCard(
@@ -143,19 +131,27 @@ class _CategoryOptionCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                            color: theme.colorScheme.onSurface,
-                            fontWeight: FontWeight.w600)),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(subtitle,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right,
-                  color: theme.colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),
@@ -168,23 +164,19 @@ class _CategoryOptionCard extends StatelessWidget {
 // PASO 2: Detalles del problema (varía según categoría)
 // =============================================================================
 class _DetailsStep extends StatelessWidget {
-  const _DetailsStep({
-    super.key,
-    required this.form,
-    required this.notifier,
-  });
+  const _DetailsStep({required this.form, required this.notifier});
 
   final SupportFormState form;
   final HelpNotifier notifier;
 
   static String _categoryTitle(String? code) => switch (code) {
-        'PAYMENT_ISSUE' => 'Problema con un pago',
-        'PAYMENT_INQUIRY' => 'Duda sobre un valor',
-        'TECHNICAL_ERROR' => 'Error técnico',
-        'INFORMATION_REQUEST' => 'Solicitud de información',
-        'OTHER' => 'Otra solicitud',
-        _ => 'Solicitud de soporte',
-      };
+    'PAYMENT_ISSUE' => 'Problema con un pago',
+    'PAYMENT_INQUIRY' => 'Duda sobre un valor',
+    'TECHNICAL_ERROR' => 'Error técnico',
+    'INFORMATION_REQUEST' => 'Solicitud de información',
+    'OTHER' => 'Otra solicitud',
+    _ => 'Solicitud de soporte',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -204,8 +196,9 @@ class _DetailsStep extends StatelessWidget {
             Expanded(
               child: Text(
                 _categoryTitle(form.selectedCategoryCode),
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(color: theme.colorScheme.onSurface),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
             ),
           ],
@@ -251,7 +244,8 @@ class _DetailsStep extends StatelessWidget {
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(50),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: form.isSubmitting
                 ? Row(
@@ -263,7 +257,8 @@ class _DetailsStep extends StatelessWidget {
                         child: CircularProgressIndicator.adaptive(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation(
-                              theme.colorScheme.onPrimary),
+                            theme.colorScheme.onPrimary,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -287,13 +282,22 @@ class _CategoryFields extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (data) {
-      final PaymentIssueData d => _PaymentIssueFields(data: d, notifier: notifier),
-      final PaymentInquiryData d =>
-        _PaymentInquiryFields(data: d, notifier: notifier),
-      final TechnicalErrorData d =>
-        _TechnicalErrorFields(data: d, notifier: notifier),
-      final InformationRequestData d =>
-        _InformationRequestFields(data: d, notifier: notifier),
+      final PaymentIssueData d => _PaymentIssueFields(
+        data: d,
+        notifier: notifier,
+      ),
+      final PaymentInquiryData d => _PaymentInquiryFields(
+        data: d,
+        notifier: notifier,
+      ),
+      final TechnicalErrorData d => _TechnicalErrorFields(
+        data: d,
+        notifier: notifier,
+      ),
+      final InformationRequestData d => _InformationRequestFields(
+        data: d,
+        notifier: notifier,
+      ),
       OtherCategory() => const SizedBox.shrink(),
       EmptyCategory() => const SizedBox.shrink(),
     };
@@ -551,8 +555,9 @@ class _SupportTextFieldState extends State<_SupportTextField> {
       enabled: widget.enabled,
       minLines: widget.minLines,
       maxLines: widget.maxLines,
-      textInputAction:
-          widget.maxLines > 1 ? TextInputAction.newline : TextInputAction.next,
+      textInputAction: widget.maxLines > 1
+          ? TextInputAction.newline
+          : TextInputAction.next,
       style: theme.textTheme.bodyMedium,
       onChanged: widget.onChanged,
       decoration: InputDecoration(

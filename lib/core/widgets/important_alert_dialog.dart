@@ -103,12 +103,29 @@ class ImportantAlertDialog extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(fontSize: 18),
                 ),
-                if (showProgressBar) ...[
-                  const SizedBox(height: 24),
-                  CircularProgressIndicator(color: scheme.primary),
-                  const SizedBox(height: 10),
-                  Text('redirigiendo...', style: theme.textTheme.bodyMedium),
-                ],
+                // AnimatedVisibility(visible = showProgressBar): fade + expand.
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.fastOutSlowIn,
+                  alignment: Alignment.topCenter,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: !showProgressBar
+                        ? const SizedBox(width: double.infinity)
+                        : Column(
+                            key: const ValueKey('progress'),
+                            children: [
+                              const SizedBox(height: 24),
+                              CircularProgressIndicator(color: scheme.primary),
+                              const SizedBox(height: 10),
+                              Text(
+                                'redirigiendo...',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
                 if (onConfirmRequest != null) ...[
                   const SizedBox(height: 24),
                   SizedBox(
