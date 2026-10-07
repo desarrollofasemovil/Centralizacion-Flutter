@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:tramiapp_flutter/core/widgets/slide_switcher.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,8 +42,7 @@ class _PqrdIdentificacionScreenState
   final _formKey2 = GlobalKey<FormState>();
   final _formKey3 = GlobalKey<FormState>();
 
-  PqrdFormStateNotifier get _form =>
-      ref.read(pqrdFormStateProvider.notifier);
+  PqrdFormStateNotifier get _form => ref.read(pqrdFormStateProvider.notifier);
 
   void _update(PqrdFormState Function(PqrdFormState) updater) =>
       _form.updateField(updater);
@@ -52,17 +53,28 @@ class _PqrdIdentificacionScreenState
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const [
-          'xls', 'xlsx', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'pdf', 'rar', 'zip',
+          'xls',
+          'xlsx',
+          'doc',
+          'docx',
+          'jpg',
+          'jpeg',
+          'png',
+          'pdf',
+          'rar',
+          'zip',
         ],
       );
       if (result != null && result.files.single.path != null) {
         final file = File(result.files.single.path!);
         final bytes = await file.readAsBytes();
-        _update((s) => s.copyWith(
-              nombreArchivo: result.files.single.name,
-              tipoArchivo: result.files.single.extension,
-              contenidoArchivoBase64: base64Encode(bytes),
-            ));
+        _update(
+          (s) => s.copyWith(
+            nombreArchivo: result.files.single.name,
+            tipoArchivo: result.files.single.extension,
+            contenidoArchivoBase64: base64Encode(bytes),
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;
@@ -73,12 +85,12 @@ class _PqrdIdentificacionScreenState
   }
 
   void _removeFile() => _update(
-        (s) => s.copyWith(
-          nombreArchivo: null,
-          tipoArchivo: null,
-          contenidoArchivoBase64: null,
-        ),
-      );
+    (s) => s.copyWith(
+      nombreArchivo: null,
+      tipoArchivo: null,
+      contenidoArchivoBase64: null,
+    ),
+  );
 
   // ----------------------------------------------------------------- navegación
   void _next() {
@@ -106,11 +118,13 @@ class _PqrdIdentificacionScreenState
           final notifier = ref.read(pqrdFormStateProvider.notifier);
           return ConfirmationPoliciesDialog(
             aceptaTratamientoDatos: form.aceptaTratamientoDatos,
-            onAceptaTratamientoDatosChange: (v) =>
-                notifier.updateField((s) => s.copyWith(aceptaTratamientoDatos: v)),
+            onAceptaTratamientoDatosChange: (v) => notifier.updateField(
+              (s) => s.copyWith(aceptaTratamientoDatos: v),
+            ),
             aceptaCondicionesUso: form.aceptaCondicionesUso,
-            onAceptaCondicionesUsoChange: (v) =>
-                notifier.updateField((s) => s.copyWith(aceptaCondicionesUso: v)),
+            onAceptaCondicionesUsoChange: (v) => notifier.updateField(
+              (s) => s.copyWith(aceptaCondicionesUso: v),
+            ),
             onDismiss: () => Navigator.pop(ctx),
             onConfirm: () {
               Navigator.pop(ctx);
@@ -187,9 +201,15 @@ class _PqrdIdentificacionScreenState
                     child: StepIndicator(currentStep: _currentStep),
                   ),
                   const SizedBox(height: 25),
-                  if (_currentStep == 1) _buildStep1(dropdowns),
-                  if (_currentStep == 2) _buildStep2(dropdowns),
-                  if (_currentStep == 3) _buildStep3(dropdowns),
+                  // AnimatedContent "StepAnimation" (slide + fade).
+                  SlideSwitcher(
+                    index: _currentStep,
+                    child: switch (_currentStep) {
+                      1 => _buildStep1(dropdowns),
+                      2 => _buildStep2(dropdowns),
+                      _ => _buildStep3(dropdowns),
+                    },
+                  ),
                   const SizedBox(height: 16),
                   _buttons(munDto.entityCode),
                   const SizedBox(height: 12),
@@ -204,23 +224,23 @@ class _PqrdIdentificacionScreenState
 
   // ------------------------------------------------------------------- widgets
   Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSecondary,
-              ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      textAlign: TextAlign.center,
+      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.onSecondary,
+      ),
+    ),
+  );
 
   InputDecoration _fieldDeco(String label) {
     final scheme = Theme.of(context).colorScheme;
     OutlineInputBorder b(Color c, [double w = 1]) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: c, width: w),
-        );
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: c, width: w),
+    );
     return InputDecoration(
       labelText: label,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -239,29 +259,28 @@ class _PqrdIdentificacionScreenState
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     int maxLines = 1,
-  }) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: TextFormField(
-          initialValue: initial,
-          onChanged: onChanged,
-          validator: validator,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          decoration: _fieldDeco(label),
-        ),
-      );
+  }) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: TextFormField(
+      initialValue: initial,
+      onChanged: onChanged,
+      validator: validator,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: _fieldDeco(label),
+    ),
+  );
 
   String? _required(String? v, String msg) =>
       (v == null || v.trim().isEmpty) ? msg : null;
 
   Widget _obligatoriosHint() => Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(
-          'Los campos con * son obligatorios',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      );
+    padding: const EdgeInsets.only(top: 4),
+    child: Text(
+      'Los campos con * son obligatorios',
+      style: Theme.of(context).textTheme.bodySmall,
+    ),
+  );
 
   // --------------------------------------------------------------------- paso 1
   Widget _buildStep1(PqrdDropdownOptionsState d) {
@@ -278,7 +297,8 @@ class _PqrdIdentificacionScreenState
             items: d.secretarias,
             itemLabel: (s) => s.secretaria,
             onChanged: (v) => _update((s) => s.copyWith(secretaria: v)),
-            validator: (v) => v == null ? 'Debe seleccionar una secretaría' : null,
+            validator: (v) =>
+                v == null ? 'Debe seleccionar una secretaría' : null,
           ),
           PqrdDropdown(
             label: 'Asunto de interés*',
@@ -294,7 +314,8 @@ class _PqrdIdentificacionScreenState
             value: form.clasificacionSolicitud,
             items: d.clasificacionesSolicitud,
             itemLabel: (s) => s.descripcion,
-            onChanged: (v) => _update((s) => s.copyWith(clasificacionSolicitud: v)),
+            onChanged: (v) =>
+                _update((s) => s.copyWith(clasificacionSolicitud: v)),
             validator: (v) =>
                 v == null ? 'Debe seleccionar una clasificación' : null,
           ),
@@ -312,7 +333,8 @@ class _PqrdIdentificacionScreenState
             value: form.atencionPreferencial,
             items: d.atencionesPreferenciales,
             itemLabel: (s) => s.descripcion,
-            onChanged: (v) => _update((s) => s.copyWith(atencionPreferencial: v)),
+            onChanged: (v) =>
+                _update((s) => s.copyWith(atencionPreferencial: v)),
             validator: (v) =>
                 v == null ? 'Debe seleccionar una atención preferencial' : null,
           ),
@@ -346,14 +368,16 @@ class _PqrdIdentificacionScreenState
             items: d.tiposDocumento,
             itemLabel: (s) => s.descripcion,
             onChanged: (v) => _update((s) => s.copyWith(tipoDocumento: v)),
-            validator: (v) => v == null ? 'Seleccione un tipo de documento' : null,
+            validator: (v) =>
+                v == null ? 'Seleccione un tipo de documento' : null,
           ),
           _field(
             label: 'Identificación*',
             initial: form.identificacion,
             keyboardType: TextInputType.number,
             onChanged: (v) => _update((s) => s.copyWith(identificacion: v)),
-            validator: (v) => _required(v, 'Por favor, introduce un documento.'),
+            validator: (v) =>
+                _required(v, 'Por favor, introduce un documento.'),
           ),
           _field(
             label: 'Primer nombre*',
@@ -483,7 +507,8 @@ class _PqrdIdentificacionScreenState
                     .loadCiudades(v.id);
               }
             },
-            validator: (v) => v == null ? 'Debe seleccionar un departamento.' : null,
+            validator: (v) =>
+                v == null ? 'Debe seleccionar un departamento.' : null,
           ),
           Stack(
             alignment: Alignment.centerRight,
@@ -497,7 +522,8 @@ class _PqrdIdentificacionScreenState
                 itemLabel: (s) => s.nombreCiudad,
                 enabled: form.departamento != null && !d.isLoadingCiudades,
                 onChanged: (v) => _update((s) => s.copyWith(ciudad: v)),
-                validator: (v) => v == null ? 'Debe seleccionar una ciudad.' : null,
+                validator: (v) =>
+                    v == null ? 'Debe seleccionar una ciudad.' : null,
               ),
               if (d.isLoadingCiudades)
                 const Padding(
@@ -514,7 +540,8 @@ class _PqrdIdentificacionScreenState
             label: 'Razón social*',
             initial: form.razonSocial,
             onChanged: (v) => _update((s) => s.copyWith(razonSocial: v)),
-            validator: (v) => _required(v, 'La razón social no puede estar vacía.'),
+            validator: (v) =>
+                _required(v, 'La razón social no puede estar vacía.'),
           ),
           _field(
             label: 'Correo electrónico*',
@@ -525,7 +552,9 @@ class _PqrdIdentificacionScreenState
               if (v == null || v.trim().isEmpty) {
                 return 'Ingrese un correo electrónico válido.';
               }
-              final ok = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$').hasMatch(v.trim());
+              final ok = RegExp(
+                r'^[\w.+-]+@[\w-]+\.[\w.-]+$',
+              ).hasMatch(v.trim());
               return ok ? null : 'Ingrese un correo electrónico válido.';
             },
           ),
@@ -551,7 +580,8 @@ class _PqrdIdentificacionScreenState
             initial: form.descripcion,
             maxLines: 5,
             onChanged: (v) => _update((s) => s.copyWith(descripcion: v)),
-            validator: (v) => _required(v, 'La descripción no puede estar vacía.'),
+            validator: (v) =>
+                _required(v, 'La descripción no puede estar vacía.'),
           ),
           const SizedBox(height: 12),
           _fileAttach(form),
@@ -575,8 +605,10 @@ class _PqrdIdentificacionScreenState
                 child: const Icon(Icons.attach_file),
               ),
               const SizedBox(width: 8),
-              Text('Adjuntar documentos',
-                  style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                'Adjuntar documentos',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -589,8 +621,10 @@ class _PqrdIdentificacionScreenState
                 color: scheme.surface,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text('Seleccionar documentos',
-                  style: Theme.of(context).textTheme.bodyMedium),
+              child: Text(
+                'Seleccionar documentos',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
           ),
         ],

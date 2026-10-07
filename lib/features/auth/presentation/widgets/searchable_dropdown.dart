@@ -109,45 +109,55 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
             ),
           ),
         ),
-        if (_expanded && filtered.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            constraints: const BoxConstraints(maxHeight: 180),
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: scheme.outline),
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              itemCount: filtered.length,
-              itemBuilder: (context, i) {
-                final item = filtered[i];
-                return ListTile(
-                  dense: true,
-                  title: Text(
-                    widget.itemLabel(item),
-                    style: Theme.of(context).textTheme.bodyMedium,
+        // fadeIn(300) + expandVertically(300) / fadeOut + shrinkVertically.
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.fastOutSlowIn,
+          alignment: Alignment.topCenter,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: !(_expanded && filtered.isNotEmpty)
+                ? const SizedBox(width: double.infinity)
+                : Container(
+                    key: const ValueKey('options'),
+                    margin: const EdgeInsets.only(top: 4),
+                    constraints: const BoxConstraints(maxHeight: 180),
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: scheme.outline),
+                    ),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: filtered.length,
+                      itemBuilder: (context, i) {
+                        final item = filtered[i];
+                        return ListTile(
+                          dense: true,
+                          title: Text(
+                            widget.itemLabel(item),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          onTap: () {
+                            widget.controller.text = widget.itemLabel(item);
+                            _focus.unfocus();
+                            widget.onSelected(item);
+                          },
+                        );
+                      },
+                    ),
                   ),
-                  onTap: () {
-                    widget.controller.text = widget.itemLabel(item);
-                    _focus.unfocus();
-                    widget.onSelected(item);
-                  },
-                );
-              },
-            ),
           ),
+        ),
         if (hasError)
           Padding(
             padding: const EdgeInsets.only(left: 12, top: 4),
             child: Text(
               widget.errorText!,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: scheme.error),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.error),
             ),
           ),
       ],

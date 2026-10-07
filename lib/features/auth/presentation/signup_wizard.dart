@@ -19,6 +19,9 @@ import 'widgets/register_text_field.dart';
 import 'widgets/registration_success_overlay.dart';
 import 'widgets/searchable_dropdown.dart';
 import 'widgets/signup_step_row.dart';
+import '../../../core/router/app_transitions.dart';
+import '../../../core/widgets/enter_transition.dart';
+import '../../../core/widgets/slide_switcher.dart';
 
 /// Wizard de registro de 3 pasos — puerto de `SignUpStep1/2/3Screen.kt`.
 /// Soporta prellenado desde un borrador de Google ([RegistrationDraft]) y,
@@ -146,8 +149,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
     final payload = CreateUserDTO(
       firstName: _firstName.text.trim(),
-      middleName:
-          _middleName.text.trim().isNotEmpty ? _middleName.text.trim() : null,
+      middleName: _middleName.text.trim().isNotEmpty
+          ? _middleName.text.trim()
+          : null,
       lastName: _lastName.text.trim(),
       secondLastName: _secondLastName.text.trim().isNotEmpty
           ? _secondLastName.text.trim()
@@ -172,9 +176,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       if (!res.booleanStatus) {
         if (!mounted) return;
         setState(() => _isLoading = false);
-        _showError(res.sentencesError.isNotEmpty
-            ? res.sentencesError
-            : 'No se pudo completar el registro.');
+        _showError(
+          res.sentencesError.isNotEmpty
+              ? res.sentencesError
+              : 'No se pudo completar el registro.',
+        );
         return;
       }
 
@@ -183,7 +189,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       if (_fromGoogle && _draft != null) {
         // Google: recién ahora creamos el usuario Firebase (fix de fantasmas)
         // e iniciamos sesión con sus datos del backend.
-        await ref.read(googleAuthServiceProvider).completeFirebaseSignIn(
+        await ref
+            .read(googleAuthServiceProvider)
+            .completeFirebaseSignIn(
               idToken: _draft!.googleIdToken,
               accessToken: _draft!.googleAccessToken,
             );
@@ -256,75 +264,79 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         ),
       ),
       child: Scaffold(
-      backgroundColor: scheme.surface,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                // TopBar (back + título)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 30, 10, 10),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: SignUpBackButton(onPressed: _back),
-                      ),
-                      Text(title,
-                          style: Theme.of(context).textTheme.titleLarge),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+        backgroundColor: scheme.surface,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  // TopBar (back + título)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 30, 10, 10),
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        const SizedBox(height: 12),
-                        SignUpStepRow(activeStep: _currentStep + 1),
-                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: SignUpBackButton(onPressed: _back),
+                        ),
                         Text(
-                          'Los campos con (*) son obligatorios.',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelLarge
-                              ?.copyWith(
-                                color: AppColors.registerAccent
-                                    .withValues(alpha: 0.8),
-                              ),
+                          title,
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
-                        const SizedBox(height: 8),
-                        IndexedStack(
-                          index: _currentStep,
-                          children: [
-                            _buildStep1(),
-                            _buildStep2(),
-                            _buildStep3(),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildButtons(),
-                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-            RegistrationSuccessOverlay(
-              visible: _showSuccessOverlay,
-              title: '¡Registro exitoso!',
-              subtitle: _registrationHadSession
-                  ? 'Bienvenido. Preparando tu sesión...'
-                  : 'Tu cuenta fue creada. Redirigiendo...',
-              onFinished: _onOverlayFinished,
-            ),
-          ],
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 12),
+                          SignUpStepRow(activeStep: _currentStep + 1),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Los campos con (*) son obligatorios.',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: AppColors.registerAccent.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          // Cada paso es una ruta con slideInFromRight / fade
+                          // en el original (SignupNavGraph.kt).
+                          SlideSwitcher(
+                            index: _currentStep,
+                            duration: NavTransition.parallax.duration,
+                            child: switch (_currentStep) {
+                              0 => _buildStep1(),
+                              1 => _buildStep2(),
+                              _ => _buildStep3(),
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _buildButtons(),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              RegistrationSuccessOverlay(
+                visible: _showSuccessOverlay,
+                title: '¡Registro exitoso!',
+                subtitle: _registrationHadSession
+                    ? 'Bienvenido. Preparando tu sesión...'
+                    : 'Tu cuenta fue creada. Redirigiendo...',
+                onFinished: _onOverlayFinished,
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -380,25 +392,34 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SearchableDropdown<DocumentTypeDTO>(
-            controller: _docTypeQuery,
-            items: docTypes,
-            itemLabel: (d) => d.name,
-            label: 'Tipo de documento*',
-            errorText: _docTypeError,
-            onSelected: (d) => setState(() {
-              _selectedDocType = d;
-              _docTypeError = null;
-            }),
+          // fadeIn(800, delay 300) + slideInVertically desde su altura.
+          EnterTransition(
+            delayMillis: 300,
+            fadeMillis: 800,
+            slideMillis: 800,
+            offsetFactor: 1,
+            child: SearchableDropdown<DocumentTypeDTO>(
+              controller: _docTypeQuery,
+              items: docTypes,
+              itemLabel: (d) => d.name,
+              label: 'Tipo de documento*',
+              errorText: _docTypeError,
+              onSelected: (d) => setState(() {
+                _selectedDocType = d;
+                _docTypeError = null;
+              }),
+            ),
           ),
           const SizedBox(height: 12),
           RegisterTextField(
             controller: _nationalId,
             label: 'Número de documento*',
-            keyboardType:
-                isPassport ? TextInputType.text : TextInputType.number,
-            inputFormatters:
-                isPassport ? null : [FilteringTextInputFormatter.digitsOnly],
+            keyboardType: isPassport
+                ? TextInputType.text
+                : TextInputType.number,
+            inputFormatters: isPassport
+                ? null
+                : [FilteringTextInputFormatter.digitsOnly],
             textInputAction: TextInputAction.next,
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Requerido' : null,
@@ -534,15 +555,18 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.registerAccent,
               foregroundColor: Colors.white,
-              disabledBackgroundColor:
-                  AppColors.registerAccent.withValues(alpha: 0.5),
+              disabledBackgroundColor: AppColors.registerAccent.withValues(
+                alpha: 0.5,
+              ),
               disabledForegroundColor: Colors.white70,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: Text(
-              isLast ? (_isLoading ? 'Registrando...' : 'Finalizar') : 'Siguiente',
+              isLast
+                  ? (_isLoading ? 'Registrando...' : 'Finalizar')
+                  : 'Siguiente',
             ),
           ),
         ),
