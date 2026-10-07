@@ -6,6 +6,7 @@ import '../../application/help_notifier.dart';
 import '../../domain/help_state.dart';
 import '../../domain/support_enums.dart';
 import 'support_form_inputs.dart';
+import '../../../../core/widgets/app_back_button.dart';
 
 /// Wizard del formulario de soporte técnico. Port de `SupportFormWizard.kt`.
 /// Router entre el paso de selección de categoría y el de detalles, con una
@@ -188,11 +189,11 @@ class _DetailsStep extends StatelessWidget {
         // Header con botón de "volver".
         Row(
           children: [
-            IconButton(
+            AppBackButton(
               onPressed: notifier.goBackToCategorySelection,
-              icon: const Icon(Icons.arrow_back_ios_new),
               tooltip: 'Cambiar categoría',
             ),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 _categoryTitle(form.selectedCategoryCode),

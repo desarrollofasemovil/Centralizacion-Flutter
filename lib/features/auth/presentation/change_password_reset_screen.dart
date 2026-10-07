@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_back_button.dart';
+import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/confirmation_dialog.dart';
 import '../application/auth_providers.dart';
 import '../application/change_password_reset_notifier.dart';
@@ -91,32 +93,14 @@ class _ChangePasswordResetScreenState
 
     return Scaffold(
       backgroundColor: AppColors.primary,
-      appBar: AppBar(
+      appBar: AppTopBar(
+        title: 'Cambiar contraseña',
         backgroundColor: AppColors.primary,
-        elevation: 0,
-        titleSpacing: 0,
-        title: const Text('Cambiar contraseña', style: TextStyle(color: Colors.white)),
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: Center(
-            child: Container(
-              width: 35,
-              height: 35,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.arrow_back_ios_new,
-                    size: 18, color: AppColors.primary),
-                onPressed: () {
-                  if (context.canPop()) context.pop();
-                },
-              ),
-            ),
-          ),
-        ),
+        foregroundColor: Colors.white,
+        backStyle: AppBackButtonStyle.light,
+        onBack: () {
+          if (context.canPop()) context.pop();
+        },
       ),
       body: SafeArea(
         child: Center(

@@ -25,25 +25,22 @@ class MainTopBar extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
+          // Mismo inset y alto de franja que `AppTopBar`, para que el botón de
+          // atrás quede en el mismo sitio que en el resto de pantallas.
           padding: const EdgeInsets.only(
-            top: 8,
-            left: 10,
+            left: AppBackButton.edgeInset,
             right: 15,
-            bottom: 5,
           ),
           child: SizedBox(
-            height: 50,
+            height: AppBackButton.barHeight,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.all(5),
-                    child: AppBackButton(
-                      onPressed: onBackClicked,
-                      style: AppBackButtonStyle.light,
-                    ),
+                  child: AppBackButton(
+                    onPressed: onBackClicked,
+                    style: AppBackButtonStyle.light,
                   ),
                 ),
                 Align(
