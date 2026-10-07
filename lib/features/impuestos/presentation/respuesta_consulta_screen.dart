@@ -11,6 +11,7 @@ import '../../../core/municipality/municipality_repository.dart';
 import '../../../core/review/review_prompt_service.dart';
 import '../../../core/widgets/app_back_button.dart';
 import '../../../core/utils/url_opener.dart';
+import '../../../core/widgets/enter_transition.dart';
 import '../application/tax_results_notifier.dart';
 import '../domain/tax.dart';
 import 'widgets/tax_card.dart';
@@ -205,10 +206,15 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
             if (state.validationCreatePayment != null)
               Align(
                 alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _ValidationAlert(
-                    validation: state.validationCreatePayment!,
+                // AnimatedVisibility(enter = slideInVertically { it }).
+                child: EnterTransition(
+                  fadeMillis: 1,
+                  offsetFactor: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _ValidationAlert(
+                      validation: state.validationCreatePayment!,
+                    ),
                   ),
                 ),
               ),

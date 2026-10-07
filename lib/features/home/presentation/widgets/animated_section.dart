@@ -26,7 +26,7 @@ class _AnimatedSectionState extends State<AnimatedSection>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 500),
     );
     _startTimer = Timer(Duration(milliseconds: widget.delayMillis), () {
       if (mounted) _controller.forward();
@@ -49,7 +49,7 @@ class _AnimatedSectionState extends State<AnimatedSection>
         return Opacity(
           opacity: t,
           child: Transform.translate(
-            offset: Offset(0, (1 - t) * 24),
+            offset: Offset(0, (1 - t) * 10),
             child: child,
           ),
         );
