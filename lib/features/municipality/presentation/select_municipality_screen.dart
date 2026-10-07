@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/models/municipality.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/enter_transition.dart';
 import '../application/select_municipality_controller.dart';
 
 /// Selección de municipio — puerto fiel de `selectmunicipality/SelectMunScreen.kt`
@@ -32,7 +33,6 @@ class _SelectMunicipalityScreenState
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
   bool _searchFocused = false;
-  bool _animate = false;
 
   @override
   void initState() {
@@ -45,11 +45,6 @@ class _SelectMunicipalityScreenState
           .read(selectMunicipalityControllerProvider.notifier)
           .load(widget.departmentId),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (mounted) setState(() => _animate = true);
-      });
-    });
   }
 
   @override
@@ -96,23 +91,31 @@ class _SelectMunicipalityScreenState
           child: Column(
             children: [
               Expanded(
-                child: AnimatedOpacity(
-                  opacity: _animate ? 1 : 0,
-                  duration: const Duration(milliseconds: 500),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 24),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 65),
-                        SvgPicture.asset(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 24,
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 65),
+                      // fadeIn(900) + slideInVertically(-50) en logo,
+                      // texto y buscador (SelectMunScreen.kt).
+                      EnterTransition(
+                        fadeMillis: 900,
+                        offsetDp: -50,
+                        child: SvgPicture.asset(
                           'assets/images/newtramiapp.svg',
                           width: 90,
                           height: 40,
                           fit: BoxFit.contain,
                         ),
-                        const SizedBox(height: 30),
-                        Text(
+                      ),
+                      const SizedBox(height: 30),
+                      EnterTransition(
+                        fadeMillis: 900,
+                        offsetDp: -50,
+                        child: Text(
                           'Ahora, elige tu municipio de\nresidencia',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -120,76 +123,93 @@ class _SelectMunicipalityScreenState
                             fontSize: 16,
                           ),
                         ),
-                        const SizedBox(height: 15),
-                        _MunicipalitySearch(
+                      ),
+                      const SizedBox(height: 15),
+                      EnterTransition(
+                        fadeMillis: 900,
+                        offsetDp: -50,
+                        child: _MunicipalitySearch(
                           controller: _searchController,
                           focusNode: _searchFocus,
                           onChanged: notifier.onQueryChanged,
                           isLoading: state.municipalities.isLoading,
-                          showDropdown:
-                              _searchFocused && filtered.isNotEmpty,
+                          showDropdown: _searchFocused && filtered.isNotEmpty,
                           municipalities: filtered,
                           onSelected: _onMunicipalitySelected,
                           textColor: AppColors.textPrimary,
                         ),
-                        const SizedBox(height: 16),
-                        _SaveCheckbox(
+                      ),
+                      const SizedBox(height: 16),
+                      // tween(500, delay 200) + slide desde su altura.
+                      EnterTransition(
+                        delayMillis: 200,
+                        offsetFactor: 1,
+                        child: _SaveCheckbox(
                           value: state.savePreference,
                           onChanged: notifier.onSavePreferenceChanged,
                           color: scheme.onPrimary,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               // ── Barra inferior: Cancelar / Continuar ───────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(26, 8, 26, 24),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _cancel,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF212121),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
+              EnterTransition(
+                offsetDp: 40,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(26, 8, 26, 24),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _cancel,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF212121),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancelar',
+                              style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ),
-                          child: const Text('Cancelar',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: state.selected == null
-                              ? null
-                              : () => _confirm(state.selected!.id),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _kContinue,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor:
-                                _kContinue.withValues(alpha: 0.4),
-                            disabledForegroundColor:
-                                Colors.white.withValues(alpha: 0.7),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: SizedBox(
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: state.selected == null
+                                ? null
+                                : () => _confirm(state.selected!.id),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _kContinue,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: _kContinue.withValues(
+                                alpha: 0.4,
+                              ),
+                              disabledForegroundColor: Colors.white.withValues(
+                                alpha: 0.7,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                            child: const Text(
+                              'Continuar',
+                              style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ),
-                          child: const Text('Continuar',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -232,23 +252,28 @@ class _MunicipalitySearch extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
-            controller: controller,
-            focusNode: focusNode,
-            onChanged: onChanged,
-            style: TextStyle(color: textColor, fontSize: 15),
-            decoration: const InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: Colors.white,
-              hintText: 'Buscar municipio...',
-              hintStyle: TextStyle(color: Color(0xFF7E7E7E)),
-              prefixIcon: Icon(Icons.search, color: Color(0xFF7E7E7E)),
-              contentPadding:
-                  EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              border: OutlineInputBorder(borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(borderSide: BorderSide.none),
+          EnterTransition(
+            offsetDp: -30,
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              onChanged: onChanged,
+              style: TextStyle(color: textColor, fontSize: 15),
+              decoration: const InputDecoration(
+                isDense: true,
+                filled: true,
+                fillColor: Colors.white,
+                hintText: 'Buscar municipio...',
+                hintStyle: TextStyle(color: Color(0xFF7E7E7E)),
+                prefixIcon: Icon(Icons.search, color: Color(0xFF7E7E7E)),
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 12,
+                ),
+                border: OutlineInputBorder(borderSide: BorderSide.none),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide.none),
+              ),
             ),
           ),
           if (isLoading)
@@ -256,24 +281,39 @@ class _MunicipalitySearch extends StatelessWidget {
               padding: EdgeInsets.all(12),
               child: CircularProgressIndicator(),
             )
-          else if (showDropdown)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 180),
-              child: ListView.builder(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                itemCount: municipalities.length,
-                itemBuilder: (context, i) {
-                  final mun = municipalities[i];
-                  return ListTile(
-                    dense: true,
-                    title: Text(
-                      mun.name,
-                      style: TextStyle(color: textColor, fontSize: 15),
-                    ),
-                    onTap: () => onSelected(mun),
-                  );
-                },
+          else
+            // fadeIn() + expandVertically() / fadeOut() + shrinkVertically()
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.fastOutSlowIn,
+              alignment: Alignment.topCenter,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: !showDropdown
+                    ? const SizedBox(width: double.infinity)
+                    : ConstrainedBox(
+                        key: const ValueKey('dropdown'),
+                        constraints: const BoxConstraints(maxHeight: 180),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          padding: EdgeInsets.zero,
+                          itemCount: municipalities.length,
+                          itemBuilder: (context, i) {
+                            final mun = municipalities[i];
+                            return ListTile(
+                              dense: true,
+                              title: Text(
+                                mun.name,
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              onTap: () => onSelected(mun),
+                            );
+                          },
+                        ),
+                      ),
               ),
             ),
         ],
