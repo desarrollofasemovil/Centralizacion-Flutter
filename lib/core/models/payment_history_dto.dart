@@ -40,5 +40,17 @@ class PaymentHistoryDTO {
 
 typedef PaymentHistoryListDTO = List<PaymentHistoryDTO>;
 
-/// `idStatusType` de un pago aprobado (2 = rechazado, 3 = pendiente).
+/// `idStatusType` de un pago aprobado. Tabla `Availibity` de la API (igual en
+/// producción y pruebas): 1 = APROBADA, 2 = COMENZADA, 3 = FALLIDA,
+/// 4 = EXPIRADA.
 const kPaymentStatusApproved = 1;
+
+/// Estado por nombre, como el original (`HistoryPayViewModel.kt` /
+/// `HistoryPayScreen.kt` comparan `statusType`, no el id).
+extension PaymentHistoryStatus on PaymentHistoryDTO {
+  /// Pago en curso en la pasarela: el que se sincroniza al refrescar.
+  bool get isInProgress => statusType.trim().toUpperCase() == 'COMENZADA';
+
+  /// Pago fallido: el único que se puede ocultar deslizando.
+  bool get isFailed => statusType.trim().toUpperCase() == 'FALLIDA';
+}

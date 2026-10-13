@@ -51,8 +51,8 @@ class HistoryPayScreen extends ConsumerWidget {
                             dateText: _formatDate(item.paymentDate),
                           );
                           // Solo los pagos FALLIDA se pueden ocultar deslizando
-                          // de derecha a izquierda (idStatusType 2).
-                          if (item.idStatusType != 2) return card;
+                          // de derecha a izquierda.
+                          if (!item.isFailed) return card;
                           return Dismissible(
                             key: ValueKey('history-${item.id}'),
                             direction: DismissDirection.endToStart,
@@ -111,7 +111,7 @@ class HistoryPayScreen extends ConsumerWidget {
   Future<void> _refresh(WidgetRef ref) async {
     final notifier = ref.read(historyPayNotifierProvider.notifier);
     final pending = (ref.read(historyPayNotifierProvider).value ?? const [])
-        .where((p) => p.idStatusType == 3)
+        .where((p) => p.isInProgress)
         .map((p) => p.id)
         .toList();
     for (final id in pending) {
