@@ -241,6 +241,26 @@ varios productos.
       iOS (Codemagic, manual).
 - [ ] **Un test golpea la API real** (`GET /api/Department` devuelve 400 en la suite). Debe usar mock.
 
+## Release hardening — navegación (backport de Santander `d553eff`, 2026-10-13)
+
+Port a mano (los repos divergieron el 2026-08-21) de la parte de navegación de `d553eff`. Cada punto
+tiene tests que fallan con el código anterior.
+
+- [x] **El estado bloqueante ya no desmonta el router.** `GlobalStatusOverlay` (`lib/app.dart`) pinta
+      `_BlockingStatusScreen` *encima* del router (capa superior del `Stack`, con barrera, `ExcludeFocus` y
+      `_BackBlocker`) en vez de sustituirlo. Un 5xx / mantenimiento / force update ya no borra formularios,
+      pasos ni scroll. Prioridad: bloqueante > diálogo sin conexión > contenido.
+- [x] **Diálogos de la Home por `ref.listen`.** "Próximamente" y "Salir" se lanzaban desde `build()` y se
+      apilaban 2-5 copias; "Sí, salir" podía navegar varias veces (vuelta intermitente a Welcome). Ahora salen
+      una vez por transición `false → true` y el flag se resetea si se cierran con el gesto Atrás.
+- [x] **`errorBuilder` de go_router** con `_RouteErrorScreen` ("No pudimos abrir esta pantalla." +
+      "Volver al inicio" → `computeStartDestination`), sin redirección automática.
+- [x] **`SafePop`** (`lib/core/router/safe_pop.dart`, `popOrGo`). Pago → "Verificar estado" reconstruye la
+      pila Home → Historial; `TopBarNavigationScaffold` con `onBack` por defecto cae a la Home del municipio
+      (`:id`) si la pantalla es la única de la pila, también con el Atrás del sistema. PQRD y Certificados
+      usan `popOrGo` en vez de `context.pop()`.
+- [ ] **Verificación manual en dispositivo Android** de los 4 escenarios (ver PR).
+
 ## Fase 5 — Ajuste iOS 🍎
 
 > ⚠️ **iOS está como lo dejó `flutter create`.** `ios/Runner/Info.plist` conserva la fecha de creación
