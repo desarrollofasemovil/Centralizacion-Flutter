@@ -189,9 +189,23 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       },
     );
 
-    // Diálogos informativos
-    if (state.showInDevelopmentDialog) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Diálogos informativos.
+    //
+    // ⚠️ Van por `ref.listen`, NO por `if (state.showX) addPostFrameCallback(...)`
+    // dentro del `build`. Ese patrón dispara un `showDialog` en CADA repintado
+    // mientras el flag siga en `true` —y la Home repinta por cualquier cosa: el
+    // teclado, el tema, la sesión, el carrusel—, así que se apilaban dos o tres
+    // diálogos idénticos. Con el de salida eso significaba que "Sí, salir"
+    // cerraba uno y navegaba, y los duplicados que quedaban detrás volvían a
+    // ejecutar `context.go(...)` desde un contexto ya desmontado: es la vía por
+    // la que pulsar Atrás en la Home terminaba, de forma intermitente, en la
+    // pantalla de Bienvenida. `ref.listen` corre una sola vez por transición.
+    ref.listen<bool>(
+      mainViewModelProvider(
+        widget.municipality.id,
+      ).select((s) => s.showInDevelopmentDialog),
+      (prev, next) {
+        if (!next) return;
         showDialog<void>(
           context: context,
           barrierDismissible: false,
@@ -207,13 +221,27 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             },
             onDismiss: () {},
           ),
-        );
-      });
-    }
+        ).then((_) {
+          // El diálogo se puede cerrar también por el gesto Atrás del sistema.
+          // Sin esto el flag se quedaría en `true` y el diálogo no volvería a
+          // salir nunca (la transición false→true ya no ocurriría).
+          if (!mounted) return;
+          if (ref
+              .read(mainViewModelProvider(widget.municipality.id))
+              .showInDevelopmentDialog) {
+            notifier.onInDevelopmentDialogDismiss();
+          }
+        });
+      },
+    );
 
-    if (state.showExitDialog) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showDialog(
+    ref.listen<bool>(
+      mainViewModelProvider(
+        widget.municipality.id,
+      ).select((s) => s.showExitDialog),
+      (prev, next) {
+        if (!next) return;
+        showDialog<void>(
           context: context,
           // `ConfirmationDialog` compartido (cabecera de color + ícono), igual
           // que el original; antes era un `AlertDialog` suelto sin el estilo
@@ -235,15 +263,25 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               // al Welcome; si lo hay, cierra la app (`MainEvent.FinishApp`).
               final loc = ref.read(userPreferencesProvider).getSavedLocation();
               if (!loc.guardado) {
-                context.go(AppRoutes.welcome);
+                // El pop del diálogo puede haber desmontado esta pantalla: sin
+                // el guarda, `context.go` operaría sobre un elemento muerto.
+                if (context.mounted) context.go(AppRoutes.welcome);
               } else {
                 await SystemNavigator.pop();
               }
             },
           ),
-        );
-      });
-    }
+        ).then((_) {
+          // Cerrado con el gesto Atrás: resetear el flag (ver arriba).
+          if (!mounted) return;
+          if (ref
+              .read(mainViewModelProvider(widget.municipality.id))
+              .showExitDialog) {
+            notifier.onExitDialogDismissed();
+          }
+        });
+      },
+    );
 
     // Home es la raíz del flujo de alcaldías: el gesto/botón Atrás del sistema no
     // debe salir de la app, sino reproducir el BackHandler del original (cancelar
