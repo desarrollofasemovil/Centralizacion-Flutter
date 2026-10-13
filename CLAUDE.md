@@ -21,7 +21,7 @@
 3. **Dos caminos de autenticación:** login nativo (correo/clave) contra la API propia (NO usa Firebase Auth) + login con Google (único uso de Firebase Auth). Ver `BACKEND.md §5`.
 4. **Package / applicationId por ahora:** `com.tramites1cero1.centralizacion` (el mismo de Centralización).
 5. **Orden de trabajo:** la migración de **Centralización está funcionalmente completa en Android** (los 21 paquetes de pantallas Kotlin tienen equivalente en Flutter). El foco actual es **pulir detalles visuales, cerrar deuda de componentes compartidos y abrir iOS**. **Manizales** va por la mitad, en la rama `claude/manizales-shield-flavor-apk-41c6c7` del repo anterior [`MultiplatformCentralizacion`](https://github.com/desarrollofasemovil/MultiplatformCentralizacion) (no se migró a este repo), aún sin mezclar. Estado medido y verificado en `MIGRACION_FLUTTER_ROADMAP.md`.
-6. **iOS = HTTPS siempre.** No portar `usesCleartextTraffic`; iOS bloquea HTTP. Confirmar que todos los endpoints son HTTPS.
+6. **iOS = HTTPS siempre.** Todo lo que puede publicarse es HTTPS; no portar `usesCleartextTraffic`. La URL HTTP del servidor de pruebas (`http://192.168.20.198:45600/`) existe **solo** detrás del override de debug `USE_DEV_SERVER` (Android debug, apagado por defecto, con el permiso de cleartext limitado a esa IP en el source set `debug`). Nunca la saques de ahí ni la uses en release/profile, iOS o web.
 7. **Sigue las convenciones** de `MIGRACION_FLUTTER_CONVENCIONES.md` para que cada módulo migrado se vea igual. No improvises arquitectura por módulo. **La referencia visual de cada pantalla es su `*Screen.kt` original en `codebase/` — no rediseñes ni reinterpretes la UI.**
 8. **Actualiza el roadmap.** Al completar una tarea, marca su casilla en `MIGRACION_FLUTTER_ROADMAP.md`.
 
@@ -86,7 +86,7 @@ O lee el resumen curado en [`graphify-out/GRAPH_REPORT.md`](graphify-out/GRAPH_R
 - No cambies el `applicationId` del flavor `municipios` (debe conservar la app de Play Store).
 - No empieces a configurar Trami App Manizales hasta terminar Centralización.
 - No traduzcas datos largos por la ruta de navegación (usa estado/extra) — ver `FRONTEND.md §11`.
-- No portes la base URL local HTTP comentada ni `usesCleartextTraffic`.
+- No uses la URL HTTP del servidor de pruebas fuera del override `USE_DEV_SERVER` ni portes `usesCleartextTraffic`.
 
 ---
 
@@ -99,6 +99,11 @@ flutter pub run build_runner build --delete-conflicting-outputs
 # Correr por flavor
 flutter run --flavor municipios -t lib/main_municipios.dart
 flutter run --flavor manizales  -t lib/main_manizales.dart
+
+# Contra el servidor de pruebas (solo Android debug, en la red de la oficina/VPN; ver BACKEND §2)
+flutter run --flavor municipios -t lib/main_municipios.dart --dart-define=USE_DEV_SERVER=true
+# APK de QA contra el servidor de pruebas
+flutter build apk --debug --flavor municipios -t lib/main_municipios.dart --dart-define=USE_DEV_SERVER=true
 
 # Análisis estático
 flutter analyze
