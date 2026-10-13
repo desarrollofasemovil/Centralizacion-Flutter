@@ -7,6 +7,7 @@ import 'flavor_config.dart';
 const flavorMunicipios = FlavorConfig(
   flavor: Flavor.municipios,
   appName: 'Trami App Municipios',
+  appIdentifier: 'com.tramites1cero1.centralizacion', // Bancolombia (legacy)
   fixedMunicipalityId: null, // modo selector (dinámico)
   showMunicipalitySelector: true,
 );
@@ -14,6 +15,7 @@ const flavorMunicipios = FlavorConfig(
 const flavorManizales = FlavorConfig(
   flavor: Flavor.manizales,
   appName: 'Trami App Manizales',
+  appIdentifier: 'com.tramitesapp.manizales', // Santander
   // ⚠️ PENDIENTE: reemplazar por el `id` (Int) real de Manizales que espera
   // `GET /api/Municipality/GetInfoBy{id}` en el backend. Ese número es lo único
   // "de negocio" que hace que la app sea de Manizales (ver FLAVORS.md §8).
