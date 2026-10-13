@@ -35,7 +35,9 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
     }
     state = const AsyncValue.loading();
     try {
-      final list = await _apiService.getHistoryPaymentByUser(userId);
+      final list = paymentHistoryFromResponse(
+        await _apiService.getHistoryPaymentByUser(userId),
+      );
       _lastLoaded = list;
       state = AsyncValue.data(list);
     } catch (e, stack) {

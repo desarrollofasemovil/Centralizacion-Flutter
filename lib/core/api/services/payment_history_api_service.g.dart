@@ -20,12 +20,12 @@ class _PaymentHistoryApiService implements PaymentHistoryApiService {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<List<PaymentHistoryDTO>> getHistoryPaymentByUser(int id) async {
+  Future<dynamic> getHistoryPaymentByUser(int id) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<List<PaymentHistoryDTO>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -35,19 +35,8 @@ class _PaymentHistoryApiService implements PaymentHistoryApiService {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<List<dynamic>>(_options);
-    late List<PaymentHistoryDTO> _value;
-    try {
-      _value = _result.data!
-          .map(
-            (dynamic i) =>
-                PaymentHistoryDTO.fromJson(i as Map<String, dynamic>),
-          )
-          .toList();
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 

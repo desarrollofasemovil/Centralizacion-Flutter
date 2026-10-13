@@ -247,8 +247,9 @@ varios productos.
       municipio tolerantes a nulos (`phone` como string). Ver BACKEND §1.2, §3.10, §4.1.
 - [ ] **Quitar el guardado de `auth_token`**: guarda el mensaje "Inicio de sesión exitoso" (la API no emite
       token) y nada lo lee.
-- [ ] **Historial vacío = error**: con 0 pagos pendientes, `GET api/PaymentHistory/User/{id}` responde 404 con un
-      envelope (objeto) y el cliente espera una lista.
+- [x] **Historial vacío = error** (`DioException [unknown]: null`): con 0 pagos, `GET api/PaymentHistory/User/{id}`
+      responde 404 con un envelope y el cliente esperaba una lista. Se lee con `paymentHistoryFromResponse`; además
+      `PaymentHistoryDTO` tolera nulos. Corregido también: refrescar sincronizaba FALLIDA en vez de COMENZADA.
 - [ ] **Un test golpea la API real** (`GET /api/Department` devuelve 400 en la suite). Debe usar mock.
 
 ## Release hardening — navegación (backport de Santander `d553eff`, 2026-10-13)

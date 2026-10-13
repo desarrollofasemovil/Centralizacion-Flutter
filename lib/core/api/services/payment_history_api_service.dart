@@ -11,8 +11,10 @@ part 'payment_history_api_service.g.dart';
 abstract class PaymentHistoryApiService {
   factory PaymentHistoryApiService(Dio dio, {String baseUrl}) = _PaymentHistoryApiService;
 
+  /// Lista directa con pagos, o envelope `404` sin pagos: leer siempre con
+  /// [paymentHistoryFromResponse].
   @GET('api/PaymentHistory/User/{id}')
-  Future<PaymentHistoryListDTO> getHistoryPaymentByUser(@Path('id') int id);
+  Future<dynamic> getHistoryPaymentByUser(@Path('id') int id);
 
   /// Sincroniza un pago contra la pasarela (API `docs/api/payment-history.md`).
   /// Antes apuntaba a `{id}/sync-status` sin el prefijo del controlador, una
