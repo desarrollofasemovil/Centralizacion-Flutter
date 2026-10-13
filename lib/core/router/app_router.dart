@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../flavor/flavor_config.dart';
+import '../remote_config/remote_config_service.dart';
 import '../storage/user_preferences.dart';
 import '../municipality/municipality_repository.dart';
 import 'app_routes.dart';
@@ -102,6 +103,23 @@ GoRoute _route({
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
+    // Una ruta que no matchea no puede acabar en la pantalla de error cruda de
+    // go_router (título rojo + excepción), que es lo que se mostraba en
+    // release. Puede pasar sin culpa del usuario: la ruta de Servicios Públicos
+    // lleva factura, valor y fecha COMO segmentos de path, así que un dato con
+    // `/` o vacío rompe el match.
+    //
+    // La salida NO es automática: la pulsa el usuario. Un `redirect` silencioso
+    // a Bienvenida convertiría cualquier fallo de ruta en una "vuelta
+    // inesperada al Welcome".
+    errorBuilder: (context, state) => _RouteErrorScreen(
+      onExit: () => context.go(
+        computeStartDestination(
+          sendToWelcome: ref.read(sendToWelcomeProvider),
+          prefs: ref.read(userPreferencesProvider),
+        ),
+      ),
+    ),
     routes: [
       GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
       _route(path: AppRoutes.welcome, builder: (_, _) => const WelcomeScreen()),
@@ -391,6 +409,58 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Pantalla de `errorBuilder`: ruta desconocida o que no matchea.
+class _RouteErrorScreen extends StatelessWidget {
+  const _RouteErrorScreen({required this.onExit});
+
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: colors.surface,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.explore_off_outlined,
+                  size: 48,
+                  color: colors.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No pudimos abrir esta pantalla.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: colors.onSurface),
+                ),
+                const SizedBox(height: 24),
+                FractionallySizedBox(
+                  widthFactor: 0.8,
+                  child: ElevatedButton(
+                    onPressed: onExit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.onPrimary,
+                    ),
+                    child: const Text('Volver al inicio'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _MainScreenContainer extends ConsumerWidget {
   const _MainScreenContainer({required this.municipalityId});
