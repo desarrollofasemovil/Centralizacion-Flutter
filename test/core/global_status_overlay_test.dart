@@ -7,9 +7,20 @@ import 'package:tramiapp_flutter/core/api/app_status.dart';
 import 'package:tramiapp_flutter/core/connectivity/connectivity_observer.dart';
 import 'package:tramiapp_flutter/core/connectivity/connectivity_status.dart';
 import 'package:tramiapp_flutter/core/connectivity/no_connection_notifier.dart';
+import 'package:tramiapp_flutter/core/theme/app_theme.dart';
+import 'package:tramiapp_flutter/core/theme/theme_mode_provider.dart';
 
 class _StubNoConnection extends NoConnectionNotifier {
   _StubNoConnection(this.initial);
+
+  final bool initial;
+
+  @override
+  bool build() => initial;
+}
+
+class _StubDark extends ThemeIsDarkNotifier {
+  _StubDark(this.initial);
 
   final bool initial;
 
@@ -70,6 +81,7 @@ Future<void> _pump(
   AppStatus status = const AppStatus(),
   FocusNode? focusNode,
   Widget? home,
+  bool dark = false,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -77,6 +89,7 @@ Future<void> _pump(
         noConnectionDialogProvider
             .overrideWith(() => _StubNoConnection(dialogVisible)),
         appStatusProvider.overrideWith(() => _StubAppStatus(status)),
+        themeIsDarkProvider.overrideWith(() => _StubDark(dark)),
         connectivityStatusProvider
             .overrideWith((_) => Stream.value(ConnectivityStatus.unavailable)),
       ],
@@ -209,6 +222,30 @@ void main() {
       expect(find.text('Mantenimiento'), findsNothing);
       expect(find.text(_title), findsOneWidget);
     });
+
+    for (final dark in [false, true]) {
+      testWidgets(
+          'fondo según el modo del usuario y textos en rojo (dark: $dark)',
+          (tester) async {
+        await _pump(tester, dialogVisible: false, status: _blocking, dark: dark);
+
+        final red = brandErrorColor(dark: dark);
+        final title = tester.widget<Text>(find.text('Mantenimiento'));
+        expect(title.style?.color, red);
+        final background = tester.widget<Material>(
+          find
+              .ancestor(
+                of: find.text('Mantenimiento'),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+        expect(
+          background.color,
+          buildInicialTheme(dark: dark).colorScheme.surfaceContainerLowest,
+        );
+      });
+    }
 
     testWidgets('el contenido de abajo pierde el foco', (tester) async {
       final focusNode = FocusNode();

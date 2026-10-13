@@ -74,6 +74,11 @@ ThemeData buildAlcaldiasTheme(Design design, {bool dark = false}) {
   return ThemeData(useMaterial3: true, colorScheme: scheme);
 }
 
+/// Rojo de error de marca (el mismo que pone [buildAlcaldiasTheme]). Para
+/// pantallas que viven fuera del tema del municipio, como el estado bloqueante
+/// global; el `error` del tema neutro es un vino tinto, no un rojo.
+Color brandErrorColor({required bool dark}) => dark ? _lightRed : _red;
+
 /// Tema neutro para Welcome / Selector de municipio — puerto de `InicialTheme`
 /// (sin colores de municipio). No portamos el dynamic color (Material You) del
 /// original; se usa la paleta de marca.

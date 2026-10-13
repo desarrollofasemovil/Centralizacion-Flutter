@@ -8,6 +8,7 @@ import 'core/connectivity/no_connection_notifier.dart';
 import 'core/flavor/flavor_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_mode_provider.dart';
 import 'core/widgets/no_connection_dialog.dart';
 
 /// Widget raíz. Navegación con go_router + tema neutro base (el tema del
@@ -111,7 +112,12 @@ class GlobalStatusOverlay extends ConsumerWidget {
           const ModalBarrier(dismissible: false),
           _BackBlocker(
             dispatcher: backButtonDispatcher,
-            child: _BlockingStatusScreen(status: status),
+            child: _BlockingStatusScreen(
+              status: status,
+              // Este overlay vive por encima de `AlcaldiasScope`, así que no
+              // hereda el modo oscuro del usuario: se lee aquí.
+              dark: ref.watch(themeIsDarkProvider),
+            ),
           ),
         ],
       ],
@@ -160,18 +166,24 @@ class _BackBlockerState extends State<_BackBlocker> {
   Widget build(BuildContext context) => widget.child;
 }
 
+/// Pantalla de estado bloqueante (5xx, mantenimiento, force update). Fondo
+/// claro u oscuro según el modo del usuario y textos en rojo de marca.
 class _BlockingStatusScreen extends StatelessWidget {
-  const _BlockingStatusScreen({required this.status});
+  const _BlockingStatusScreen({required this.status, required this.dark});
 
   final AppStatus status;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
     final isForceUpdate = status.type == AppStatusType.forceUpdate;
+    final background =
+        buildInicialTheme(dark: dark).colorScheme.surfaceContainerLowest;
+    final red = brandErrorColor(dark: dark);
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Material(
-        color: Colors.red.shade700,
+        color: background,
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Center(
@@ -180,7 +192,7 @@ class _BlockingStatusScreen extends StatelessWidget {
               children: [
                 Icon(
                   isForceUpdate ? Icons.system_update : Icons.cloud_off,
-                  color: Colors.white,
+                  color: red,
                   size: 48,
                 ),
                 const SizedBox(height: 16),
@@ -191,8 +203,8 @@ class _BlockingStatusScreen extends StatelessWidget {
                           ? 'Actualización requerida'
                           : 'Servicio no disponible'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: red,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -202,7 +214,7 @@ class _BlockingStatusScreen extends StatelessWidget {
                   Text(
                     status.message,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: red),
                   ),
                 ],
               ],
