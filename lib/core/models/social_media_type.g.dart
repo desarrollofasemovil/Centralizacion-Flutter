@@ -8,8 +8,8 @@ part of 'social_media_type.dart';
 
 SocialMediaType _$SocialMediaTypeFromJson(Map<String, dynamic> json) =>
     SocialMediaType(
-      id: (json['id'] as num).toInt(),
-      name: json['name'] as String,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name'] as String? ?? '',
     );
 
 Map<String, dynamic> _$SocialMediaTypeToJson(SocialMediaType instance) =>

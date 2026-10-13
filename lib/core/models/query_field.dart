@@ -8,10 +8,10 @@ class QueryField {
   @JsonKey(name: 'id')
   final int id;
 
-  @JsonKey(name: 'queryFieldType')
+  @JsonKey(name: 'queryFieldType', defaultValue: '')
   final String queryFieldType;
 
-  @JsonKey(name: 'fieldName')
+  @JsonKey(name: 'fieldName', defaultValue: '')
   final String fieldName;
 
   @JsonKey(name: 'municipality')

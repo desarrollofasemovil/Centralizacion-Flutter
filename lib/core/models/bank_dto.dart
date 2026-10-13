@@ -4,7 +4,7 @@ part 'bank_dto.g.dart';
 
 @JsonSerializable()
 class BankDTO {
-  @JsonKey(name: 'nameBank')
+  @JsonKey(name: 'nameBank', defaultValue: '')
   final String nameBank;
 
   BankDTO({

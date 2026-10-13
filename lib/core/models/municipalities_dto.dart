@@ -8,6 +8,7 @@ part 'municipalities_dto.g.dart';
 @JsonSerializable()
 class MunicipalitiesDTO {
   final int id;
+  @JsonKey(defaultValue: '')
   final String name;
 
   MunicipalitiesDTO({required this.id, required this.name});

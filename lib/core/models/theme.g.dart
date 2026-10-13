@@ -7,12 +7,12 @@ part of 'theme.dart';
 // **************************************************************************
 
 Theme _$ThemeFromJson(Map<String, dynamic> json) => Theme(
-  backGroundColor: json['backGroundColor'] as String,
-  onPrimaryColorDark: json['onPrimaryColorDark'] as String,
-  onPrimaryColorLight: json['onPrimaryColorLight'] as String,
-  primaryColor: json['primaryColor'] as String,
-  secondaryColor: json['secondaryColor'] as String,
-  secondaryColorBlack: json['secondaryColorBlack'] as String,
+  backGroundColor: json['backGroundColor'] as String? ?? '',
+  onPrimaryColorDark: json['onPrimaryColorDark'] as String? ?? '',
+  onPrimaryColorLight: json['onPrimaryColorLight'] as String? ?? '',
+  primaryColor: json['primaryColor'] as String? ?? '',
+  secondaryColor: json['secondaryColor'] as String? ?? '',
+  secondaryColorBlack: json['secondaryColorBlack'] as String? ?? '',
 );
 
 Map<String, dynamic> _$ThemeToJson(Theme instance) => <String, dynamic>{

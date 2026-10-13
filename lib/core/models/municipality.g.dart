@@ -7,10 +7,10 @@ part of 'municipality.dart';
 // **************************************************************************
 
 Municipality _$MunicipalityFromJson(Map<String, dynamic> json) => Municipality(
-  domain: json['domain'] as String,
+  domain: json['domain'] as String? ?? '',
   id: (json['id'] as num).toInt(),
-  name: json['name'] as String,
-  isActive: json['isActive'] as bool,
+  name: json['name'] as String? ?? '',
+  isActive: json['isActive'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$MunicipalityToJson(Municipality instance) =>

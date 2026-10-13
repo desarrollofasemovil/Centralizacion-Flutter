@@ -12,29 +12,59 @@ import 'news_by_municipality.dart';
 
 part 'municipality_dto.g.dart';
 
+// La API declara casi todo nullable (`GetMunicipalitysDto.cs`) y el wizard del
+// dashboard ya crea municipios con campos vacíos. Un objeto anidado `null` se lee
+// como uno "vacío" (strings `''`, listas `[]`): así el municipio abre con los
+// fallbacks de siempre (colores grises de `parseColor`, ícono en vez de escudo)
+// en vez de que `GetInfoBy{id}` lance. Con datos completos nada cambia.
+Department _departmentOrEmpty(Map<String, dynamic>? json) =>
+    Department.fromJson(json ?? const <String, dynamic>{});
+Theme _themeOrEmpty(Map<String, dynamic>? json) =>
+    Theme.fromJson(json ?? const <String, dynamic>{});
+BankDTO _bankOrEmpty(Map<String, dynamic>? json) =>
+    BankDTO.fromJson(json ?? const <String, dynamic>{});
+ShieldDTO _shieldOrEmpty(Map<String, dynamic>? json) =>
+    ShieldDTO.fromJson(json ?? const <String, dynamic>{});
+String? _phoneAsString(Object? value) => value?.toString();
+
 @JsonSerializable()
 class MunicipalityDTO {
+  @JsonKey(defaultValue: <CourseX>[])
   final List<CourseX> courses;
+  @JsonKey(fromJson: _departmentOrEmpty)
   final Department department;
+  @JsonKey(defaultValue: '')
   final String domain;
+  @JsonKey(defaultValue: '')
   final String entityCode;
   final int id;
+  @JsonKey(defaultValue: false)
   final bool isActive;
+  @JsonKey(defaultValue: <MunicipalityProcedure>[])
   final List<MunicipalityProcedure> municipalityProcedures;
+  @JsonKey(defaultValue: <MunicipalitySocialMedia>[])
   final List<MunicipalitySocialMedia> municipalitySocialMedia;
+  @JsonKey(defaultValue: '')
   final String name;
+  @JsonKey(defaultValue: '')
   final String passwordFintech;
+  @JsonKey(defaultValue: <QueryField>[])
   final List<QueryField> queryFields;
+  @JsonKey(defaultValue: <SportsFacility>[])
   final List<SportsFacility> sportsFacilities;
+  @JsonKey(fromJson: _themeOrEmpty)
   final Theme theme;
+  @JsonKey(defaultValue: '')
   final String userFintech;
+  @JsonKey(fromJson: _bankOrEmpty)
   final BankDTO bank;
+  @JsonKey(fromJson: _shieldOrEmpty)
   final ShieldDTO idShield;
   @JsonKey(name: 'dataPrivacy')
   final String? dataPrivacy;
   @JsonKey(name: 'dataProcessingPrivacy')
   final String? dataProcessingPrivacy;
-  @JsonKey(name: 'newsByMunicipalities')
+  @JsonKey(name: 'newsByMunicipalities', defaultValue: <NewsByMunicipality>[])
   final List<NewsByMunicipality> newsByMunicipalities;
   @JsonKey(name: 'latitude')
   final String? latitude;
@@ -44,8 +74,10 @@ class MunicipalityDTO {
   final String? emailMunicipalities;
   @JsonKey(name: 'emailPanic')
   final String? emailPanic;
-  @JsonKey(name: 'phone')
-  final int? phone;
+  /// `string?` en la API (`GetMunicipalitysDto.Phone`, string desde 2025-11).
+  /// Se acepta también un número por si algún entorno aún lo manda así.
+  @JsonKey(name: 'phone', fromJson: _phoneAsString)
+  final String? phone;
 
   MunicipalityDTO({
     required this.courses,

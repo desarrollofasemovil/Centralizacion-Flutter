@@ -4,7 +4,9 @@ part 'social_media_type.g.dart';
 
 @JsonSerializable()
 class SocialMediaType {
+  @JsonKey(defaultValue: 0)
   final int id;
+  @JsonKey(defaultValue: '')
   final String name;
 
   SocialMediaType({
