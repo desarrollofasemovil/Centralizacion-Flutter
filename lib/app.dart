@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/api/app_status.dart';
+import 'core/api/network_provider.dart';
 import 'core/connectivity/connectivity_observer.dart';
 import 'core/connectivity/connectivity_status.dart';
 import 'core/connectivity/no_connection_notifier.dart';
@@ -28,11 +29,22 @@ class TramiApp extends ConsumerWidget {
       theme: buildInicialTheme(),
       darkTheme: buildInicialTheme(dark: true),
       routerConfig: router,
-      builder: (context, child) =>
-          GlobalStatusOverlay(
-        backButtonDispatcher: router.backButtonDispatcher,
-        child: child ?? const SizedBox.shrink(),
-      ),
+      builder: (context, child) {
+        final app = GlobalStatusOverlay(
+          backButtonDispatcher: router.backButtonDispatcher,
+          child: child ?? const SizedBox.shrink(),
+        );
+        if (!NetworkProvider.isUsingDevServer) return app;
+        // Marca inconfundible: con el override USE_DEV_SERVER los datos son
+        // del servidor de pruebas, no de producción.
+        return Banner(
+          message: 'API DEV',
+          location: BannerLocation.topEnd,
+          textDirection: TextDirection.ltr,
+          layoutDirection: TextDirection.ltr,
+          child: app,
+        );
+      },
     );
   }
 }

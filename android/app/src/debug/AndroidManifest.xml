@@ -4,4 +4,9 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- HTTP en claro SOLO hacia el servidor de pruebas (192.168.20.198), para
+         el override USE_DEV_SERVER de NetworkProvider. Source set `debug`:
+         nunca se mezcla en release ni profile (CLAUDE.md regla 6). -->
+    <application android:networkSecurityConfig="@xml/network_security_config"/>
 </manifest>

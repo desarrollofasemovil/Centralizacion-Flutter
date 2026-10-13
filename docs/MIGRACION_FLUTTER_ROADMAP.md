@@ -239,6 +239,9 @@ varios productos.
       a `release-apk.yml`); ver [`CI_CD.md`](CI_CD.md) y [`release/CONFIGURAR_PLAY_CI.md`](release/CONFIGURAR_PLAY_CI.md).
       Versión `2.0.0+53` (Play iba en 52 / 1.5.0). **Pendiente:** primera publicación real, flavor `manizales`,
       iOS (Codemagic, manual).
+- [x] **Override del servidor de pruebas** (`--dart-define=USE_DEV_SERVER=true`, solo Android debug) para
+      probar la API nueva antes de producción; marca "API DEV" y cleartext limitado a `192.168.20.198` en el
+      source set `debug`. Ver BACKEND §2. Pendiente: binding HTTPS en el IIS de pruebas para iOS.
 - [ ] **Un test golpea la API real** (`GET /api/Department` devuelve 400 en la suite). Debe usar mock.
 
 ## Release hardening — navegación (backport de Santander `d553eff`, 2026-10-13)

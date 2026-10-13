@@ -12,6 +12,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import 'app.dart';
 import 'core/api/app_status.dart';
+import 'core/api/network_provider.dart';
 import 'core/flavor/flavor_config.dart';
 import 'core/notifications/push_notifications_service.dart';
 import 'core/remote_config/remote_config_service.dart';
@@ -25,6 +26,10 @@ import 'core/utils/app_info.dart';
 Future<void> bootstrap(FlavorConfig config, FirebaseOptions options) async {
   WidgetsFlutterBinding.ensureInitialized();
   FlavorConfig.instance = config;
+  debugPrint(
+    '[NetworkProvider] API Centralízate: ${NetworkProvider.centralizacionApiUrl}'
+    '${NetworkProvider.isUsingDevServer ? ' (SERVIDOR DE PRUEBAS)' : ''}',
+  );
 
   // Versión/build reales antes de Remote Config: `force_update` los compara.
   await AppInfo.init();

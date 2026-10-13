@@ -70,7 +70,26 @@ Definidas en `data/network/NetworkProvider.kt`:
 | `GOOGLE_API_URL` | `https://people.googleapis.com/` | Google People API — perfil del usuario tras login con Google. |
 | `GOOGLE_WEATHER_API_URL` | `https://weather.googleapis.com/` | Google Weather API (clima). **Actualmente comentado/inactivo** en `MunicipalityViewModel` — el código del clima está deshabilitado. |
 
-> ⚠️ **iOS / App Transport Security:** todas las URLs productivas son HTTPS (bien). La app Android tiene `usesCleartextTraffic="true"` y una base URL local comentada (`http://192.168.20.198:45600/`). En iOS, HTTP plano está bloqueado por defecto: cualquier endpoint de desarrollo HTTP necesitará excepción ATS explícita o (preferible) usar siempre HTTPS.
+> ⚠️ **iOS / App Transport Security:** todas las URLs productivas son HTTPS (bien). La app Android original tiene `usesCleartextTraffic="true"` y una base URL local comentada (`http://192.168.20.198:45600/`). En Flutter no se porta así: ver el servidor de pruebas abajo.
+
+### Servidor de pruebas (`http://192.168.20.198:45600/`)
+
+Los cambios de API (multi-tenant, rediseño del dashboard) viven solo aquí antes de pasar a producción.
+
+- **Qué corre:** IIS con la API en la rama `develop` y la base de datos `DLLO3`. Producción
+  (`https://apicentralizate.1cero1.com/`) sigue con `main`.
+- **Solo reemplaza `CENTRALIZACION_API_URL`.** Impuestos, PQRD, autoliquidables y Google siguen en producción.
+- **Solo en la LAN:** el dispositivo tiene que estar en la red de la oficina o en la VPN.
+- **Cómo se usa:** `--dart-define=USE_DEV_SERVER=true`, solo en **Android debug** (`NetworkProvider`). Es HTTP
+  plano, así que el permiso de cleartext vive en `android/app/src/debug/res/xml/network_security_config.xml`,
+  limitado a esa IP. Release, profile, iOS y web siempre usan producción. La app muestra la marca **"API DEV"**.
+- **Los datos son distintos a producción:** los ids de bancos y municipios no coinciden (p. ej. Santander es el
+  banco 5 en pruebas y el 6 en producción; Manizales no existe en pruebas), y los municipios "… Test" (p. ej.
+  Bello Test 74, Envigado Test 71) vienen sin `theme` ni `idShield`, así que su Home no carga.
+  **No marques "Guardar selección"** con el servidor de pruebas: el id guardado apuntaría a otro municipio (o
+  a ninguno) al volver a producción.
+- **Pendiente:** un binding HTTPS en el IIS de pruebas permitiría usarlo también en iOS y quitar la excepción
+  de cleartext.
 
 > **Servicios con base URL distinta cargados vía `ApiFactory` directamente** (no por `AppModule`): `CourseService` y `VenueService` reciben el `ApiFactory` y construyen su servicio internamente (ver `CourseRepositoryImpl` / `VenueRepositoryImpl`). Revisar esos dos archivos para la base URL exacta de Cursos y Escenarios.
 
