@@ -54,7 +54,7 @@ ReservationRequestDTO _$ReservationRequestDTOFromJson(
   email: json['email'] as String,
   date: json['date'] as String,
   time: json['time'] as String,
-  municipalityEmail: json['municipalityEmail'] as String? ?? 'test@test.com',
+  municipalityEmail: json['municipalityEmail'] as String?,
 );
 
 Map<String, dynamic> _$ReservationRequestDTOToJson(

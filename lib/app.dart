@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/api/app_status.dart';
@@ -180,6 +182,13 @@ class _BackBlockerState extends State<_BackBlocker> {
 
 /// Pantalla de estado bloqueante (5xx, mantenimiento, force update). Fondo
 /// claro u oscuro según el modo del usuario y textos en rojo de marca.
+///
+/// La única salida es "Salir" (cierra la app): si el backend responde 5xx el
+/// servicio está caído y lo mejor es que el usuario deje de usar la app un
+/// rato. El original además ofrecía "Reintentar (n/3)"; se dejó solo "Salir"
+/// por decisión de producto. Solo en Android: iOS no deja que una app se
+/// cierre sola (`SystemNavigator.pop` no hace nada) y Apple rechaza los
+/// botones de salir.
 class _BlockingStatusScreen extends StatelessWidget {
   const _BlockingStatusScreen({required this.status, required this.dark});
 
@@ -227,6 +236,18 @@ class _BlockingStatusScreen extends StatelessWidget {
                     status.message,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: red),
+                  ),
+                ],
+                if (defaultTargetPlatform == TargetPlatform.android) ...[
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: SystemNavigator.pop,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: red,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(200, 48),
+                    ),
+                    child: const Text('Salir'),
                   ),
                 ],
               ],
