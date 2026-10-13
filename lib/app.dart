@@ -8,6 +8,7 @@ import 'core/connectivity/no_connection_notifier.dart';
 import 'core/flavor/flavor_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_mode_provider.dart';
 import 'core/widgets/no_connection_dialog.dart';
 
 /// Widget raíz. Navegación con go_router + tema neutro base (el tema del
@@ -39,9 +40,10 @@ class TramiApp extends ConsumerWidget {
 /// Capas globales sobre el árbol de navegación, por prioridad (FRONTEND §3):
 /// estado bloqueante > diálogo sin conexión > contenido normal.
 ///
-/// El diálogo se **superpone** (no reemplaza) al contenido: así no se destruye
-/// el estado de go_router ni de los formularios. El `builder` de `MaterialApp`
-/// queda por encima del `Navigator`, por eso no se usa `showDialog`.
+/// Ambas capas se **superponen** al contenido, nunca lo reemplazan: así no se
+/// destruye el estado de go_router ni de los formularios. El `builder` de
+/// `MaterialApp` queda por encima del `Navigator`, por eso no se usa
+/// `showDialog`.
 class GlobalStatusOverlay extends ConsumerWidget {
   const GlobalStatusOverlay({
     required this.child,
@@ -52,25 +54,40 @@ class GlobalStatusOverlay extends ConsumerWidget {
   final Widget child;
 
   /// Despachador de "atrás" del Router (`GoRouter.backButtonDispatcher`) en el
-  /// que el diálogo registra su callback para tragarse el botón atrás.
+  /// que las capas registran su callback para tragarse el botón atrás.
   final BackButtonDispatcher? backButtonDispatcher;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(appStatusProvider);
-    final dialogVisible = ref.watch(noConnectionDialogProvider);
-    if (status.isBlocking) return _BlockingStatusScreen(status: status);
+    final isBlocking = status.isBlocking;
+    // El bloqueo tapa al diálogo: mientras esté activo el diálogo no se pinta
+    // (aunque el notifier siga en `true`) y vuelve a salir al levantarse.
+    final dialogVisible = ref.watch(noConnectionDialogProvider) && !isBlocking;
 
     final isConnectionRestored =
         ref.watch(connectivityStatusProvider).value ==
             ConnectivityStatus.available;
+
+    // ⚠️ El estado bloqueante se pinta ENCIMA del router, nunca en su lugar.
+    // Antes esto era `if (status.isBlocking) return _BlockingStatusScreen(...)`,
+    // que sustituía el widget `Router`: un 5xx —de cualquier petición, incluso
+    // de fondo— desmontaba el Navigator y con él el `State` de todas las
+    // pantallas. Al levantarse el bloqueo el Router se remontaba desde cero:
+    // formularios a medio llenar, pasos de asistente y scroll se perdían, y los
+    // `Future` pendientes de pantallas desmontadas quedaban huérfanos.
     return Stack(
+      // `expand` da constraints TIGHT al router; con `loose` el Navigator
+      // podría resolverse a tamaño cero.
       fit: StackFit.expand,
+      // No direccional: este `Stack` vive por encima de la `Directionality`
+      // que aporta el árbol de `MaterialApp`.
+      alignment: Alignment.topLeft,
       children: [
-        // Con el diálogo visible el contenido de abajo pierde el foco (cierra
-        // el teclado y no recibe teclas). Siempre montado para no recrear el
-        // subárbol al alternar.
-        ExcludeFocus(excluding: dialogVisible, child: child),
+        // Con una capa visible el contenido de abajo pierde el foco (cierra el
+        // teclado y no recibe teclas). Siempre en la misma posición del `Stack`
+        // para no recrear el subárbol al alternar.
+        ExcludeFocus(excluding: dialogVisible || isBlocking, child: child),
         if (dialogVisible) ...[
           const ModalBarrier(dismissible: false, color: Colors.black54),
           Material(
@@ -84,6 +101,22 @@ class GlobalStatusOverlay extends ConsumerWidget {
                       ref.read(noConnectionDialogProvider.notifier).dismiss,
                 ),
               ),
+            ),
+          ),
+        ],
+        // Capa superior. La barrera conserva la semántica del bloqueo anterior
+        // (nada de abajo recibe toques; antes se lograba porque el router ni
+        // existía) y `_BackBlocker` evita que el "atrás" del sistema haga pop
+        // del router que sigue montado debajo.
+        if (isBlocking) ...[
+          const ModalBarrier(dismissible: false),
+          _BackBlocker(
+            dispatcher: backButtonDispatcher,
+            child: _BlockingStatusScreen(
+              status: status,
+              // Este overlay vive por encima de `AlcaldiasScope`, así que no
+              // hereda el modo oscuro del usuario: se lee aquí.
+              dark: ref.watch(themeIsDarkProvider),
             ),
           ),
         ],
@@ -133,18 +166,24 @@ class _BackBlockerState extends State<_BackBlocker> {
   Widget build(BuildContext context) => widget.child;
 }
 
+/// Pantalla de estado bloqueante (5xx, mantenimiento, force update). Fondo
+/// claro u oscuro según el modo del usuario y textos en rojo de marca.
 class _BlockingStatusScreen extends StatelessWidget {
-  const _BlockingStatusScreen({required this.status});
+  const _BlockingStatusScreen({required this.status, required this.dark});
 
   final AppStatus status;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
     final isForceUpdate = status.type == AppStatusType.forceUpdate;
+    final background =
+        buildInicialTheme(dark: dark).colorScheme.surfaceContainerLowest;
+    final red = brandErrorColor(dark: dark);
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Material(
-        color: Colors.red.shade700,
+        color: background,
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Center(
@@ -153,7 +192,7 @@ class _BlockingStatusScreen extends StatelessWidget {
               children: [
                 Icon(
                   isForceUpdate ? Icons.system_update : Icons.cloud_off,
-                  color: Colors.white,
+                  color: red,
                   size: 48,
                 ),
                 const SizedBox(height: 16),
@@ -164,8 +203,8 @@ class _BlockingStatusScreen extends StatelessWidget {
                           ? 'Actualización requerida'
                           : 'Servicio no disponible'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: red,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -175,7 +214,7 @@ class _BlockingStatusScreen extends StatelessWidget {
                   Text(
                     status.message,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: red),
                   ),
                 ],
               ],

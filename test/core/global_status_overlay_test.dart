@@ -7,9 +7,20 @@ import 'package:tramiapp_flutter/core/api/app_status.dart';
 import 'package:tramiapp_flutter/core/connectivity/connectivity_observer.dart';
 import 'package:tramiapp_flutter/core/connectivity/connectivity_status.dart';
 import 'package:tramiapp_flutter/core/connectivity/no_connection_notifier.dart';
+import 'package:tramiapp_flutter/core/theme/app_theme.dart';
+import 'package:tramiapp_flutter/core/theme/theme_mode_provider.dart';
 
 class _StubNoConnection extends NoConnectionNotifier {
   _StubNoConnection(this.initial);
+
+  final bool initial;
+
+  @override
+  bool build() => initial;
+}
+
+class _StubDark extends ThemeIsDarkNotifier {
+  _StubDark(this.initial);
 
   final bool initial;
 
@@ -27,6 +38,41 @@ class _StubAppStatus extends AppStatusNotifier {
 }
 
 const _contentKey = Key('contenido');
+
+const _blocking = AppStatus(
+  type: AppStatusType.serverError,
+  title: 'Mantenimiento',
+  isBlocking: true,
+);
+
+/// Página con estado propio: un contador que solo sobrevive si su `State`
+/// no se desmonta.
+class _CounterPage extends StatefulWidget {
+  const _CounterPage();
+
+  @override
+  State<_CounterPage> createState() => _CounterPageState();
+}
+
+class _CounterPageState extends State<_CounterPage> {
+  int taps = 0;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SizedBox.expand(
+      key: _contentKey,
+      child: Center(
+        child: TextButton(
+          onPressed: () => setState(() => taps++),
+          child: Text('toques: $taps'),
+        ),
+      ),
+    ),
+  );
+}
+
+ProviderContainer _container(WidgetTester tester) =>
+    ProviderScope.containerOf(tester.element(find.byKey(_contentKey)));
 const _title = 'No estás conectado a internet';
 
 Future<void> _pump(
@@ -34,6 +80,8 @@ Future<void> _pump(
   required bool dialogVisible,
   AppStatus status = const AppStatus(),
   FocusNode? focusNode,
+  Widget? home,
+  bool dark = false,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -41,6 +89,7 @@ Future<void> _pump(
         noConnectionDialogProvider
             .overrideWith(() => _StubNoConnection(dialogVisible)),
         appStatusProvider.overrideWith(() => _StubAppStatus(status)),
+        themeIsDarkProvider.overrideWith(() => _StubDark(dark)),
         connectivityStatusProvider
             .overrideWith((_) => Stream.value(ConnectivityStatus.unavailable)),
       ],
@@ -49,12 +98,14 @@ Future<void> _pump(
           backButtonDispatcher: RootBackButtonDispatcher(),
           child: child!,
         ),
-        home: Scaffold(
-          body: SizedBox.expand(
-            key: _contentKey,
-            child: Center(child: TextField(focusNode: focusNode)),
-          ),
-        ),
+        home:
+            home ??
+            Scaffold(
+              body: SizedBox.expand(
+                key: _contentKey,
+                child: Center(child: TextField(focusNode: focusNode)),
+              ),
+            ),
       ),
     ),
   );
@@ -122,6 +173,95 @@ void main() {
     expect(find.text(_title), findsOneWidget);
   });
 
+  group('estado bloqueante sobre el router', () {
+    testWidgets('la página de abajo conserva su State tras bloquear y limpiar',
+        (tester) async {
+      await _pump(tester, dialogVisible: false, home: const _CounterPage());
+      await tester.tap(find.text('toques: 0'));
+      await tester.pump();
+      expect(find.text('toques: 1'), findsOneWidget);
+
+      final container = _container(tester);
+      container.read(appStatusProvider.notifier).updateStatus(_blocking);
+      await tester.pump();
+      expect(find.text('Mantenimiento'), findsOneWidget);
+      // El router sigue montado debajo (antes se sustituía por la pantalla).
+      expect(find.text('toques: 1'), findsOneWidget);
+
+      container.read(appStatusProvider.notifier).clearStatus();
+      await tester.pump();
+      expect(find.text('Mantenimiento'), findsNothing);
+      expect(find.text('toques: 1'), findsOneWidget);
+    });
+
+    testWidgets('los toques no llegan al contenido mientras bloquea',
+        (tester) async {
+      await _pump(
+        tester,
+        dialogVisible: false,
+        status: _blocking,
+        home: const _CounterPage(),
+      );
+
+      await tester.tapAt(tester.getCenter(find.text('toques: 0')));
+      await tester.pump();
+
+      expect(find.text('toques: 0'), findsOneWidget);
+    });
+
+    testWidgets(
+        'tapa al diálogo sin conexión, que reaparece al levantarse el bloqueo',
+        (tester) async {
+      await _pump(tester, dialogVisible: true, status: _blocking);
+      expect(find.text('Mantenimiento'), findsOneWidget);
+      expect(find.text(_title), findsNothing);
+
+      _container(tester).read(appStatusProvider.notifier).clearStatus();
+      await tester.pump();
+
+      expect(find.text('Mantenimiento'), findsNothing);
+      expect(find.text(_title), findsOneWidget);
+    });
+
+    for (final dark in [false, true]) {
+      testWidgets(
+          'fondo según el modo del usuario y textos en rojo (dark: $dark)',
+          (tester) async {
+        await _pump(tester, dialogVisible: false, status: _blocking, dark: dark);
+
+        final red = brandErrorColor(dark: dark);
+        final title = tester.widget<Text>(find.text('Mantenimiento'));
+        expect(title.style?.color, red);
+        final background = tester.widget<Material>(
+          find
+              .ancestor(
+                of: find.text('Mantenimiento'),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+        expect(
+          background.color,
+          buildInicialTheme(dark: dark).colorScheme.surfaceContainerLowest,
+        );
+      });
+    }
+
+    testWidgets('el contenido de abajo pierde el foco', (tester) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      await _pump(tester, dialogVisible: false, focusNode: focusNode);
+      focusNode.requestFocus();
+      await tester.pump();
+      expect(focusNode.hasFocus, isTrue);
+
+      _container(tester).read(appStatusProvider.notifier).updateStatus(_blocking);
+      await tester.pump();
+
+      expect(focusNode.hasFocus, isFalse);
+    });
+  });
+
   group('botón atrás del sistema', () {
     late List<String> platformCalls;
 
@@ -148,6 +288,18 @@ void main() {
 
       expect(platformCalls, isNot(contains('SystemNavigator.pop')));
       expect(find.text(_title), findsOneWidget);
+    });
+
+    testWidgets('con el estado bloqueante no hace pop del router de abajo',
+        (tester) async {
+      mockPlatform(tester);
+      await _pump(tester, dialogVisible: false, status: _blocking);
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+
+      expect(platformCalls, isNot(contains('SystemNavigator.pop')));
+      expect(find.text('Mantenimiento'), findsOneWidget);
     });
 
     testWidgets('sin diálogo, atrás sigue cerrando la app (control)',

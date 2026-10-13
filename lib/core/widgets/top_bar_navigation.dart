@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
+
+import '../router/safe_pop.dart';
 
 import 'app_back_button.dart';
 
@@ -39,6 +42,11 @@ class TopBarNavigationScaffold extends StatelessWidget {
   final String title;
   final String description;
   final Widget body;
+
+  /// Acción del botón atrás. Si es `null`, vuelve a la página anterior y, si la
+  /// pantalla es la única de la pila (se llegó con `go`), a la Home del
+  /// municipio de la ruta (`:id`). En ese caso también intercepta el "atrás"
+  /// del sistema para que haga lo mismo en vez de cerrar la app.
   final VoidCallback? onBack;
 
   /// Barra fija al pie (botones de paso, acciones). Queda fuera del scroll.
@@ -53,19 +61,28 @@ class TopBarNavigationScaffold extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final topInset = MediaQuery.paddingOf(context).top;
+    // Solo con el `onBack` por defecto: las pantallas que pasan el suyo
+    // (asistentes por pasos) gestionan su propia vuelta atrás.
+    final homeFallback = onBack == null
+        ? municipalityHomeFallback(context)
+        : null;
 
     final delegate = _TopBarHeaderDelegate(
       iconAsset: iconAsset,
       title: title,
       description: description,
-      onBack: onBack ?? () => Navigator.of(context).maybePop(),
+      onBack:
+          onBack ??
+          () => homeFallback == null
+              ? Navigator.of(context).maybePop()
+              : context.popOrGo(homeFallback),
       topInset: topInset,
       primary: scheme.primary,
       onPrimary: scheme.onPrimary,
       textTheme: theme.textTheme,
     );
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: scheme.primary,
       bottomNavigationBar: bottomBar,
       body: LayoutBuilder(
@@ -116,6 +133,19 @@ class TopBarNavigationScaffold extends StatelessWidget {
           );
         },
       ),
+    );
+
+    if (homeFallback == null) return scaffold;
+    // Raíz de la pila: el "atrás" del sistema no tiene a dónde volver y
+    // cerraría la app; se redirige a la Home igual que el botón de la barra.
+    // `ModalRoute.of` suscribe el build a cambios de la ruta.
+    ModalRoute.of(context);
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.go(homeFallback);
+      },
+      child: scaffold,
     );
   }
 }
