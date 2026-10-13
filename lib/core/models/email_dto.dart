@@ -24,60 +24,6 @@ class EmailDto {
 }
 
 // ---------------------------------------------------------------------------
-// EmailDtoReservations
-// ---------------------------------------------------------------------------
-@JsonSerializable()
-class EmailDtoReservations {
-  @JsonKey(name: 'Id')
-  final String id;
-
-  @JsonKey(name: 'To')
-  final String to;
-
-  @JsonKey(name: 'Subject')
-  final String subject;
-
-  @JsonKey(name: 'IdUser')
-  final String idUser;
-
-  @JsonKey(name: 'NameUser')
-  final String nameUser;
-
-  @JsonKey(name: 'EmailUser')
-  final String emailUser;
-
-  @JsonKey(name: 'PhoneUser')
-  final String phoneUser;
-
-  @JsonKey(name: 'DateReservation')
-  final String? dateReservation;
-
-  @JsonKey(name: 'Type')
-  final String type;
-
-  @JsonKey(name: 'Body')
-  final String? body;
-
-  const EmailDtoReservations({
-    required this.id,
-    required this.to,
-    required this.subject,
-    required this.idUser,
-    required this.nameUser,
-    required this.emailUser,
-    required this.phoneUser,
-    this.dateReservation,
-    required this.type,
-    this.body,
-  });
-
-  factory EmailDtoReservations.fromJson(Map<String, dynamic> json) =>
-      _$EmailDtoReservationsFromJson(json);
-
-  Map<String, dynamic> toJson() => _$EmailDtoReservationsToJson(this);
-}
-
-// ---------------------------------------------------------------------------
 // PanicEmailDto
 // ---------------------------------------------------------------------------
 @JsonSerializable()
