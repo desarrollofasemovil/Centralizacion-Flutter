@@ -53,7 +53,7 @@ class _PaymentHistoryApiService implements PaymentHistoryApiService {
 
   @override
   Future<ValidationResponseDTO> syncPaymentStatus(int idHistory) async {
-    final _extra = <String, dynamic>{};
+    final _extra = <String, dynamic>{'allowServerError': true};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
@@ -61,7 +61,7 @@ class _PaymentHistoryApiService implements PaymentHistoryApiService {
       Options(method: 'PUT', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '${idHistory}/sync-status',
+            'api/PaymentHistory/${idHistory}/sync-status',
             queryParameters: queryParameters,
             data: _data,
           )

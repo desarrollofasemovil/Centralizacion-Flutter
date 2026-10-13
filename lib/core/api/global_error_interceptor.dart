@@ -7,6 +7,13 @@ import 'app_status.dart';
 /// Publica un [AppStatus] en el estado global.
 typedef AppStatusSink = void Function(AppStatus status);
 
+/// Clave de `RequestOptions.extra` para que un `5xx` de esa petición NO
+/// bloquee la app. Es para endpoints cuyo `5xx` es un resultado esperado y no
+/// "servicio caído": `PUT api/PaymentHistory/{id}/sync-status` responde `502`
+/// cuando el banco no contesta (el pago se reprograma solo) y no puede sacar al
+/// usuario de la app. En Retrofit: `@Extra({kAllowServerErrorExtra: true})`.
+const kAllowServerErrorExtra = 'allowServerError';
+
 /// Puerto de `GlobalErrorInterceptor.kt` (BACKEND §1.1).
 ///
 /// Intercepta TODAS las respuestas/errores de red, publica un estado global y
@@ -24,7 +31,8 @@ class GlobalErrorInterceptor extends Interceptor {
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     final code = response.statusCode ?? 0;
-    if (code >= 500 && code <= 599) {
+    final allowed = response.requestOptions.extra[kAllowServerErrorExtra] == true;
+    if (code >= 500 && code <= 599 && !allowed) {
       _publish(
         AppStatus(
           type: AppStatusType.serverError,
