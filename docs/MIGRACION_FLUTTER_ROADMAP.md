@@ -221,6 +221,19 @@ varios productos.
       600 ms y el splash espera 3600 ms, así que validaba el splash. (PR #17)
 - [ ] **Cobertura de tests**: 5 archivos para 31 k líneas, y solo `tramite_mappers_test.dart` cubre
       lógica de negocio real. Prioridad: mappers de trámites, validaciones de formularios, `AppStatus`.
+- [ ] **Validar App Status con Remote Config** (hallazgo 2026-10-02, aplazado). En un teléfono real la app mostró
+      una pantalla roja "Mantenimiento" con `status: "operational"` en el JSON: era `force_update` (ícono de
+      actualización), porque el build instalado era `1` (`version: 1.0.0+1`) y `min_version_code` era mayor; al poner
+      `min_version_code` en 0 la app abrió normal. Lo que hay que revisar contra el Kotlin
+      (`RemoteConfigRepositoryImpl.checkAppStatus`):
+      1. `force_update` usa `title`/`message` **del JSON**; el Kotlin usa textos fijos ("Hay una nueva actualización" /
+         "Tienes una versión antigua…"). Por eso un título "Mantenimiento" confunde al usuario.
+      2. `toAppStatus` también acepta `server_error` desde Remote Config; el Kotlin solo lee `maintenance`.
+      3. El Kotlin ejecuta `clearStatus()` cuando el status no es `maintenance` (salvo `SERVER_ERROR`); Flutter solo lee
+         Remote Config una vez en `bootstrap` y descarta `operational` sin limpiar.
+      4. `min_version_code` se compara contra el build del `pubspec.yaml`, que ya va en `2.0.0+53` (> `versionCode 48` de Play).
+      5. No hay tests de `RemoteConfigService.toAppStatus` (operational / maintenance / `dismissible` / `min_version_code`).
+      Jira: tarea "Validar App Status con Remote Config", etiqueta `Centralizacion-Flutter`.
 - [~] **GitHub Actions**: `ci.yml` (analyze + test en PRs a `develop`/`main`) y `release-internal.yml` (AAB
       firmado publicado en la **pista interna de Play** en cada push a `main`, con guarda de `versionCode`; sustituye
       a `release-apk.yml`); ver [`CI_CD.md`](CI_CD.md) y [`release/CONFIGURAR_PLAY_CI.md`](release/CONFIGURAR_PLAY_CI.md).
