@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
+import 'package:tramiapp_flutter/core/router/app_routes.dart';
+import 'package:tramiapp_flutter/core/router/safe_pop.dart';
 import 'package:tramiapp_flutter/core/theme/app_colors.dart';
 import 'package:tramiapp_flutter/core/widgets/confirmation_policies_dialog.dart';
 import 'package:tramiapp_flutter/core/widgets/pqrd_dropdown.dart';
@@ -181,7 +183,9 @@ class _PqrdIdentificacionScreenState
       iconAsset: 'assets/images/ico_pqrd_identificacion.svg',
       title: 'PQRDS CON IDENTIFICACIÓN',
       description: 'Peticiones, quejas, reclamos y sugerencias',
-      onBack: () => _currentStep == 1 ? context.pop() : _prev(),
+      onBack: () => _currentStep == 1
+          ? context.popOrGo(AppRoutes.municipalityPath(widget.municipalityId))
+          : _prev(),
       body: asyncMun.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),

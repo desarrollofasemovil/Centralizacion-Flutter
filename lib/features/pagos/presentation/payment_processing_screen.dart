@@ -50,7 +50,11 @@ class _PaymentProcessingScreenState
         .read(paymentProcessingNotifierProvider.notifier)
         .onCheckStatusClick();
     if (shouldNavigate && mounted) {
-      context.go(AppRoutes.pagosHistoryPath(widget.municipalityId));
+      // Rutas del ShellRoute = hermanas planas: un `go` directo a History la
+      // dejaría como única página y su botón Atrás no tendría a dónde volver.
+      // Se reconstruye la pila Home → History.
+      context.go(AppRoutes.municipalityPath(widget.municipalityId));
+      context.push(AppRoutes.pagosHistoryPath(widget.municipalityId));
     }
   }
 

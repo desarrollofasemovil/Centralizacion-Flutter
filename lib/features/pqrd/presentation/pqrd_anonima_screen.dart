@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
+import 'package:tramiapp_flutter/core/router/app_routes.dart';
+import 'package:tramiapp_flutter/core/router/safe_pop.dart';
 import 'package:tramiapp_flutter/core/theme/app_colors.dart';
 import 'package:tramiapp_flutter/core/widgets/pqrd_dropdown.dart';
 import 'package:tramiapp_flutter/core/widgets/top_bar_navigation.dart';
@@ -110,7 +112,8 @@ class _PqrdAnonimaScreenState extends ConsumerState<PqrdAnonimaScreen> {
       iconAsset: 'assets/images/ico_pqrd_anonima.svg',
       title: 'PQRSD ANÓNIMA',
       description: 'Peticiones, quejas, reclamos y sugerencias',
-      onBack: () => context.pop(),
+      onBack: () =>
+          context.popOrGo(AppRoutes.municipalityPath(widget.municipalityId)),
       body: asyncMun.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),

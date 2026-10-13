@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tramiapp_flutter/core/router/app_routes.dart';
+import 'package:tramiapp_flutter/core/router/safe_pop.dart';
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
 import 'package:tramiapp_flutter/core/models/tipo_documento.dart';
 import 'package:tramiapp_flutter/core/widgets/slide_switcher.dart';
@@ -268,7 +269,7 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
         description: 'Pide, paga y recibe tu certificado.',
         onBack: () {
           if (state.currentStep == 1) {
-            context.pop();
+            context.popOrGo(AppRoutes.municipalityPath(widget.municipalityId));
           } else {
             notifier.onPreviousStep();
           }
