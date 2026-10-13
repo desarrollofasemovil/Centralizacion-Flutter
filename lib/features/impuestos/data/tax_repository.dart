@@ -169,6 +169,6 @@ class TaxRepository {
     );
     final response = await _taxApi.downloadInvoice(request);
     final cleanResponse = response.replaceAll('"', '');
-    return 'http://apidatamovil.1cero1.com/$cleanResponse';
+    return 'https://apidatamovil.1cero1.com/$cleanResponse';
   }
 }

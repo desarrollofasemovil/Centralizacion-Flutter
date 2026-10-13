@@ -115,7 +115,7 @@ class ReservationRequestDTO {
     required this.email,
     required this.date,
     required this.time,
-    this.municipalityEmail = 'test@test.com',
+    this.municipalityEmail
   });
 
   factory ReservationRequestDTO.fromJson(Map<String, dynamic> json) =>
