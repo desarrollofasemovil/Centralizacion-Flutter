@@ -302,6 +302,25 @@ void main() {
       expect(find.text('Mantenimiento'), findsOneWidget);
     });
 
+    testWidgets('"Salir" del estado bloqueante cierra la app (Android)',
+        (tester) async {
+      mockPlatform(tester);
+      await _pump(tester, dialogVisible: false, status: _blocking);
+
+      await tester.tap(find.text('Salir'));
+      await tester.pump();
+
+      expect(platformCalls, contains('SystemNavigator.pop'));
+    });
+
+    testWidgets('en iOS no hay botón "Salir" (Apple no deja cerrar la app)',
+        (tester) async {
+      await _pump(tester, dialogVisible: false, status: _blocking);
+
+      expect(find.text('Mantenimiento'), findsOneWidget);
+      expect(find.text('Salir'), findsNothing);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
     testWidgets('sin diálogo, atrás sigue cerrando la app (control)',
         (tester) async {
       mockPlatform(tester);
