@@ -19,8 +19,12 @@ class LoginResult {
 }
 
 /// Login nativo (correo/clave) contra la API propia — NO usa Firebase Auth
-/// (BACKEND §5.1). El éxito se evalúa por `booleanStatus`; el token viaja en
-/// `sentencesError` cuando es exitoso.
+/// (BACKEND §5.1). El éxito se evalúa por `booleanStatus`.
+///
+/// `POST api/Auth` **no emite token** (API `docs/api/auth.md`): solo valida
+/// credenciales, y en éxito `sentencesError` es el mensaje "Inicio de sesión
+/// exitoso". Aun así se guarda en `auth_token` como hacía el Kotlin; nada lo
+/// lee (`getAuthToken()` no tiene llamadas). Queda como seguimiento quitarlo.
 class AuthRepository {
   AuthRepository(this._api, this._prefs);
 
@@ -48,7 +52,8 @@ class AuthRepository {
       );
     }
 
-    final token = res.sentencesError; // el token viaja aquí en login exitoso
+    // No es un token: es el mensaje de éxito del login (ver doc de la clase).
+    final token = res.sentencesError;
     final user = await _api.getUserByEmail(email);
     if (user == null) {
       return const LoginResult.failure('Usuario no encontrado.');

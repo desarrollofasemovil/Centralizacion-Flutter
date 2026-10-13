@@ -242,6 +242,13 @@ varios productos.
 - [x] **Override del servidor de pruebas** (`--dart-define=USE_DEV_SERVER=true`, solo Android debug) para
       probar la API nueva antes de producción; marca "API DEV" y cleartext limitado a `192.168.20.198` en el
       source set `debug`. Ver BACKEND §2. Pendiente: binding HTTPS en el IIS de pruebas para iOS.
+- [x] **Multi-tenant Fase 4 (cabeceras)**: `X-App-Id` / `X-App-Version` / `X-Platform` hacia la API Centralízate
+      (`TenantHeadersInterceptor`), ruta real de `sync-status`, endpoints inexistentes eliminados y DTOs del
+      municipio tolerantes a nulos (`phone` como string). Ver BACKEND §1.2, §3.10, §4.1.
+- [ ] **Quitar el guardado de `auth_token`**: guarda el mensaje "Inicio de sesión exitoso" (la API no emite
+      token) y nada lo lee.
+- [ ] **Historial vacío = error**: con 0 pagos pendientes, `GET api/PaymentHistory/User/{id}` responde 404 con un
+      envelope (objeto) y el cliente espera una lista.
 - [ ] **Un test golpea la API real** (`GET /api/Department` devuelve 400 en la suite). Debe usar mock.
 
 ## Release hardening — navegación (backport de Santander `d553eff`, 2026-10-13)
