@@ -719,61 +719,89 @@ class _PsvCollapsingHeader extends StatelessWidget {
     final iconSize = lerpDouble(24, 32, t)!;
     final titleSize = lerpDouble(16, 20, t)!;
 
+    // El botón de atrás queda fijo arriba (mismo sitio que `AppTopBar` y
+    // `TopBarNavigationScaffold`); la fila del badge y el título se desliza
+    // con el colapso a su derecha.
     return Container(
       color: scheme.primary,
-      padding: const EdgeInsets.fromLTRB(8, 4, 16, 10),
-      alignment: Alignment.bottomLeft,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Stack(
         children: [
-          AppBackButton(onPressed: onBack, style: AppBackButtonStyle.light),
-          const SizedBox(width: 8),
-          Container(
-            width: badgeSize,
-            height: badgeSize,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: SvgPicture.asset(
-              iconAsset,
-              width: iconSize,
-              height: iconSize,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontSize: titleSize,
-                    color: scheme.onPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (t > 0.05)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Opacity(
-                      opacity: t,
-                      child: Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onPrimary.withValues(alpha: 0.9),
-                        ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppBackButton.edgeInset + AppBackButton.size + 8,
+                4,
+                16,
+                // Colapsada (64 px, badge de 38) la fila queda centrada a la
+                // altura del botón.
+                13,
+              ),
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: badgeSize,
+                      height: badgeSize,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: SvgPicture.asset(
+                        iconAsset,
+                        width: iconSize,
+                        height: iconSize,
                       ),
                     ),
-                  ),
-              ],
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontSize: titleSize,
+                              color: scheme.onPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (t > 0.05)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Opacity(
+                                opacity: t,
+                                child: Text(
+                                  subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onPrimary.withValues(
+                                      alpha: 0.9,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: AppBackButton.edgeInset,
+            top: (AppBackButton.barHeight - AppBackButton.size) / 2,
+            child: AppBackButton(
+              onPressed: onBack,
+              style: AppBackButtonStyle.light,
             ),
           ),
         ],

@@ -4,13 +4,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/municipality/municipality_repository.dart';
-import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/important_alert_dialog.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../../core/widgets/policy_checkboxes.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../application/tax_notifier.dart';
 import 'widgets/styled_dropdown_menu.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 /// Puerto de `TaxQueryScreen` (ConsultaImpuestoScreen.kt): formulario de
 /// consulta de impuestos. Toda la lógica vive en [TaxQueryNotifier].
@@ -104,14 +104,9 @@ class _ConsultaImpuestoScreenState
     return Scaffold(
       backgroundColor: scheme.surface,
       resizeToAvoidBottomInset: true,
-      appBar: AppBar(
+      appBar: AppTopBar(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: Center(child: AppBackButton(onPressed: () => context.pop())),
-        ),
+        onBack: () => context.pop(),
       ),
       body: asyncMun.maybeWhen(
         data: (munDto) {

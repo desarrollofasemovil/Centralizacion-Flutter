@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../utils/url_opener.dart';
 
 class PolicyCheckboxes extends StatelessWidget {
   final bool dataPolicyChecked;
@@ -82,14 +82,10 @@ class PolicyCheckboxRow extends StatelessWidget {
               decoration: TextDecoration.underline,
             ),
             recognizer: TapGestureRecognizer()
-              ..onTap = () async {
-                if (url.isNotEmpty) {
-                  final uri = Uri.parse(url);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                }
-              },
+              ..onTap = () => abrirUrl(
+                url,
+                toolbarColor: theme.colorScheme.primary,
+              ),
           ),
           TextSpan(text: after),
         ],

@@ -43,6 +43,9 @@ class UserPreferences {
   static const _kRemindersSendByEmail = 'remindersSendByEmail';
   static const _kCoachmarkSeen = 'has_seen_notifications_coachmark';
   static const _kBlockedSendEmail = 'IS_BLOQUED_BOTTOM';
+  // In-App Review: el Kotlin usaba un archivo aparte (`in_app_review_prefs`);
+  // aquí se prefija porque comparte espacio con el resto de preferencias.
+  static const _kReviewLoginCount = 'in_app_review_login_count';
 
   // ── Ubicación ──────────────────────────────────────────────────────────────
   SavedLocation getSavedLocation() => SavedLocation(
@@ -136,6 +139,12 @@ class UserPreferences {
       _prefs.setInt(_kBlockedSendEmail, millis);
 
   Future<void> clearTimeBlockedSendEmail() => _prefs.remove(_kBlockedSendEmail);
+
+  // ── In-App Review: inicios de sesión nativos acumulados ─────────────────────
+  int reviewLoginCount() => _prefs.getInt(_kReviewLoginCount) ?? 0;
+
+  Future<void> incrementReviewLoginCount() =>
+      _prefs.setInt(_kReviewLoginCount, reviewLoginCount() + 1);
 }
 
 /// Instancia de [SharedPreferences]. **Se sobreescribe en `bootstrap`** tras

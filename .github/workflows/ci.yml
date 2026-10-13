@@ -1,11 +1,13 @@
 name: CI
 
 # Validación de cada PR hacia develop o main: análisis estático + tests.
-# No compila APK: eso solo ocurre al fusionar develop -> main (release-apk.yml).
+# No compila nada publicable: el App Bundle sale solo de `main`
+# (release-internal.yml), que reutiliza este mismo workflow como puerta.
 on:
   pull_request:
     branches: [develop, main]
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

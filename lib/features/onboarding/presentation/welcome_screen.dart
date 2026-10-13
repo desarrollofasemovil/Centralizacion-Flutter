@@ -4,15 +4,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/url_opener.dart';
 
 import '../../../core/models/department.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../../core/widgets/footer_sponsors.dart';
 import '../application/welcome_controller.dart';
-
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -94,14 +94,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       parent: _entrance,
       curve: const Interval(100 / 1600, 900 / 1600, curve: Curves.easeOut),
     );
-    _carouselScale = Tween<double>(begin: 0.85, end: 1.0).animate(_carouselFade);
-    _carouselSlide = Tween<Offset>(
-      begin: const Offset(0, -0.15),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entrance,
-      curve: const Interval(800 / 1600, 1.0, curve: Curves.easeOut),
-    ));
+    _carouselScale = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(_carouselFade);
+    _carouselSlide =
+        Tween<Offset>(begin: const Offset(0, -0.15), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entrance,
+            curve: const Interval(800 / 1600, 1.0, curve: Curves.easeOut),
+          ),
+        );
 
     // Port de triggerAnimations() en WelcomeViewModel: delay antes de
     // arrancar la coreografía.
@@ -221,7 +224,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       showDropdown: _searchFocused && filtered.isNotEmpty,
                       departments: filtered,
                       onSelected: _onDepartmentSelected,
-                      textColor: scheme.onSurface,
+                      textColor: AppColors.textPrimary,
                     ),
                   ),
                 ),
@@ -271,7 +274,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 }
 
-
 class _DepartmentSearch extends StatelessWidget {
   const _DepartmentSearch({
     required this.controller,
@@ -312,33 +314,46 @@ class _DepartmentSearch extends StatelessWidget {
               hintText: 'Busca tu departamento...',
               hintStyle: TextStyle(color: Color(0xFF7E7E7E)),
               prefixIcon: Icon(Icons.search, color: Color(0xFF7E7E7E)),
-              contentPadding:
-                  EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              contentPadding: EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 12,
+              ),
               border: OutlineInputBorder(borderSide: BorderSide.none),
               enabledBorder: OutlineInputBorder(borderSide: BorderSide.none),
               focusedBorder: OutlineInputBorder(borderSide: BorderSide.none),
             ),
           ),
-          if (showDropdown)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 200),
-              child: ListView.builder(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                itemCount: departments.length,
-                itemBuilder: (context, i) {
-                  final dep = departments[i];
-                  return ListTile(
-                    dense: true,
-                    title: Text(
-                      dep.name,
-                      style: TextStyle(color: textColor, fontSize: 15),
+          // fadeIn(300) + expandVertically(300) / fadeOut + shrinkVertically.
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.fastOutSlowIn,
+            alignment: Alignment.topCenter,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: !showDropdown
+                  ? const SizedBox(width: double.infinity)
+                  : ConstrainedBox(
+                      key: const ValueKey('departments'),
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: departments.length,
+                        itemBuilder: (context, i) {
+                          final dep = departments[i];
+                          return ListTile(
+                            dense: true,
+                            title: Text(
+                              dep.name,
+                              style: TextStyle(color: textColor, fontSize: 15),
+                            ),
+                            onTap: () => onSelected(dep),
+                          );
+                        },
+                      ),
                     ),
-                    onTap: () => onSelected(dep),
-                  );
-                },
-              ),
             ),
+          ),
         ],
       ),
     );
@@ -366,8 +381,9 @@ class _Carousel extends StatelessWidget {
     if (items.isEmpty) {
       return SizedBox(
         height: height,
-        child:
-            const Center(child: CircularProgressIndicator(color: Colors.white)),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
     return Column(
@@ -397,16 +413,10 @@ class _Carousel extends StatelessWidget {
                   );
                 },
                 child: GestureDetector(
-                  onTap: () async {
-                    final url = item.clickUrl;
-                    if (url.isNotEmpty) {
-                      final uri = Uri.tryParse(url);
-                      if (uri != null) {
-                        await launchUrl(uri,
-                            mode: LaunchMode.externalApplication);
-                      }
-                    }
-                  },
+                  onTap: () => abrirUrl(
+                    item.clickUrl,
+                    toolbarColor: Theme.of(context).colorScheme.primary,
+                  ),
                   child: Card(
                     elevation: 5,
                     clipBehavior: Clip.antiAlias,
@@ -459,4 +469,3 @@ class _Carousel extends StatelessWidget {
     );
   }
 }
-

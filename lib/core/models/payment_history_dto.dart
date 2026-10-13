@@ -39,3 +39,6 @@ class PaymentHistoryDTO {
 }
 
 typedef PaymentHistoryListDTO = List<PaymentHistoryDTO>;
+
+/// `idStatusType` de un pago aprobado (2 = rechazado, 3 = pendiente).
+const kPaymentStatusApproved = 1;

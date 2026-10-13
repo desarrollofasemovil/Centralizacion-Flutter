@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tramiapp_flutter/core/router/app_routes.dart';
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
 import 'package:tramiapp_flutter/core/models/tipo_documento.dart';
+import 'package:tramiapp_flutter/core/widgets/slide_switcher.dart';
 import 'package:tramiapp_flutter/core/widgets/step_indicator.dart';
 import 'package:tramiapp_flutter/core/widgets/top_bar_navigation.dart';
 import '../application/certificates_notifier.dart';
@@ -290,9 +291,15 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
                     children: [
                       StepIndicator(currentStep: state.currentStep),
                       const SizedBox(height: 24),
-                      if (state.currentStep == 1) _buildStep1(state, notifier),
-                      if (state.currentStep == 2) _buildStep2(state, notifier),
-                      if (state.currentStep == 3) _buildStep3(state, notifier),
+                      // AnimatedContent "StepAnimation" (slide + fade).
+                      SlideSwitcher(
+                        index: state.currentStep,
+                        child: switch (state.currentStep) {
+                          1 => _buildStep1(state, notifier),
+                          2 => _buildStep2(state, notifier),
+                          _ => _buildStep3(state, notifier),
+                        },
+                      ),
                     ],
                   ),
                 ),

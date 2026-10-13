@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/models/course_dto.dart';
-import '../../../core/widgets/app_back_button.dart';
+import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/circles_decoration.dart';
 import '../../../core/widgets/confirmation_dialog.dart';
 import '../../auth/application/auth_providers.dart';
@@ -88,7 +88,6 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final state = ref.watch(coursesNotifierProvider(widget.param));
     final showingDetails =
         state.selectedCourseForDetails != null &&
@@ -145,33 +144,15 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
           : Stack(
               children: [
                 Scaffold(
+                  appBar: AppTopBar(
+                    title: 'Cursos',
+                    backgroundColor: Colors.transparent,
+                    onBack: () => context.pop(),
+                  ),
                   body: SafeArea(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 10),
-                              child: AppBackButton(
-                                onPressed: () => context.pop(),
-                              ),
-                            ),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: Text(
-                                  'Cursos',
-                                  style: theme.textTheme.titleLarge,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Expanded(child: _body(context, state)),
-                      ],
+                      children: [Expanded(child: _body(context, state))],
                     ),
                   ),
                 ),

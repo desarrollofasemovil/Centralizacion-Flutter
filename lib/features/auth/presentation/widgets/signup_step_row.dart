@@ -53,29 +53,3 @@ class SignUpStepRow extends StatelessWidget {
     );
   }
 }
-
-/// Botón de volver del registro — puerto de `SignUpBackButton`: ícono circular
-/// con fondo `primary` y flecha `onPrimary`.
-class SignUpBackButton extends StatelessWidget {
-  const SignUpBackButton({super.key, required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return IconButton(
-      onPressed: onPressed,
-      icon: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: scheme.primary,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(Icons.arrow_back_ios_new, size: 18, color: scheme.onPrimary),
-      ),
-    );
-  }
-}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/municipality_procedure.dart';
+import '../../../../core/widgets/enter_transition.dart';
 import '../../application/reminders_notifier.dart';
 import 'calendar_custom_reminder.dart';
 
@@ -57,8 +58,9 @@ class _CreateReminderSheet extends ConsumerWidget {
               Text(
                 'Añadir recordatorio',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 2),
               Expanded(
@@ -111,8 +113,9 @@ class _CreateReminderSheet extends ConsumerWidget {
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
                           form.formError!,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: theme.colorScheme.error),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
                         ),
                       ),
                     const SizedBox(height: 8),
@@ -180,9 +183,7 @@ class _ToggleRow extends StatelessWidget {
         children: [
           Icon(icon, size: 30, color: theme.colorScheme.primary),
           const SizedBox(width: 5),
-          Expanded(
-            child: Text(label, style: theme.textTheme.bodySmall),
-          ),
+          Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
           Switch.adaptive(value: value, onChanged: onChanged),
         ],
       ),
@@ -204,16 +205,19 @@ class _TimePickerField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Hora',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurface)),
+        Text(
+          'Hora',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
         const SizedBox(height: 3),
         SizedBox(
           width: double.infinity,
           child: FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor:
-                  theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              backgroundColor: theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.5),
               foregroundColor: theme.colorScheme.onSurface,
               padding: const EdgeInsets.all(12),
               shape: RoundedRectangleBorder(
@@ -225,8 +229,9 @@ class _TimePickerField extends StatelessWidget {
                 context: context,
                 initialTime: time,
                 builder: (ctx, child) => MediaQuery(
-                  data: MediaQuery.of(ctx)
-                      .copyWith(alwaysUse24HourFormat: true),
+                  data: MediaQuery.of(
+                    ctx,
+                  ).copyWith(alwaysUse24HourFormat: true),
                   child: child!,
                 ),
               );
@@ -265,8 +270,9 @@ class _SearchableProcedureDropdownState
   @override
   void initState() {
     super.initState();
-    _controller =
-        TextEditingController(text: widget.selected?.procedures.name ?? '');
+    _controller = TextEditingController(
+      text: widget.selected?.procedures.name ?? '',
+    );
   }
 
   @override
@@ -286,8 +292,9 @@ class _SearchableProcedureDropdownState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fill =
-        theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5);
+    final fill = theme.colorScheme.surfaceContainerHighest.withValues(
+      alpha: 0.5,
+    );
     return Container(
       decoration: BoxDecoration(
         color: fill,
@@ -296,67 +303,87 @@ class _SearchableProcedureDropdownState
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          TextField(
-            controller: _controller,
-            onChanged: (_) => setState(() => _expanded = true),
-            onTap: () => setState(() => _expanded = true),
-            style: theme.textTheme.bodyMedium,
-            decoration: InputDecoration(
-              hintText: 'Selecciona un trámite',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: widget.procedures.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(14),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+          EnterTransition(
+            offsetDp: -30,
+            child: TextField(
+              controller: _controller,
+              onChanged: (_) => setState(() => _expanded = true),
+              onTap: () => setState(() => _expanded = true),
+              style: theme.textTheme.bodyMedium,
+              decoration: InputDecoration(
+                hintText: 'Selecciona un trámite',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: widget.procedures.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      )
+                    : IconButton(
+                        icon: Icon(
+                          _expanded
+                              ? Icons.arrow_drop_up
+                              : Icons.arrow_drop_down,
+                        ),
+                        onPressed: () => setState(() => _expanded = !_expanded),
                       ),
-                    )
-                  : IconButton(
-                      icon: Icon(_expanded
-                          ? Icons.arrow_drop_up
-                          : Icons.arrow_drop_down),
-                      onPressed: () => setState(() => _expanded = !_expanded),
-                    ),
-              border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 14,
+                ),
+              ),
             ),
           ),
-          if (_expanded)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 180),
-              child: _filtered.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(
-                        'No se encontraron trámites',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _filtered.length,
-                      itemBuilder: (_, i) {
-                        final p = _filtered[i];
-                        return ListTile(
-                          dense: true,
-                          title: Text(
-                            p.procedures.name,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                          onTap: () {
-                            _controller.text = p.procedures.name;
-                            FocusScope.of(context).unfocus();
-                            setState(() => _expanded = false);
-                            widget.onSelected(p);
-                          },
-                        );
-                      },
+          // fadeIn() + expandVertically() / fadeOut() + shrinkVertically()
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.fastOutSlowIn,
+            alignment: Alignment.topCenter,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: !_expanded
+                  ? const SizedBox(width: double.infinity)
+                  : ConstrainedBox(
+                      key: const ValueKey('procedures'),
+                      constraints: const BoxConstraints(maxHeight: 180),
+                      child: _filtered.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Text(
+                                'No se encontraron trámites',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _filtered.length,
+                              itemBuilder: (_, i) {
+                                final p = _filtered[i];
+                                return ListTile(
+                                  dense: true,
+                                  title: Text(
+                                    p.procedures.name,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                  onTap: () {
+                                    _controller.text = p.procedures.name;
+                                    FocusScope.of(context).unfocus();
+                                    setState(() => _expanded = false);
+                                    widget.onSelected(p);
+                                  },
+                                );
+                              },
+                            ),
                     ),
             ),
+          ),
         ],
       ),
     );

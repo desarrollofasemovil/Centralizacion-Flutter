@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/services/api_providers.dart';
+import '../../../core/api/services/payment_history_api_service.dart';
+import '../../../core/models/payment_history_dto.dart';
+import '../../../core/review/review_prompt_service.dart';
 import '../../auth/application/auth_providers.dart';
 
 /// Segundos que se bloquea el botón "Verificar" (tiempo aprox. de un pago PSE).
@@ -61,10 +64,21 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
         final api = ref.read(paymentHistoryApiServiceProvider);
         final history = await api.getHistoryPaymentByUser(userId);
         if (history.isNotEmpty) {
-          final latestId = history
-              .map((h) => h.id)
-              .reduce((a, b) => a > b ? a : b);
-          await api.syncPaymentStatus(latestId);
+          final latest = history.reduce((a, b) => a.id > b.id ? a : b);
+          await api.syncPaymentStatus(latest.id);
+          // Reseña de la tienda si el pago pasó a aprobado con esta
+          // verificación (FSM-59). Si ya lo estaba, no se relee. Sin `await`:
+          // la navegación al Historial no espera esa lectura extra.
+          if (latest.idStatusType != kPaymentStatusApproved) {
+            unawaited(
+              _reviewIfApproved(
+                api,
+                ref.read(reviewPromptServiceProvider),
+                userId,
+                latest.id,
+              ),
+            );
+          }
         }
       }
     } catch (_) {
@@ -73,6 +87,26 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
     }
     state = state.copyWith(isVerifying: false);
     return true;
+  }
+
+  /// Corre después de que la pantalla navegó (el notifier autoDispose ya
+  /// puede estar liberado): por eso recibe el servicio y la API, no `ref`.
+  static Future<void> _reviewIfApproved(
+    PaymentHistoryApiService api,
+    ReviewPromptService review,
+    int userId,
+    int idHistory,
+  ) async {
+    try {
+      final synced = await api.getHistoryPaymentByUser(userId);
+      final status =
+          synced.where((h) => h.id == idHistory).firstOrNull?.idStatusType;
+      if (status == kPaymentStatusApproved) {
+        await review.onPositiveMoment(ReviewTrigger.paymentApproved);
+      }
+    } catch (_) {
+      // Best-effort: sin red, simplemente no se pide la reseña.
+    }
   }
 }
 

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/url_opener.dart';
 
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../application/help_notifier.dart';
 import '../domain/help_state.dart';
 import 'widgets/support_form_wizard.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 /// Pantalla de Ayuda y Soporte. Port de `HelpScreen.kt`.
 ///
@@ -45,11 +46,11 @@ class HelpScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Ayuda y Soporte'),
+      appBar: AppTopBar(
+        title: 'Ayuda y Soporte',
         backgroundColor: theme.colorScheme.surface,
         foregroundColor: theme.colorScheme.onSurface,
-        elevation: 0,
+        onBack: () => Navigator.of(context).maybePop(),
       ),
       body: SafeArea(
         top: false,
@@ -332,20 +333,14 @@ class _OfficialPortalButton extends StatelessWidget {
 
   final String portal;
 
-  Future<void> _open() async {
-    if (portal.trim().isEmpty) return;
-    final uri = Uri.tryParse(portal);
-    if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
+  Future<void> _open(BuildContext context) =>
+      abrirUrl(portal, toolbarColor: Theme.of(context).colorScheme.primary);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OutlinedButton.icon(
-      onPressed: _open,
+      onPressed: () => _open(context),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(50),
         side: BorderSide(color: theme.colorScheme.primary),

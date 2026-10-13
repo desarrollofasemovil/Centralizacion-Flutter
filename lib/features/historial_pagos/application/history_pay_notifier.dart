@@ -1,10 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/api/services/payment_history_api_service.dart';
 import '../../../core/models/payment_history_dto.dart';
+import '../../../core/review/review_prompt_service.dart';
 import '../../auth/application/auth_providers.dart';
 
 class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
+  /// Última lista recibida. `fetchHistory` pone el estado en `loading` sin
+  /// valor previo, así que el estado no sirve para saber cómo estaba un pago
+  /// antes de sincronizarlo.
+  PaymentHistoryListDTO _lastLoaded = const [];
+
   @override
   AsyncValue<PaymentHistoryListDTO> build() {
     _fetchHistoryInitial();
@@ -28,6 +36,7 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
     state = const AsyncValue.loading();
     try {
       final list = await _apiService.getHistoryPaymentByUser(userId);
+      _lastLoaded = list;
       state = AsyncValue.data(list);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
@@ -51,14 +60,26 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
   }
 
   Future<void> syncPayment(int idHistory) async {
+    final wasApproved = _statusOf(idHistory) == kPaymentStatusApproved;
     try {
       await _apiService.syncPaymentStatus(idHistory);
       // Reload history to get updated status from API
       await fetchHistory();
+      // Reseña de la tienda cuando el pago pasa a aprobado (FSM-59).
+      if (!wasApproved && _statusOf(idHistory) == kPaymentStatusApproved) {
+        unawaited(
+          ref
+              .read(reviewPromptServiceProvider)
+              .onPositiveMoment(ReviewTrigger.paymentApproved),
+        );
+      }
     } catch (e) {
       rethrow;
     }
   }
+
+  int? _statusOf(int idHistory) =>
+      _lastLoaded.where((item) => item.id == idHistory).firstOrNull?.idStatusType;
 }
 
 final historyPayNotifierProvider =

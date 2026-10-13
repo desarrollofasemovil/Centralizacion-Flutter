@@ -38,6 +38,10 @@ class AppColors {
   /// `Gray900`.
   static const gray900 = Color(0xFF212121);
 
+  /// `ColorTextPrimary` — texto de los buscadores sobre fondo blanco fijo
+  /// (departamento/municipio). No usar `onSurface`: en tema oscuro es claro.
+  static const textPrimary = Color(0xFF2C2E35);
+
   /// `Green` — check de éxito de registro.
   static const successGreen = Color(0xFF42A345);
 

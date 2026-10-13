@@ -109,7 +109,8 @@ class TopBarNavigationScaffold extends StatelessWidget {
           if (onRefresh == null) return scrollView;
           return RefreshIndicator(
             onRefresh: onRefresh!,
-            edgeOffset: MediaQuery.paddingOf(context).top + 56,
+            edgeOffset:
+                MediaQuery.paddingOf(context).top + AppBackButton.barHeight,
             color: scheme.primary,
             child: scrollView,
           );
@@ -141,7 +142,8 @@ class _TopBarHeaderDelegate extends SliverPersistentHeaderDelegate {
   final TextTheme textTheme;
 
   // Alto de la barra colapsada (bajo el status bar) y alto extra en expandido.
-  static const double _toolbar = 56;
+  // Misma franja que `AppTopBar` para que el botón quede a la misma altura.
+  static const double _toolbar = AppBackButton.barHeight;
   static const double _expandedExtra = 92;
 
   @override
@@ -171,7 +173,7 @@ class _TopBarHeaderDelegate extends SliverPersistentHeaderDelegate {
             Positioned(
               left: 16,
               right: 16,
-              top: topInset + 52,
+              top: topInset + _toolbar - 4,
               child: IgnorePointer(
                 ignoring: expandedOpacity < 0.5,
                 child: Opacity(
@@ -272,7 +274,7 @@ class _TopBarHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
             // ---- Botón de retroceso (siempre visible, fijo) ----
             Positioned(
-              left: 16,
+              left: AppBackButton.edgeInset,
               top: topInset + (_toolbar - AppBackButton.size) / 2,
               child: AppBackButton(
                 onPressed: onBack,

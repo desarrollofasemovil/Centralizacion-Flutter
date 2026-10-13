@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'servicios_publicos_theme.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 class HistoryItem {
   final String id;
@@ -78,15 +79,10 @@ class _PublicServicesHistoryScreenState extends State<PublicServicesHistoryScree
     return Theme(
       data: activeTheme,
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
-          title: const Text(
-            'Historial',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+        appBar: AppTopBar(
+          title: 'Historial',
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onBack: () => context.pop(),
         ),
         body: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

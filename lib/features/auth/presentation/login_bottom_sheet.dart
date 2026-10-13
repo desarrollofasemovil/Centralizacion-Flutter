@@ -1,17 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/review/review_prompt_service.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/auth_providers.dart';
 import '../application/login_options_controller.dart';
 import '../application/registration_draft.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/footer_sponsors.dart';
 
 /// Resultado con el que se cierra el sheet, para que el llamador navegue/avise
 /// usando el contexto de la página (no el del sheet, que ya no existe tras pop).
-enum _SheetResult { loggedIn, goToRegister, recover }
+/// `loggedIn` es el login nativo (correo/clave); el de Google va aparte porque
+/// no cuenta para la reseña de la tienda (igual que en el Kotlin).
+enum _SheetResult { loggedIn, loggedInWithGoogle, goToRegister, recover }
 
 /// Muestra el ModalBottomSheet de login (opciones + email) — puerto del
 /// `ModalBottomSheet` que el base hospeda en `MainScreen.kt` (color `Gray300`).
@@ -28,7 +34,7 @@ Future<void> showLoginBottomSheet(BuildContext context) async {
 
   if (!context.mounted) return;
   switch (result) {
-    case _SheetResult.loggedIn:
+    case _SheetResult.loggedIn || _SheetResult.loggedInWithGoogle:
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -44,6 +50,16 @@ Future<void> showLoginBottomSheet(BuildContext context) async {
           ],
         ),
       );
+      // Tras cerrar el diálogo, con la pantalla de destino ya visible (el
+      // Kotlin lo consume en MainScreen). Fuera del sheet: ese widget ya no
+      // existe.
+      if (result == _SheetResult.loggedIn && context.mounted) {
+        unawaited(
+          ProviderScope.containerOf(context, listen: false)
+              .read(reviewPromptServiceProvider)
+              .onSuccessfulLogin(),
+        );
+      }
     case _SheetResult.goToRegister:
       context.push(AppRoutes.signup);
     case _SheetResult.recover:
@@ -263,7 +279,7 @@ class _LoginSheetContentState extends ConsumerState<_LoginSheetContent> {
 
     switch (outcome.status) {
       case GoogleAuthStatus.loggedIn:
-        Navigator.of(context).pop(_SheetResult.loggedIn);
+        Navigator.of(context).pop(_SheetResult.loggedInWithGoogle);
       case GoogleAuthStatus.goToRegister:
         Navigator.of(context).pop(_SheetResult.goToRegister);
       case GoogleAuthStatus.cancelled:
@@ -328,19 +344,11 @@ class _EmailLoginFormState extends ConsumerState<_EmailLoginForm> {
       children: [
         Align(
           alignment: Alignment.centerLeft,
-          child: IconButton(
+          child: AppBackButton(
             onPressed: widget.onBack,
-            icon: Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: AppColors.buttonOptionScreen,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back_ios_new,
-                  color: Colors.white, size: 18),
-            ),
+            backgroundColor: AppColors.buttonOptionScreen,
+            iconColor: Colors.white,
+            tooltip: 'Volver',
           ),
         ),
         Center(child: widget.logo),

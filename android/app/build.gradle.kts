@@ -128,6 +128,29 @@ android.applicationVariants.all {
     tasks.named(variantTaskName) {
         finalizedBy("copy${variantName.replaceFirstChar { it.uppercase() }}FlutterApk")
     }
+
+    // Igual para el App Bundle: `flutter build appbundle` lo busca en
+    // `<raíz>/build/app/outputs/bundle/<variante>/` y Gradle lo deja en
+    // `android/app/build/outputs/bundle/<variante>/`; sin esta copia el comando
+    // termina con error aunque el .aab exista (lo usa release-internal.yml).
+    val bundleTaskName = "bundle${variantName.replaceFirstChar { it.uppercase() }}"
+    val copyBundleTaskName = "copy${variantName.replaceFirstChar { it.uppercase() }}FlutterBundle"
+    val bundleFile = File(
+        projectDir,
+        "build/outputs/bundle/$variantName/${sourceFileName.removeSuffix(".apk")}.aab"
+    )
+    tasks.register<Copy>(copyBundleTaskName) {
+        from(bundleFile)
+        into(File(flutterProjectRoot, "build/app/outputs/bundle/$variantName"))
+        doFirst {
+            if (!bundleFile.exists()) {
+                throw GradleException("No se encontró el App Bundle generado en ${bundleFile}")
+            }
+        }
+    }
+    tasks.matching { it.name == bundleTaskName }.configureEach {
+        finalizedBy(copyBundleTaskName)
+    }
 }
 
 tasks.register<Copy>("copyDefaultDebugFlutterApk") {
