@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/course_dto.dart';
-import '../../../../core/widgets/app_back_button.dart';
 import '../../domain/courses_state.dart';
+import '../../../../core/widgets/app_top_bar.dart';
 
 /// Vista de detalles de un curso (dirigida por estado, no es una ruta). Port de
 /// `CourseDetailsScreen.kt`.
@@ -24,13 +24,10 @@ class CourseDetailsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppTopBar(
+        title: 'Detalles del Curso',
         backgroundColor: theme.colorScheme.surface,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: AppBackButton(onPressed: onBack),
-        ),
-        title: Text('Detalles del Curso', style: theme.textTheme.titleMedium),
+        onBack: onBack,
       ),
       body: SafeArea(
         child: SingleChildScrollView(

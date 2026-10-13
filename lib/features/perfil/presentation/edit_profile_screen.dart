@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/widgets/app_back_button.dart';
 import '../application/edit_profile_notifier.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 /// Pantalla Editar Perfil. Port de `EditProfileScreen.kt`.
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -70,20 +70,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppTopBar(
+        title: 'Editar Perfil',
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: AppBackButton(onPressed: () => context.pop()),
-        ),
-        title: Text(
-          'Editar Perfil',
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
+        onBack: () => context.pop(),
       ),
       body: SafeArea(
         top: false,

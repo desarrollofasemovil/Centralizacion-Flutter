@@ -6,6 +6,7 @@ import '../../auth/presentation/login_bottom_sheet.dart';
 import '../application/help_notifier.dart';
 import '../domain/help_state.dart';
 import 'widgets/support_form_wizard.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 /// Pantalla de Ayuda y Soporte. Port de `HelpScreen.kt`.
 ///
@@ -45,11 +46,11 @@ class HelpScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Ayuda y Soporte'),
+      appBar: AppTopBar(
+        title: 'Ayuda y Soporte',
         backgroundColor: theme.colorScheme.surface,
         foregroundColor: theme.colorScheme.onSurface,
-        elevation: 0,
+        onBack: () => Navigator.of(context).maybePop(),
       ),
       body: SafeArea(
         top: false,

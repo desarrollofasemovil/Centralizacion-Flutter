@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../domain/barcode_parser.dart';
 import 'servicios_publicos_theme.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({required this.municipalityId, super.key});
@@ -73,15 +74,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
     return Theme(
       data: activeTheme,
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
-          title: const Text(
-            'Escanear con cámara',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+        appBar: AppTopBar(
+          title: 'Escanear con cámara',
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onBack: () => context.pop(),
         ),
         body: Stack(
           children: [

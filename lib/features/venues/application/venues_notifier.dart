@@ -225,7 +225,7 @@ class VenuesNotifier extends Notifier<VenuesUiState> {
       date: f.date,
       time: f.time,
       municipalityEmail: param.municipalityEmail.trim().isEmpty
-          ? 'test@test.com'
+          ? null
           : param.municipalityEmail,
     );
 

@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../application/auth_providers.dart';
 import '../application/login_options_controller.dart';
 import '../application/registration_draft.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/footer_sponsors.dart';
 
 /// Resultado con el que se cierra el sheet, para que el llamador navegue/avise
@@ -343,19 +344,11 @@ class _EmailLoginFormState extends ConsumerState<_EmailLoginForm> {
       children: [
         Align(
           alignment: Alignment.centerLeft,
-          child: IconButton(
+          child: AppBackButton(
             onPressed: widget.onBack,
-            icon: Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: AppColors.buttonOptionScreen,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back_ios_new,
-                  color: Colors.white, size: 18),
-            ),
+            backgroundColor: AppColors.buttonOptionScreen,
+            iconColor: Colors.white,
+            tooltip: 'Volver',
           ),
         ),
         Center(child: widget.logo),

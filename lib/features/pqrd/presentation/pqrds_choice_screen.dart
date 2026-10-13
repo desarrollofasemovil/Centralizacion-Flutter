@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/widgets/app_top_bar.dart';
 import '../application/pqrd_notifier.dart';
 
 class PqrdsChoiceScreen extends ConsumerWidget {
@@ -68,11 +69,7 @@ class PqrdsChoiceScreen extends ConsumerWidget {
       data: (munDto) {
         final entityCode = munDto.entityCode;
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('PQRSDF'),
-            backgroundColor: scheme.primary,
-            foregroundColor: scheme.onPrimary,
-          ),
+          appBar: AppTopBar(title: 'PQRSDF', onBack: () => context.pop()),
           body: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
@@ -146,8 +143,9 @@ class PqrdsChoiceScreen extends ConsumerWidget {
           ),
         );
       },
-      orElse: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      orElse: () => Scaffold(
+        appBar: AppTopBar(title: 'PQRSDF', onBack: () => context.pop()),
+        body: const Center(child: CircularProgressIndicator()),
       ),
     );
   }

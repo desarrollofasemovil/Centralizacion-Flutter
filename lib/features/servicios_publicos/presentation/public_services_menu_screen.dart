@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'servicios_publicos_theme.dart';
+import '../../../core/widgets/app_top_bar.dart';
 
 class PublicServicesMenuScreen extends StatelessWidget {
   const PublicServicesMenuScreen({required this.municipalityId, super.key});
@@ -15,15 +16,10 @@ class PublicServicesMenuScreen extends StatelessWidget {
     return Theme(
       data: activeTheme,
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: const Text(
-            'Servicios Públicos',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+        appBar: AppTopBar(
+          title: 'Servicios Públicos',
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onBack: () => Navigator.of(context).pop(),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

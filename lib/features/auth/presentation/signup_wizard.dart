@@ -20,6 +20,7 @@ import 'widgets/registration_success_overlay.dart';
 import 'widgets/searchable_dropdown.dart';
 import 'widgets/signup_step_row.dart';
 import '../../../core/router/app_transitions.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/enter_transition.dart';
 import '../../../core/widgets/slide_switcher.dart';
 
@@ -271,14 +272,20 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               Column(
                 children: [
                   // TopBar (back + título)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 30, 10, 10),
+                  // Mismo alto e inset que `AppTopBar`; el botón toma el acento
+                  // del registro porque `primary` está sobrescrito arriba.
+                  SizedBox(
+                    width: double.infinity,
+                    height: AppBackButton.barHeight,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: SignUpBackButton(onPressed: _back),
+                        Positioned(
+                          left: AppBackButton.edgeInset,
+                          child: AppBackButton(
+                            onPressed: _back,
+                            tooltip: 'Volver',
+                          ),
                         ),
                         Text(
                           title,
