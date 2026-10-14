@@ -13,34 +13,47 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
   /// antes de sincronizarlo.
   PaymentHistoryListDTO _lastLoaded = const [];
 
+  /// Usuario de la sesión, fijado en [build]. Solo se observa el id: un cambio
+  /// de usuario (cerrar sesión y entrar con otro) reconstruye el notifier y
+  /// vuelve a pedir la lista; otros cambios de la sesión no.
+  int? _userId;
+
   @override
   AsyncValue<PaymentHistoryListDTO> build() {
-    _fetchHistoryInitial();
+    _userId = ref.watch(sessionProvider.select((user) => user?.id));
+    // Mantiene vivo el set de "sincronizando" mientras viva el historial.
+    ref.listen(historySyncingIdsProvider, (_, _) {});
+    Future.microtask(fetchHistory);
     return const AsyncValue.loading();
   }
 
   PaymentHistoryApiService get _apiService =>
       ref.read(paymentHistoryApiServiceProvider);
-  int? get _userId => ref.watch(sessionProvider)?.id;
 
-  void _fetchHistoryInitial() {
-    Future.microtask(() => fetchHistory());
-  }
-
-  Future<void> fetchHistory() async {
+  /// Carga la lista. Con [silent] y una lista ya en pantalla, no pasa por
+  /// `loading`: la lista visible se queda hasta que llega la nueva (y se queda
+  /// si la recarga falla). Así refrescar no reemplaza toda la pantalla por los
+  /// placeholders de carga.
+  Future<void> fetchHistory({bool silent = false}) async {
+    // `autoDispose`: la pantalla puede cerrarse antes de que llegue la
+    // respuesta; entonces ya no hay a quién escribirle el estado.
+    if (!ref.mounted) return;
     final userId = _userId;
     if (userId == null) {
       state = const AsyncValue.data([]);
       return;
     }
-    state = const AsyncValue.loading();
+    final keepVisible = silent && state.hasValue;
+    if (!keepVisible) state = const AsyncValue.loading();
     try {
       final list = paymentHistoryFromResponse(
         await _apiService.getHistoryPaymentByUser(userId),
       );
+      if (!ref.mounted) return;
       _lastLoaded = list;
       state = AsyncValue.data(list);
     } catch (e, stack) {
+      if (!ref.mounted || keepVisible) return;
       state = AsyncValue.error(e, stack);
     }
   }
@@ -50,6 +63,7 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
     if (userId == null) return;
     try {
       await _apiService.deleteHistoryByUser(userId, idHistory);
+      if (!ref.mounted) return;
       // Update local state by removing/filtering out the deleted item
       state.whenData((list) {
         final updated = list.where((item) => item.id != idHistory).toList();
@@ -61,22 +75,55 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
     }
   }
 
-  Future<void> syncPayment(int idHistory) async {
-    final wasApproved = _statusOf(idHistory) == kPaymentStatusApproved;
+  /// Sincroniza un pago y recarga la lista en silencio. Si falla, relanza.
+  Future<void> syncPayment(int idHistory) =>
+      _syncAndReload([idHistory], rethrowErrors: true);
+
+  /// Deslizar para refrescar: sincroniza con la pasarela todos los pagos en
+  /// curso (COMENZADA, como el original) y recarga la lista **una sola vez** al
+  /// final. Mientras tanto esas tarjetas muestran el estado cargando
+  /// ([historySyncingIdsProvider]). Un pago que no se pueda sincronizar no
+  /// detiene a los demás.
+  Future<void> refreshPending() async {
+    final pending = [
+      for (final p in _lastLoaded)
+        if (p.isInProgress) p.id,
+    ];
+    await _syncAndReload(pending);
+  }
+
+  Future<void> _syncAndReload(
+    List<int> ids, {
+    bool rethrowErrors = false,
+  }) async {
+    final wasApproved = {
+      for (final id in ids) id: _statusOf(id) == kPaymentStatusApproved,
+    };
+    final syncing = ref.read(historySyncingIdsProvider.notifier)..add(ids);
     try {
-      await _apiService.syncPaymentStatus(idHistory);
-      // Reload history to get updated status from API
-      await fetchHistory();
-      // Reseña de la tienda cuando el pago pasa a aprobado (FSM-59).
-      if (!wasApproved && _statusOf(idHistory) == kPaymentStatusApproved) {
+      for (final id in ids) {
+        try {
+          await _apiService.syncPaymentStatus(id);
+        } catch (_) {
+          if (rethrowErrors) rethrow;
+        }
+      }
+      await fetchHistory(silent: true);
+      if (!ref.mounted) return;
+      // Reseña de la tienda cuando un pago pasa a aprobado (FSM-59). Una sola
+      // vez aunque se aprueben varios en el mismo refresco.
+      final approvedNow = ids.any(
+        (id) => !wasApproved[id]! && _statusOf(id) == kPaymentStatusApproved,
+      );
+      if (approvedNow) {
         unawaited(
           ref
               .read(reviewPromptServiceProvider)
               .onPositiveMoment(ReviewTrigger.paymentApproved),
         );
       }
-    } catch (e) {
-      rethrow;
+    } finally {
+      if (ref.mounted) syncing.remove(ids);
     }
   }
 
@@ -84,7 +131,28 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
       _lastLoaded.where((item) => item.id == idHistory).firstOrNull?.idStatusType;
 }
 
+/// `autoDispose`: cada entrada al Historial pide la lista de nuevo. Sin esto la
+/// primera lista de la sesión quedaba fija para toda la vida de la app, y el
+/// pago recién hecho (Pagar → "Verificar estado" → Historial) solo aparecía
+/// tras deslizar para refrescar. Solo lo lee `HistoryPayScreen`.
 final historyPayNotifierProvider =
-    NotifierProvider<HistoryPayNotifier, AsyncValue<PaymentHistoryListDTO>>(
-      HistoryPayNotifier.new,
+    NotifierProvider.autoDispose<
+      HistoryPayNotifier,
+      AsyncValue<PaymentHistoryListDTO>
+    >(HistoryPayNotifier.new);
+
+/// Ids de los pagos que se están sincronizando ahora mismo: sus tarjetas
+/// muestran el estado cargando en vez de toda la pantalla.
+class HistorySyncingIds extends Notifier<Set<int>> {
+  @override
+  Set<int> build() => const {};
+
+  void add(Iterable<int> ids) => state = {...state, ...ids};
+
+  void remove(Iterable<int> ids) => state = state.difference(ids.toSet());
+}
+
+final historySyncingIdsProvider =
+    NotifierProvider.autoDispose<HistorySyncingIds, Set<int>>(
+      HistorySyncingIds.new,
     );

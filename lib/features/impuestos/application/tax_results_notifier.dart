@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/services/api_providers.dart';
-import '../../../core/models/validation_response_dto.dart';
-import '../../auth/application/auth_providers.dart';
+import '../../../core/telemetry/non_fatal_reporter.dart';
+import '../../pagos/application/payment_history_registration.dart';
 import '../domain/tax.dart';
 import 'tax_notifier.dart';
 
@@ -20,7 +19,6 @@ class TaxResultsState {
   final String? fileToOpenPath;
   final String? fileToSharePath;
   final String? genericUrlToOpen;
-  final ValidationResponseDTO? validationCreatePayment;
 
   const TaxResultsState({
     this.paymentUrl,
@@ -30,7 +28,6 @@ class TaxResultsState {
     this.fileToOpenPath,
     this.fileToSharePath,
     this.genericUrlToOpen,
-    this.validationCreatePayment,
   });
 
   TaxResultsState copyWith({
@@ -41,13 +38,11 @@ class TaxResultsState {
     String? fileToOpenPath,
     String? fileToSharePath,
     String? genericUrlToOpen,
-    ValidationResponseDTO? validationCreatePayment,
     bool clearPaymentUrl = false,
     bool clearError = false,
     bool clearFileToOpen = false,
     bool clearFileToShare = false,
     bool clearGenericUrl = false,
-    bool clearValidation = false,
   }) {
     return TaxResultsState(
       paymentUrl: clearPaymentUrl ? null : (paymentUrl ?? this.paymentUrl),
@@ -63,9 +58,6 @@ class TaxResultsState {
       genericUrlToOpen: clearGenericUrl
           ? null
           : (genericUrlToOpen ?? this.genericUrlToOpen),
-      validationCreatePayment: clearValidation
-          ? null
-          : (validationCreatePayment ?? this.validationCreatePayment),
     );
   }
 }
@@ -76,19 +68,13 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
   @override
   TaxResultsState build() => const TaxResultsState();
 
-  Future<void> onPayClicked({
+  Future<void> _createTransaction({
     required Tax tax,
     required String email,
     required String bankName,
     required int municipalityId,
     required String integrationType,
   }) async {
-    if (tax.isExpired) return;
-    state = state.copyWith(
-      isLoading: true,
-      loadingMessage: 'Generando el pago...',
-      clearError: true,
-    );
     try {
       final paymentInfo = await ref
           .read(taxRepositoryProvider)
@@ -113,43 +99,62 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
     }
   }
 
-  /// Registro previo del pago en el historial (status false, statusType 2),
-  /// igual que `createHistoryPay` del original.
-  Future<void> createHistoryPay({
-    required int amount,
-    required String idImpuesto,
-    required String factura,
-    required String codigoEntidad,
-    required int municipalityProceduresId,
+  /// "Pagar por PSE": un solo flujo secuencial, como el del pago sin
+  /// validación. Primero se **espera** el registro del pago en el historial y
+  /// después se pide la transacción.
+  ///
+  /// Antes el botón disparaba la transacción y el registro a la vez: la URL de
+  /// la pasarela llevaba enseguida a la pantalla de procesamiento, el aviso
+  /// del registro quedaba detrás sin verse y un fallo no dejaba rastro. El
+  /// registro sigue siendo best-effort ([registerPaymentHistory]).
+  ///
+  /// [municipalityProceduresId] es `null` si el impuesto no corresponde a un
+  /// trámite del municipio: entonces se paga sin registro, pero queda el rastro.
+  Future<void> payTax({
+    required Tax tax,
+    required String email,
+    required String bankName,
+    required int municipalityId,
+    required String integrationType,
+    required int? municipalityProceduresId,
   }) async {
-    try {
-      final user = ref.read(sessionProvider);
-      final now = DateTime.now();
-      final formattedDate =
-          '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-      final body = {
-        'userId': user?.id,
-        'amount': amount,
-        'paymentDate': formattedDate,
-        'status': false,
-        'municipalityProceduresId': municipalityProceduresId,
-        'statusType': 2,
-        'codigoEntidad': codigoEntidad,
-        'factura': factura,
-        'idimpuesto': idImpuesto,
-      };
-      final response = await ref
-          .read(paymentHistoryApiServiceProvider)
-          .createPaymentHistory(body);
-      state = state.copyWith(validationCreatePayment: response);
-    } catch (_) {
-      state = state.copyWith(
-        validationCreatePayment: ValidationResponseDTO(
-          booleanStatus: false,
-          sentencesError: 'Tenemos problemas crear historial.',
-        ),
+    if (tax.isExpired || state.isLoading) return;
+    state = state.copyWith(
+      isLoading: true,
+      loadingMessage: 'Generando el pago...',
+      clearError: true,
+    );
+
+    final procedureId = municipalityProceduresId;
+    if (procedureId == null || tax.invoice.isEmpty || tax.entityCode.isEmpty) {
+      ref.read(nonFatalReporterProvider).report(
+        'Pago sin registro en el historial: faltan datos',
+        context: {
+          'municipalityProceduresId': procedureId,
+          'idimpuesto': tax.taxId,
+          'tieneFactura': tax.invoice.isNotEmpty,
+          'tieneCodigoEntidad': tax.entityCode.isNotEmpty,
+        },
+      );
+    } else {
+      await registerPaymentHistory(
+        ref,
+        amount: tax.value,
+        idImpuesto: tax.taxId.toString(),
+        factura: tax.invoice,
+        codigoEntidad: tax.entityCode,
+        municipalityProceduresId: procedureId,
       );
     }
+    if (!ref.mounted) return;
+
+    await _createTransaction(
+      tax: tax,
+      email: email,
+      bankName: bankName,
+      municipalityId: municipalityId,
+      integrationType: integrationType,
+    );
   }
 
   Future<void> onOpenPdfClicked(Tax tax) async {

@@ -245,6 +245,18 @@ varios productos.
 - [x] **Multi-tenant Fase 4 (cabeceras)**: `X-App-Id` / `X-App-Version` / `X-Platform` hacia la API Centralízate
       (`TenantHeadersInterceptor`), ruta real de `sync-status`, endpoints inexistentes eliminados y DTOs del
       municipio tolerantes a nulos (`phone` como string). Ver BACKEND §1.2, §3.10, §4.1.
+- [x] **Historial siempre fresco y registro del pago antes de la pasarela** (2026-10-14): `historyPayNotifierProvider`
+      es `autoDispose` y observa solo el id de la sesión (el pago nuevo aparece sin refrescar a mano; otro usuario ve
+      su lista). "Pagar por PSE" **espera** `POST api/PaymentHistory/` y luego pide la transacción (antes iban a la
+      vez y la transacción salía primero); el registro sigue siendo best-effort pero deja un no fatal en Crashlytics
+      (`registerPaymentHistory`, sin datos personales). El log HTTP de debug ya no imprime el body del login ni las
+      respuestas de cuenta (`DebugHttpLogInterceptor`).
+- [ ] **API: `sync-status` responde 500 con estados de la pasarela que no están en `Availibity`** (visto en pruebas el
+      2026-10-14 tras cancelar en la pasarela). Solo APROBADA/COMENZADA/FALLIDA/EXPIRADA existen; la app no se
+      bloquea por ese 500 (opt-out de prompt 03), pero el pago no se actualiza a demanda. Lado API (en pausa).
+- [ ] **API: exponer la hora del intento de pago en el Historial.** `paymentDate` es `DateOnly` (solo el día, y con
+      la fecha del celular); la hora real está en `CreatedAt` (UTC) pero `PaymentHistoryUserListDto` no la incluye.
+      Mientras tanto la app muestra solo la fecha (antes inventaba "12:00 AM"). Lado API (en pausa).
 - [ ] **Quitar el guardado de `auth_token`**: guarda el mensaje "Inicio de sesión exitoso" (la API no emite
       token) y nada lo lee.
 - [x] **Historial vacío = error** (`DioException [unknown]: null`): con 0 pagos, `GET api/PaymentHistory/User/{id}`

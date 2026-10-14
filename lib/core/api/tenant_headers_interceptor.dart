@@ -54,23 +54,12 @@ class TenantHeadersInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (_isCentralizacionApi(options.uri)) {
+    if (NetworkProvider.isCentralizacionApi(options.uri, baseUrl: _baseUrl())) {
       options.headers[appIdHeader] = _appIdentifier();
       options.headers[appVersionHeader] = _appVersion();
       final platform = _platform();
       if (platform != null) options.headers[platformHeader] = platform;
     }
     handler.next(options);
-  }
-
-  /// Mismo esquema, host, puerto y prefijo de ruta que la base URL. El prefijo
-  /// importa en debug web, donde todas las APIs pasan por el mismo proxy CORS
-  /// (`localhost:8899/<url real>`) y el host por sí solo no las distingue.
-  bool _isCentralizacionApi(Uri uri) {
-    final base = Uri.parse(_baseUrl());
-    return uri.scheme == base.scheme &&
-        uri.host == base.host &&
-        uri.port == base.port &&
-        uri.path.startsWith(base.path);
   }
 }

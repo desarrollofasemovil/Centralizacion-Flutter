@@ -1,11 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/api/services/api_providers.dart';
-import '../../auth/application/auth_providers.dart';
 import '../../impuestos/application/tax_notifier.dart';
 import '../../impuestos/data/tax_repository.dart';
 import '../../impuestos/domain/tax.dart';
 import '../../impuestos/domain/payment_gateway_info.dart';
 import '../domain/psv_state.dart';
+import 'payment_history_registration.dart';
 
 class PsvFormNotifier extends Notifier<PsvFormState> {
   @override
@@ -23,9 +22,9 @@ class PsvFormNotifier extends Notifier<PsvFormState> {
     state = const PsvFormState();
   }
 
-  /// Registro previo del pago en el historial (status `false`, statusType `2`),
-  /// puerto fiel de `createHistoryPay` de `PsvPaymentViewModel.kt`. Es
-  /// best-effort: si falla, el flujo de pago continúa igual que en el original.
+  /// Registro previo del pago en el historial, puerto de `createHistoryPay`
+  /// de `PsvPaymentViewModel.kt`. Best-effort: si falla, el pago continúa,
+  /// pero queda el rastro no fatal ([registerPaymentHistory]).
   Future<void> createHistoryPay({
     required int amount,
     required String idImpuesto,
@@ -33,29 +32,14 @@ class PsvFormNotifier extends Notifier<PsvFormState> {
     required String codigoEntidad,
     required int municipalityProceduresId,
   }) async {
-    try {
-      final user = ref.read(sessionProvider);
-      final now = DateTime.now();
-      final formattedDate =
-          '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-      final body = <String, dynamic>{
-        'userId': user?.id,
-        'amount': amount,
-        'paymentDate': formattedDate,
-        'status': false,
-        'municipalityProceduresId': municipalityProceduresId,
-        'statusType': 2,
-        'codigoEntidad': codigoEntidad,
-        'factura': factura,
-        'idimpuesto': idImpuesto,
-      };
-      await ref
-          .read(paymentHistoryApiServiceProvider)
-          .createPaymentHistory(body);
-    } catch (_) {
-      // Igual que el try/catch del original: la creación del historial no debe
-      // bloquear el pago.
-    }
+    await registerPaymentHistory(
+      ref,
+      amount: amount,
+      idImpuesto: idImpuesto,
+      factura: factura,
+      codigoEntidad: codigoEntidad,
+      municipalityProceduresId: municipalityProceduresId,
+    );
   }
 
   Future<PaymentGatewayInfo> submitPsv({

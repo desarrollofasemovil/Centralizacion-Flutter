@@ -21,7 +21,6 @@ class TaxCard extends StatefulWidget {
     required this.onPayClick,
     required this.onPdfClick,
     required this.onShareClick,
-    required this.onRegisterPayment,
   });
 
   final Tax tax;
@@ -29,7 +28,6 @@ class TaxCard extends StatefulWidget {
   final ValueChanged<Tax> onPayClick;
   final ValueChanged<Tax> onPdfClick;
   final ValueChanged<Tax> onShareClick;
-  final VoidCallback onRegisterPayment;
 
   @override
   State<TaxCard> createState() => _TaxCardState();
@@ -148,7 +146,6 @@ class _TaxCardState extends State<TaxCard> {
                     ? () {
                         setState(() => _isClicked = true);
                         widget.onPayClick(tax);
-                        widget.onRegisterPayment();
                       }
                     : null,
                 style: ElevatedButton.styleFrom(

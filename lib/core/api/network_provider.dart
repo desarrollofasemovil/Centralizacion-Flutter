@@ -77,6 +77,18 @@ class NetworkProvider {
       ? devCentralizacionApiUrl
       : _proxied(prodCentralizacionApiUrl);
 
+  /// Si [uri] va a la API Centralízate de [baseUrl] (por defecto
+  /// [centralizacionApiUrl]): mismo esquema, host, puerto y prefijo de ruta. El
+  /// prefijo importa en debug web, donde todas las APIs pasan por el mismo
+  /// proxy CORS (`localhost:8899/<url real>`) y el host no las distingue.
+  static bool isCentralizacionApi(Uri uri, {String? baseUrl}) {
+    final base = Uri.parse(baseUrl ?? centralizacionApiUrl);
+    return uri.scheme == base.scheme &&
+        uri.host == base.host &&
+        uri.port == base.port &&
+        uri.path.startsWith(base.path);
+  }
+
   /// Impuestos (consulta + PDF) y pasarela de pago Bancolombia.
   static String get taxApiUrl => _proxied(_taxApiUrl);
 
