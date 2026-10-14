@@ -6,11 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../core/models/validation_response_dto.dart';
 import '../../../core/municipality/municipality_repository.dart';
 import '../../../core/review/review_prompt_service.dart';
 import '../../../core/utils/url_opener.dart';
-import '../../../core/widgets/enter_transition.dart';
 import '../application/tax_results_notifier.dart';
 import '../domain/tax.dart';
 import 'widgets/tax_card.dart';
@@ -43,7 +41,6 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
   }
 
   void _handlePay(Tax tax) {
-    final notifier = ref.read(taxResultsNotifierProvider.notifier);
     final mun = ref.read(municipalityProvider(widget.municipalityId)).value;
     if (mun == null) {
       _showSnack('Espere a que carguen los datos del municipio');
@@ -52,42 +49,16 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
     final matched = mun.municipalityProcedures
         .where((p) => p.procedures.id == tax.taxId)
         .firstOrNull;
-    notifier.onPayClicked(
-      tax: tax,
-      email: widget.email,
-      bankName: mun.bank.nameBank,
-      municipalityId: widget.municipalityId,
-      integrationType: matched?.integrationType ?? '0',
-    );
-  }
-
-  void _handleRegisterPayment(Tax tax) {
-    final mun = ref.read(municipalityProvider(widget.municipalityId)).value;
-    if (mun == null) {
-      _showSnack('Tenemos problemas con tu Alcadia, Intenta mas tarde');
-      return;
-    }
-    final matched = mun.municipalityProcedures
-        .where((p) => p.procedures.id == tax.taxId)
-        .firstOrNull;
-    if (matched == null) {
-      _showSnack('Tenemos problemas con tu Alcadia, Intenta mas tarde');
-      return;
-    }
-    if (tax.invoice.isEmpty || tax.entityCode.isEmpty) {
-      _showSnack(
-        'Algunos de los datos de tu información tiene problemas, Intenta mas tarde',
-      );
-      return;
-    }
+    // Registro en el historial y transacción, en ese orden (ver `payTax`).
     ref
         .read(taxResultsNotifierProvider.notifier)
-        .createHistoryPay(
-          amount: tax.value,
-          idImpuesto: tax.taxId.toString(),
-          factura: tax.invoice,
-          codigoEntidad: tax.entityCode,
-          municipalityProceduresId: matched.id,
+        .payTax(
+          tax: tax,
+          email: widget.email,
+          bankName: mun.bank.nameBank,
+          municipalityId: widget.municipalityId,
+          integrationType: matched?.integrationType ?? '0',
+          municipalityProceduresId: matched?.id,
         );
   }
 
@@ -187,28 +158,11 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
                       onPayClick: _handlePay,
                       onPdfClick: notifier.onOpenPdfClicked,
                       onShareClick: notifier.onSharePdfClicked,
-                      onRegisterPayment: () => _handleRegisterPayment(tax),
                     ),
                   ),
                 );
               },
             ),
-            // Alerta inferior con el resultado del registro en el historial.
-            if (state.validationCreatePayment != null)
-              Align(
-                alignment: Alignment.bottomCenter,
-                // AnimatedVisibility(enter = slideInVertically { it }).
-                child: EnterTransition(
-                  fadeMillis: 1,
-                  offsetFactor: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: _ValidationAlert(
-                      validation: state.validationCreatePayment!,
-                    ),
-                  ),
-                ),
-              ),
             // Diálogo modal de carga (DownloadingDialog del original).
             if (state.isLoading)
               _DownloadingDialog(message: state.loadingMessage),
@@ -252,49 +206,6 @@ class _AnimatedEntryState extends State<_AnimatedEntry> {
         opacity: _visible ? 1 : 0,
         duration: const Duration(milliseconds: 500),
         child: widget.child,
-      ),
-    );
-  }
-}
-
-/// Puerto de `ValidationAlert`: tarjeta de éxito/error del registro de pago.
-class _ValidationAlert extends StatelessWidget {
-  const _ValidationAlert({required this.validation});
-
-  final ValidationResponseDTO validation;
-
-  @override
-  Widget build(BuildContext context) {
-    final success = validation.booleanStatus;
-    final backgroundColor = success
-        ? const Color(0xFFE6F4EA)
-        : const Color(0xFFFFE5E5);
-    final iconTint = success ? const Color(0xFF2E7D32) : Colors.red;
-    // Mejora sobre el original (usaba texto blanco en éxito, ilegible sobre
-    // fondo claro): el texto usa el mismo verde/rojo del ícono.
-    final textColor = success ? const Color(0xFF2E7D32) : Colors.red;
-
-    return Card(
-      color: backgroundColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.all(8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(success ? Icons.check_circle : Icons.error, color: iconTint),
-            const SizedBox(width: 12),
-            Flexible(
-              child: Text(
-                validation.sentencesError,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: textColor),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
