@@ -270,6 +270,10 @@ class _PqrdIdentificacionScreenState
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     int maxLines = 1,
+    // "Enter" del teclado pasa al siguiente campo; el último campo de texto de
+    // cada paso usa `done` (cierra el teclado). Los multilínea (Descripción)
+    // conservan el salto de línea.
+    TextInputAction textInputAction = TextInputAction.next,
   }) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: TextFormField(
@@ -278,6 +282,9 @@ class _PqrdIdentificacionScreenState
       validator: validator,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      textInputAction: maxLines > 1
+          ? TextInputAction.newline
+          : textInputAction,
       decoration: _fieldDeco(label),
     ),
   );
@@ -410,6 +417,8 @@ class _PqrdIdentificacionScreenState
           _field(
             label: 'Segundo apellido',
             initial: form.segundoApellido,
+            // Último texto del paso 2: lo que sigue son selects.
+            textInputAction: TextInputAction.done,
             onChanged: (v) => _update((s) => s.copyWith(segundoApellido: v)),
           ),
           PqrdDropdown(

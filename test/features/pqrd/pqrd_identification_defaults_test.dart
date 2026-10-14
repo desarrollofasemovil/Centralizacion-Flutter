@@ -28,6 +28,7 @@ import 'package:tramiapp_flutter/core/models/tipo_documento.dart';
 import 'package:tramiapp_flutter/core/models/tipo_solicitante.dart';
 import 'package:tramiapp_flutter/core/models/vulnerabilidad_pqrd.dart';
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
+import 'package:tramiapp_flutter/core/widgets/confirmation_policies_dialog.dart';
 import 'package:tramiapp_flutter/features/pqrd/application/pqrd_notifier.dart';
 import 'package:tramiapp_flutter/features/pqrd/data/pqrd_repository.dart';
 import 'package:tramiapp_flutter/features/pqrd/domain/pqrd_state.dart';
@@ -47,7 +48,10 @@ Secretaria _secretaria(int id, String name) => Secretaria(
 );
 
 final _antioquia = Departamento(id: '1', nombreDepartamento: 'ANTIOQUIA');
-final _cundinamarca = Departamento(id: '14', nombreDepartamento: 'CUNDINAMARCA');
+final _cundinamarca = Departamento(
+  id: '14',
+  nombreDepartamento: 'CUNDINAMARCA',
+);
 final _bogotaDep = Departamento(id: '3', nombreDepartamento: 'BOGOTA');
 
 final _ciudades = <String, List<Ciudad>>{
@@ -167,6 +171,35 @@ Future<PqrdFormState> _apply(
   return c.read(pqrdFormStateProvider);
 }
 
+MunicipalityDTO _girardot() {
+  return MunicipalityDTO(
+    id: 1,
+    name: 'Girardot',
+    entityCode: '8906803784',
+    domain: '',
+    isActive: true,
+    department: Department(id: 2, name: 'Cundinamarca'),
+    bank: BankDTO(nameBank: 'Banco'),
+    idShield: ShieldDTO(municipalityName: 'Girardot', url: ''),
+    theme: model_theme.Theme(
+      primaryColor: '0xFF181E31',
+      secondaryColor: '0xFF4364CD',
+      secondaryColorBlack: '0xFFFFFFFF',
+      onPrimaryColorLight: '0xFF000000',
+      onPrimaryColorDark: '0xFFFFFFFF',
+      backGroundColor: '0xFFF3F4F6',
+    ),
+    municipalityProcedures: const [],
+    municipalitySocialMedia: const [],
+    courses: const [],
+    sportsFacilities: const [],
+    newsByMunicipalities: const [],
+    queryFields: const [],
+    passwordFintech: '',
+    userFintech: '',
+  );
+}
+
 void main() {
   test('paso 1: primera opción de todo, menos la Secretaría', () async {
     final form = await _apply(_container());
@@ -196,25 +229,29 @@ void main() {
     expect(form.vulnerabilidad, isNull);
   });
 
-  test('paso 3: departamento y ciudad del municipio, no Antioquia/Medellín',
-      () async {
-    final form = await _apply(_container());
+  test(
+    'paso 3: departamento y ciudad del municipio, no Antioquia/Medellín',
+    () async {
+      final form = await _apply(_container());
 
-    expect(form.departamento, same(_cundinamarca));
-    expect(form.ciudad?.nombreCiudad, 'GIRARDOT');
-  });
+      expect(form.departamento, same(_cundinamarca));
+      expect(form.ciudad?.nombreCiudad, 'GIRARDOT');
+    },
+  );
 
-  test('paso 3: ignora tildes, mayúsculas y puntuación (Bogotá D.C.)',
-      () async {
-    final form = await _apply(
-      _container(),
-      department: 'Bogotá',
-      city: 'Bogotá D.C.',
-    );
+  test(
+    'paso 3: ignora tildes, mayúsculas y puntuación (Bogotá D.C.)',
+    () async {
+      final form = await _apply(
+        _container(),
+        department: 'Bogotá',
+        city: 'Bogotá D.C.',
+      );
 
-    expect(form.departamento, same(_bogotaDep));
-    expect(form.ciudad?.nombreCiudad, 'BOGOTA, D.C.');
-  });
+      expect(form.departamento, same(_bogotaDep));
+      expect(form.ciudad?.nombreCiudad, 'BOGOTA, D.C.');
+    },
+  );
 
   test('paso 3: si el municipio no está en el catálogo, queda vacío', () async {
     final form = await _apply(
@@ -230,13 +267,15 @@ void main() {
   test('no pisa lo que el usuario ya eligió', () async {
     final c = _container();
     final catalogs = c.read(pqrdDropdownOptionsProvider);
-    c.read(pqrdFormStateProvider.notifier).updateField(
-      (s) => s.copyWith(
-        asuntoInteres: catalogs.asuntosInteres[1],
-        atencionPreferencial: catalogs.atencionesPreferenciales[1],
-        departamento: _antioquia,
-      ),
-    );
+    c
+        .read(pqrdFormStateProvider.notifier)
+        .updateField(
+          (s) => s.copyWith(
+            asuntoInteres: catalogs.asuntosInteres[1],
+            atencionPreferencial: catalogs.atencionesPreferenciales[1],
+            departamento: _antioquia,
+          ),
+        );
 
     final form = await _apply(c);
 
@@ -251,9 +290,11 @@ void main() {
     await _apply(c);
     expect(c.read(pqrdFormStateProvider).ciudad, isNotNull);
 
-    c.read(pqrdFormStateProvider.notifier).updateField(
-      (s) => s.copyWith(departamento: _antioquia, clearCiudad: true),
-    );
+    c
+        .read(pqrdFormStateProvider.notifier)
+        .updateField(
+          (s) => s.copyWith(departamento: _antioquia, clearCiudad: true),
+        );
 
     expect(c.read(pqrdFormStateProvider).ciudad, isNull);
   });
@@ -314,32 +355,7 @@ void main() {
   testWidgets('la pantalla muestra los valores preseleccionados', (
     tester,
   ) async {
-    final mun = MunicipalityDTO(
-      id: 1,
-      name: 'Girardot',
-      entityCode: '8906803784',
-      domain: '',
-      isActive: true,
-      department: Department(id: 2, name: 'Cundinamarca'),
-      bank: BankDTO(nameBank: 'Banco'),
-      idShield: ShieldDTO(municipalityName: 'Girardot', url: ''),
-      theme: model_theme.Theme(
-        primaryColor: '0xFF181E31',
-        secondaryColor: '0xFF4364CD',
-        secondaryColorBlack: '0xFFFFFFFF',
-        onPrimaryColorLight: '0xFF000000',
-        onPrimaryColorDark: '0xFFFFFFFF',
-        backGroundColor: '0xFFF3F4F6',
-      ),
-      municipalityProcedures: const [],
-      municipalitySocialMedia: const [],
-      courses: const [],
-      sportsFacilities: const [],
-      newsByMunicipalities: const [],
-      queryFields: const [],
-      passwordFintech: '',
-      userFintech: '',
-    );
+    final mun = _girardot();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -363,5 +379,96 @@ void main() {
       expect(find.text(value), findsOneWidget, reason: value);
     }
     expect(find.text('Secretaria de Planeacion'), findsNothing);
+  });
+
+  testWidgets('Enter en el teclado pasa al siguiente campo de texto', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          municipalityProvider(1).overrideWith((ref) async => _girardot()),
+          pqrdDropdownOptionsProvider.overrideWith(_FakeOptions.new),
+        ],
+        child: const MaterialApp(
+          home: PqrdIdentificacionScreen(municipalityId: 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // La Secretaría no se preselecciona: se elige para pasar al paso 2.
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(PqrdIdentificacionScreen)),
+    );
+    final secretaria = container
+        .read(pqrdDropdownOptionsProvider)
+        .secretarias[0];
+    container
+        .read(pqrdFormStateProvider.notifier)
+        .updateField((s) => s.copyWith(secretaria: secretaria));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Siguiente'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Siguiente'));
+    await tester.pumpAndSettle();
+
+    EditableText editable(String label) => tester.widget<EditableText>(
+      find.descendant(
+        of: find.widgetWithText(TextFormField, label),
+        matching: find.byType(EditableText),
+      ),
+    );
+
+    await tester.tap(find.widgetWithText(TextFormField, 'Identificación*'));
+    await tester.pump();
+    expect(editable('Identificación*').textInputAction, TextInputAction.next);
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pump();
+    expect(editable('Primer nombre*').focusNode.hasFocus, isTrue);
+    expect(
+      editable('Segundo apellido').textInputAction,
+      TextInputAction.done,
+      reason: 'último campo de texto del paso: detrás vienen los selects',
+    );
+  });
+
+  testWidgets('políticas: título en negrita y texto de botones legible', (
+    tester,
+  ) async {
+    const primary = Color(0xFF21294D); // Copacabana: primario oscuro.
+    const onPrimary = Color(0xFFF5F5F5);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          colorScheme: const ColorScheme.light(
+            primary: primary,
+            onPrimary: onPrimary,
+          ),
+        ),
+        home: Scaffold(
+          body: ConfirmationPoliciesDialog(
+            aceptaTratamientoDatos: true,
+            onAceptaTratamientoDatosChange: (_) {},
+            aceptaCondicionesUso: true,
+            onAceptaCondicionesUsoChange: (_) {},
+            onDismiss: () {},
+            onConfirm: () {},
+          ),
+        ),
+      ),
+    );
+
+    Color? textColor(String text) => tester
+        .widget<RichText>(
+          find.descendant(of: find.text(text), matching: find.byType(RichText)),
+        )
+        .text
+        .style
+        ?.color;
+
+    expect(textColor('Radicar'), onPrimary);
+    expect(textColor('Cancelar'), Colors.white);
+    final title = tester.widget<Text>(find.text('Políticas y Condiciones'));
+    expect(title.style?.fontWeight, FontWeight.bold);
   });
 }
