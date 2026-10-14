@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/widgets/dialog_typography.dart';
 import '../../../core/utils/url_opener.dart';
 
 import '../../auth/presentation/login_bottom_sheet.dart';
@@ -97,6 +98,10 @@ class HelpScreen extends ConsumerWidget {
     );
   }
 
+  // `HandleUiStateDialogs` de `HelpScreen.kt`: el original usa el `AlertDialog`
+  // de Material 3 (no los diálogos de marca), así que aquí también —está en la
+  // lista de excepciones de `test/core/dialog_parity_test.dart`—. Solo se
+  // alinean título y texto con el `Type.kt` (headlineSmall / bodyMedium).
   void _showSuccessDialog(
       BuildContext context, String message, VoidCallback onDismiss) {
     showDialog<void>(
@@ -105,7 +110,9 @@ class HelpScreen extends ConsumerWidget {
         icon: Icon(Icons.mark_email_read_outlined,
             color: Theme.of(ctx).colorScheme.primary),
         title: const Text('¡Solicitud enviada!'),
+        titleTextStyle: _dialogTitleStyle(ctx),
         content: Text(message),
+        contentTextStyle: _dialogTextStyle(ctx),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -123,7 +130,9 @@ class HelpScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         icon: Icon(Icons.error_outline, color: Theme.of(ctx).colorScheme.error),
         title: const Text('Error al enviar'),
+        titleTextStyle: _dialogTitleStyle(ctx),
         content: Text(error.message),
+        contentTextStyle: _dialogTextStyle(ctx),
         actions: [
           if (error.isRetryable)
             TextButton(
@@ -138,6 +147,14 @@ class HelpScreen extends ConsumerWidget {
       ),
     ).then((_) => onDismiss());
   }
+
+  TextStyle _dialogTitleStyle(BuildContext context) => DialogTypography
+      .headlineSmall
+      .copyWith(color: Theme.of(context).colorScheme.onSurface);
+
+  TextStyle _dialogTextStyle(BuildContext context) => DialogTypography
+      .bodyMedium
+      .copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
 }
 
 // =============================================================================

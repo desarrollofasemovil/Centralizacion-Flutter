@@ -10,12 +10,27 @@ import '../../../core/models/email_dto.dart';
 
 enum ModalFormMode { generic, panicButton }
 
+/// URL que la Home debe abrir — puerto de `MainEvent.OpenUrl(url, showDialog)`.
+///
+/// [showWarning] es el `showDialog` del original: los trámites con URL externa
+/// (`AbrirUrl`, `AbrirUrlDirecto` y la URL que queda pendiente tras el
+/// ModalForm) muestran antes el aviso "Estás a punto de ser redirigido a un
+/// sitio web externo…"; el WhatsApp del botón de pánico se abre directo.
+///
+/// Sin `==` a propósito: cada instancia es un evento nuevo, así que tocar dos
+/// veces el mismo trámite vuelve a disparar el `ref.listen` de la Home.
+class PendingUrl {
+  const PendingUrl(this.url, {required this.showWarning});
+
+  final String url;
+  final bool showWarning;
+}
+
 class MainUiState {
   final bool isLoading;
   final UserDTO? currentUser;
   final int? currentIdMunicipality;
   final String? currentMunicipalityName;
-  final bool showLoginSuccessDialog;
   final bool isSearchActive;
   final String searchText;
   final bool showInDevelopmentDialog;
@@ -28,9 +43,10 @@ class MainUiState {
   final String? pendingUrl;
 
   /// Disparador de apertura in-app: cuando cambia a una URL no vacía, la UI la
-  /// abre con `abrirUrl()` y luego llama `clearUrlToOpen()` (equivalente al
-  /// evento `MainEvent.OpenUrl` del original).
-  final String? urlToOpen;
+  /// consume con `clearUrlToOpen()` y la abre con `abrirUrl()` —antes del aviso
+  /// de sitio externo si [PendingUrl.showWarning]— (equivalente al evento
+  /// `MainEvent.OpenUrl` del original).
+  final PendingUrl? urlToOpen;
   final bool showExitDialog;
   final bool isDarkTheme;
   final bool isSaved;
@@ -44,7 +60,6 @@ class MainUiState {
     this.currentUser,
     this.currentIdMunicipality = 0,
     this.currentMunicipalityName = "",
-    this.showLoginSuccessDialog = false,
     this.isSearchActive = false,
     this.searchText = "",
     this.showInDevelopmentDialog = false,
@@ -66,14 +81,13 @@ class MainUiState {
     UserDTO? currentUser,
     int? currentIdMunicipality,
     String? currentMunicipalityName,
-    bool? showLoginSuccessDialog,
     bool? isSearchActive,
     String? searchText,
     bool? showInDevelopmentDialog,
     AbrirBotonPanico? pendingPanicAction,
     ModalFormMode? modalMode,
     String? pendingUrl,
-    String? urlToOpen,
+    PendingUrl? urlToOpen,
     bool? showExitDialog,
     bool? isDarkTheme,
     bool? isSaved,
@@ -94,8 +108,6 @@ class MainUiState {
           currentIdMunicipality ?? this.currentIdMunicipality,
       currentMunicipalityName:
           currentMunicipalityName ?? this.currentMunicipalityName,
-      showLoginSuccessDialog:
-          showLoginSuccessDialog ?? this.showLoginSuccessDialog,
       isSearchActive: isSearchActive ?? this.isSearchActive,
       searchText: searchText ?? this.searchText,
       showInDevelopmentDialog:
@@ -184,10 +196,6 @@ class MainViewModel extends Notifier<MainUiState> {
     );
   }
 
-  void dismissLoginSuccessDialog() {
-    state = state.copyWith(showLoginSuccessDialog: false);
-  }
-
   void onInDevelopmentDialogDismiss() {
     state = state.copyWith(showInDevelopmentDialog: false);
   }
@@ -255,7 +263,7 @@ class MainViewModel extends Notifier<MainUiState> {
     } else if (url != null) {
       // Recién ahora se dispara la apertura del PT (equivalente al
       // `_event.send(OpenUrl(urlToOpen))` de `processConfirmation` original).
-      state = state.copyWith(urlToOpen: url);
+      state = state.copyWith(urlToOpen: PendingUrl(url, showWarning: true));
     }
   }
 
@@ -271,13 +279,17 @@ class MainViewModel extends Notifier<MainUiState> {
     } else if (action is AbrirUrl) {
       getEffectiveUser().then((userData) {
         if (userData != null) {
-          state = state.copyWith(urlToOpen: action.url);
+          state = state.copyWith(
+            urlToOpen: PendingUrl(action.url, showWarning: true),
+          );
         } else {
           showModalForm(ModalFormMode.generic, url: action.url);
         }
       });
     } else if (action is AbrirUrlDirecto) {
-      state = state.copyWith(urlToOpen: action.url);
+      state = state.copyWith(
+        urlToOpen: PendingUrl(action.url, showWarning: true),
+      );
     } else if (action is AbrirBotonPanico) {
       state = state.copyWith(pendingPanicAction: action);
       getEffectiveUser().then((userData) {
@@ -347,7 +359,10 @@ class MainViewModel extends Notifier<MainUiState> {
       // Disparar WhatsApp URL
       final whatsappUrl =
           "${action.baseWhatsappUrl}&text=${Uri.encodeComponent(message)}";
-      state = state.copyWith(urlToOpen: whatsappUrl);
+      // `OpenUrl(whatsappUrl, false)`: sin aviso de sitio externo.
+      state = state.copyWith(
+        urlToOpen: PendingUrl(whatsappUrl, showWarning: false),
+      );
 
       // Enviar Email de pánico si está configurado
       if (action.emailPanic.isNotEmpty) {

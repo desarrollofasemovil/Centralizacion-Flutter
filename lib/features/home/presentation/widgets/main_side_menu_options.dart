@@ -3,10 +3,6 @@ import '../../../../core/models/user_dto.dart';
 
 class MainSideMenuOptions extends StatelessWidget {
   final UserDTO? user;
-  final String currentMunicipalityName;
-  final bool showChangeLocationDialog;
-  final VoidCallback onDismissDialog;
-  final VoidCallback onConfirmChangeLocation;
   final VoidCallback onLoginSuccess;
   final VoidCallback goToSettingsUser;
   final VoidCallback onTermsClick;
@@ -16,10 +12,6 @@ class MainSideMenuOptions extends StatelessWidget {
   const MainSideMenuOptions({
     super.key,
     required this.user,
-    required this.currentMunicipalityName,
-    required this.showChangeLocationDialog,
-    required this.onDismissDialog,
-    required this.onConfirmChangeLocation,
     required this.onLoginSuccess,
     required this.goToSettingsUser,
     required this.onTermsClick,
@@ -33,42 +25,6 @@ class MainSideMenuOptions extends StatelessWidget {
     const onColor = Colors.white;
 
     final isLoggedIn = user != null && user!.loginStatus;
-
-    if (showChangeLocationDialog) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.swap_horiz, color: Colors.blue),
-                SizedBox(width: 10),
-                Text('Cambio de municipio'),
-              ],
-            ),
-            content: Text(
-              'Tu ubicación actual es $currentMunicipalityName. Al confirmar, podrás seleccionar un nuevo municipio. ¿Deseas hacer el cambio?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  onDismissDialog();
-                },
-                child: const Text('Cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  onConfirmChangeLocation();
-                },
-                child: const Text('Cambiar'),
-              ),
-            ],
-          ),
-        );
-      });
-    }
 
     return Container(
       color: primaryColor,

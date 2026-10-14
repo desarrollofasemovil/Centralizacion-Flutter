@@ -10,8 +10,12 @@ import '../../../core/theme/app_colors.dart';
 import '../application/auth_providers.dart';
 import '../application/login_options_controller.dart';
 import '../application/registration_draft.dart';
+import '../data/google_auth_service.dart';
 import '../../../core/widgets/app_back_button.dart';
+import '../../../core/widgets/confirmation_dialog.dart';
 import '../../../core/widgets/footer_sponsors.dart';
+import '../../../core/widgets/important_alert_dialog.dart';
+import '../../../core/widgets/timed_dialog.dart';
 
 /// Resultado con el que se cierra el sheet, para que el llamador navegue/avise
 /// usando el contexto de la página (no el del sheet, que ya no existe tras pop).
@@ -19,9 +23,27 @@ import '../../../core/widgets/footer_sponsors.dart';
 /// no cuenta para la reseña de la tienda (igual que en el Kotlin).
 enum _SheetResult { loggedIn, loggedInWithGoogle, goToRegister, recover }
 
+/// Cuánto dura "Inicio de sesión exitoso" antes de cerrarse solo: 2 s en
+/// `MainScreen.kt` / `HistoryPayScreen.kt` (los `LaunchedEffect` con
+/// `delay(2000L)`), 1,5 s en `UserSettingsScreen.kt`.
+const loginSuccessDialogDuration = Duration(seconds: 2);
+
+/// "No se pudo iniciar sesión" se borra a los 2 s (`AuthScreen.kt` limpia la
+/// respuesta con `delay(2000)` + `clearResponse()`).
+const _loginErrorDialogDuration = Duration(seconds: 2);
+
+/// Aviso "No pudimos completar el inicio de sesión con Google…" antes de ir al
+/// registro (`delay(3200L)` en el `LoginEvent.NavigateToRegister` del base).
+const _googleFallbackDelay = Duration(milliseconds: 3200);
+
 /// Muestra el ModalBottomSheet de login (opciones + email) — puerto del
 /// `ModalBottomSheet` que el base hospeda en `MainScreen.kt` (color `Gray300`).
-Future<void> showLoginBottomSheet(BuildContext context) async {
+///
+/// [successDialogDuration]: ver [loginSuccessDialogDuration].
+Future<void> showLoginBottomSheet(
+  BuildContext context, {
+  Duration successDialogDuration = loginSuccessDialogDuration,
+}) async {
   final result = await showModalBottomSheet<_SheetResult>(
     context: context,
     isScrollControlled: true,
@@ -35,19 +57,18 @@ Future<void> showLoginBottomSheet(BuildContext context) async {
   if (!context.mounted) return;
   switch (result) {
     case _SheetResult.loggedIn || _SheetResult.loggedInWithGoogle:
+      // Como el original: sin botones, se cierra solo (o tocando fuera).
       await showDialog<void>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          icon: Icon(Icons.check_circle,
-              color: Theme.of(ctx).colorScheme.primary, size: 48),
-          title: const Text('Inicio de sesión exitoso'),
-          content: const Text('Has iniciado sesión correctamente.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Aceptar'),
-            ),
-          ],
+        builder: (ctx) => TimedDialog(
+          duration: successDialogDuration,
+          child: ConfirmationDialog(
+            title: 'Inicio de sesión exitoso',
+            message: 'Has iniciado sesión correctamente',
+            icon: Icons.check_circle,
+            onConfirm: () => Navigator.of(ctx).pop(),
+            onDismiss: () => Navigator.of(ctx).pop(),
+          ),
         ),
       );
       // Tras cerrar el diálogo, con la pantalla de destino ya visible (el
@@ -285,9 +306,43 @@ class _LoginSheetContentState extends ConsumerState<_LoginSheetContent> {
       case GoogleAuthStatus.cancelled:
         break;
       case GoogleAuthStatus.error:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(outcome.message ?? 'Error con Google.')),
-        );
+        await _fallbackToRegister();
+    }
+  }
+
+  /// Puerto de `fallbackToRegister` + el manejo de `NavigateToRegister` con
+  /// error del base: avisa, cierra la sesión de Google y, a los 3,2 s, lleva al
+  /// registro manual (sin borrador de Google).
+  Future<void> _fallbackToRegister() async {
+    unawaited(_signOutGoogle());
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: TimedDialog(
+          duration: _googleFallbackDelay,
+          child: ImportantAlertDialog(
+            title: 'Aviso Importante',
+            message:
+                'No pudimos completar el inicio de sesión con Google. Te llevaremos al registro para que continúes.',
+            showProgressBar: true,
+            hideDismissButton: true,
+            onDismissRequest: () {},
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    ref.read(registrationDraftProvider.notifier).state = null;
+    Navigator.of(context).pop(_SheetResult.goToRegister);
+  }
+
+  Future<void> _signOutGoogle() async {
+    try {
+      await ref.read(googleAuthServiceProvider).signOut();
+    } catch (_) {
+      // Igual que el base: si falla el cierre, se sigue al registro.
     }
   }
 }
@@ -331,8 +386,23 @@ class _EmailLoginFormState extends ConsumerState<_EmailLoginForm> {
     setState(() => _loading = false);
     if (res.success) {
       Navigator.of(context).pop(_SheetResult.loggedIn);
+    } else if (res.invalidInput) {
+      // Validación local: el original la muestra bajo el campo.
+      setState(() => _errorMessage = res.message);
     } else {
-      setState(() => _errorMessage = res.message ?? 'No se pudo iniciar sesión.');
+      // Respuesta del backend: `ImportantAlertDialog("No se pudo iniciar
+      // sesión", sentencesError)` sobre el sheet, que se borra a los 2 s.
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => TimedDialog(
+          duration: _loginErrorDialogDuration,
+          child: ImportantAlertDialog(
+            title: 'No se pudo iniciar sesión',
+            message: res.message ?? 'No se pudo iniciar sesión.',
+            onDismissRequest: () => Navigator.of(ctx).pop(),
+          ),
+        ),
+      );
     }
   }
 

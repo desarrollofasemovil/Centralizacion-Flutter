@@ -20,6 +20,7 @@ import 'widgets/registration_success_overlay.dart';
 import 'widgets/searchable_dropdown.dart';
 import 'widgets/signup_step_row.dart';
 import '../../../core/router/app_transitions.dart';
+import '../../../core/widgets/dialog_typography.dart';
 import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/enter_transition.dart';
 import '../../../core/widgets/slide_switcher.dart';
@@ -232,20 +233,47 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     }
   }
 
-  void _showError(String message) {
-    showDialog<void>(
+  /// Port de `RegistrationErrorDialog` (`signup/components/SignUpDialogs.kt`).
+  /// El original es un `AlertDialog` de Material 3, no un diálogo de marca: está
+  /// en la lista de excepciones de `test/core/dialog_parity_test.dart`.
+  /// "Reintentar" vuelve a enviar el registro (`onRetry = onFinishClicked`).
+  Future<void> _showError(String message) async {
+    final retry = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Aviso'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Entendido'),
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          backgroundColor: scheme.surface,
+          icon: const Icon(Icons.error_outline),
+          iconColor: scheme.error,
+          title: const Text('No se pudo completar el registro'),
+          titleTextStyle: DialogTypography.titleMedium.copyWith(
+            color: scheme.onSurface,
           ),
-        ],
-      ),
+          content: Text(message, textAlign: TextAlign.center),
+          contentTextStyle: DialogTypography.bodyMedium.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(
+                'Reintentar',
+                style: TextStyle(color: scheme.primary),
+              ),
+            ),
+          ],
+        );
+      },
     );
+    if (retry == true && mounted) await _finish();
   }
 
   @override

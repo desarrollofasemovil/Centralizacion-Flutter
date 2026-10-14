@@ -10,6 +10,8 @@ import '../application/user_settings_notifier.dart';
 import 'widgets/change_password_sheet.dart';
 import 'widgets/notifications_config_sheet.dart';
 import '../../../core/widgets/app_top_bar.dart';
+import '../../../core/widgets/confirmation_dialog.dart';
+import '../../../core/widgets/important_alert_dialog.dart';
 
 /// Pantalla de Configuración de usuario. Port de `UserSettingsScreen.kt`.
 ///
@@ -146,7 +148,12 @@ class UserSettingsScreen extends ConsumerWidget {
                 _SettingItem(
                   icon: Icons.person_outline,
                   title: 'Iniciar sesión',
-                  onTap: () => showLoginBottomSheet(context),
+                  // `UserSettingsScreen.kt` cierra el "Inicio de sesión
+                  // exitoso" a los 1,5 s (no 2 como la Home).
+                  onTap: () => showLoginBottomSheet(
+                    context,
+                    successDialogDuration: const Duration(milliseconds: 1500),
+                  ),
                 ),
             ],
           ),
@@ -189,23 +196,18 @@ class UserSettingsScreen extends ConsumerWidget {
   ) {
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        icon: Icon(Icons.swap_horiz, color: Theme.of(ctx).colorScheme.primary),
-        title: const Text('Cambio de municipio'),
-        content: const Text('¿Estás seguro que deseas cambiar de municipio?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              notifier.confirmChangeLocation();
-            },
-            child: const Text('Sí, Cambiar'),
-          ),
-        ],
+      builder: (ctx) => ConfirmationDialog(
+        title: 'Cambio de municipio',
+        message: '¿Estás seguro que deseas cambiar de municipio?',
+        icon: Icons.swap_horiz,
+        // "Si, Cambiar" en el original; se corrige la tilde.
+        confirmButtonText: 'Sí, Cambiar',
+        dismissButtonText: 'Cancelar',
+        onDismiss: () => Navigator.of(ctx).pop(),
+        onConfirm: () {
+          Navigator.of(ctx).pop();
+          notifier.confirmChangeLocation();
+        },
       ),
     );
   }
@@ -216,31 +218,16 @@ class UserSettingsScreen extends ConsumerWidget {
   ) {
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        icon: Icon(
-          Icons.warning_amber_rounded,
-          color: Theme.of(ctx).colorScheme.error,
-        ),
-        title: const Text('Eliminar Cuenta'),
-        content: const Text(
-          'Esta acción eliminará todos tus datos de forma permanente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              notifier.deleteAccount();
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
+      builder: (ctx) => ImportantAlertDialog(
+        title: 'Eliminar Cuenta',
+        // "de forma permanentemente" en el original; se corrige la errata.
+        message: 'Esta acción eliminará todos tus datos de forma permanente.',
+        confirmButtonText: 'Confirmar',
+        onDismissRequest: () => Navigator.of(ctx).pop(),
+        onConfirmRequest: () {
+          Navigator.of(ctx).pop();
+          notifier.deleteAccount();
+        },
       ),
     );
   }
