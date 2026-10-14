@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_status.dart';
+import 'debug_http_log_interceptor.dart';
 import 'global_error_interceptor.dart';
 import 'network_provider.dart';
 import 'tenant_headers_interceptor.dart';
@@ -10,7 +11,8 @@ import 'tenant_headers_interceptor.dart';
 /// Cliente [Dio] único compartido por todos los servicios — equivalente al
 /// `OkHttpClient` único que `ApiFactory` reutiliza para las 6 base URLs
 /// (BACKEND §1). Timeouts de 40s, cabeceras multi-tenant hacia la API
-/// Centralízate ([TenantHeadersInterceptor]), logging solo en debug y el
+/// Centralízate ([TenantHeadersInterceptor]), log solo en debug
+/// ([DebugHttpLogInterceptor]) y el
 /// [GlobalErrorInterceptor] enganchado al estado global.
 ///
 /// `validateStatus: (_) => true`: el éxito se evalúa por `booleanStatus`, no por
@@ -27,14 +29,12 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
 
-  // Antes del `LogInterceptor` para que las cabeceras salgan en el log de debug.
+  // Antes del log para que las cabeceras salgan en el log de debug.
   dio.interceptors.add(TenantHeadersInterceptor());
 
-  if (kDebugMode) {
-    dio.interceptors.add(
-      LogInterceptor(requestBody: true, responseBody: true),
-    );
-  }
+  // Solo debug y solo la API Centralízate; sin bodies de petición ni respuestas
+  // con datos de la cuenta (ver `DebugHttpLogInterceptor`).
+  if (kDebugMode) dio.interceptors.add(DebugHttpLogInterceptor());
 
   dio.interceptors.add(
     GlobalErrorInterceptor(
