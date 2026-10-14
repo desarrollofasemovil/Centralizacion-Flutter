@@ -225,6 +225,29 @@ Los trámites se renderizan como `TramiteCard` según `municipalityProcedures` d
 `ConfirmationDialog`, `ConfirmationPoliciesDialog`, `ImportantAlertDialog`, `ValidationErrorDialog`, `NoConnectionDialog`, `PanicCountdownDialog`, `PolicyCheckboxes`, `RequestNotificationPermission`, `ShimmerLoadingAnimation`, `StepIndicator`, `SwipeUpDismissBox`, `TopbarNavigation`, `FooterSponsors`, `NotificationHelper`, `AlcaldiasStateWrapper`, `ErrorMunicipalityScreen`.
 Utils (`utils/`): `BarcodeAnalyzer`, `CardStatusInfo`, `ChromeTabs` (`abrirURL`), `Formatters`, `InAppReviewManager`, `MyFirebaseMessagingService`, `NotificationReceiver`, `WebViewScreen`, `AppErrorStatusScreen`.
 
+#### 5.15.1 Paridad de diálogos (Kotlin → Flutter)
+
+Regla: un diálogo de feature usa el port de marca de `core/widgets/` que use su original. Solo se
+construye un `AlertDialog` de Material cuando **el Kotlin también lo hace**; esas pantallas están en la
+lista de excepciones de `test/core/dialog_parity_test.dart`, que falla ante cualquier otro
+`AlertDialog(` en `lib/features/`. La tipografía de los diálogos sale de `core/widgets/dialog_typography.dart`
+(estilos de `Type.kt`; la app no tiene `TextTheme` propio) y los que se cierran solos usan `TimedDialog`.
+
+| Diálogo | Original Kotlin | Flutter | Componente | Cierre |
+|---|---|---|---|---|
+| Aviso de sitio externo ("redirigiendo...") | `MainScreen.kt` (`showExternalLinkDialog`) | `home/.../widgets/external_link_dialog.dart` | `ImportantAlertDialog` | Solo, a los 3 s (abre la URL). No cancelable. Solo `OpenUrl(…, showDialog = true)`: `AbrirUrl`, `AbrirUrlDirecto`, URL tras el ModalForm |
+| Cambio de municipio (menú lateral) | `MainSideMenuOptions.kt` | `main_screen.dart` (`ref.listen`) | `ConfirmationDialog` | Cancelar / toque fuera. Inalcanzable hoy: la opción del menú está comentada en Kotlin |
+| Cambio de municipio (Configuración) | `UserSettingsScreen.kt` | `user_settings_screen.dart` | `ConfirmationDialog` | Cancelar / toque fuera |
+| Eliminar cuenta | `UserSettingsScreen.kt` | `user_settings_screen.dart` | `ImportantAlertDialog` + "Confirmar" | X / toque fuera |
+| Inicio de sesión exitoso | `MainScreen.kt`, `HistoryPayScreen.kt`, `UserSettingsScreen.kt` | `login_bottom_sheet.dart` | `ConfirmationDialog` sin botones | Solo (2 s; 1,5 s en Configuración) o toque fuera |
+| No se pudo iniciar sesión | `MainScreen.kt` + `AuthScreen.kt` (`clearResponse` a los 2 s) | `login_bottom_sheet.dart` | `ImportantAlertDialog` | Solo (2 s), X o toque fuera. Los errores de validación van bajo el campo |
+| Error con Google → registro | `MainScreen.kt` (`showLoginErrorDialog`) | `login_bottom_sheet.dart` | `ImportantAlertDialog` con progreso | Solo (3,2 s) y lleva al registro |
+| Próximamente disponible / Salir | `MainScreen.kt` | `main_screen.dart` | `ConfirmationDialog` | Botones |
+| Error de registro | `signup/components/SignUpDialogs.kt` | `signup_wizard.dart` | `AlertDialog` M3 (como el original) | Cancelar / Reintentar |
+| PQRD éxito / error | `pqrds/components/SuccessPqrdDialog.kt`, `ErrorPqrdDialog.kt` | `pqrd_result_dialogs.dart` | `AlertDialog` M3 (como el original) | Aceptar / toque fuera |
+| Habeas Data (PQRD) | `pqrds/PqrdsChoiceScreen.kt` (`InformationDialog`) | `pqrds_choice_screen.dart` | `AlertDialog` M3 (como el original) | X / Cancelar / Continuar (abre el formulario de la tarjeta tocada). En Kotlin está definido pero no se llama; en Flutter se muestra a propósito, con el enlace (tocable) a la Ley 1581 en Función Pública en lugar del PDF `http` de MinTIC |
+| Solicitud enviada / Error al enviar (Ayuda) | `help/HelpScreen.kt` (`HandleUiStateDialogs`) | `help_screen.dart` | `AlertDialog` M3 (como el original) | Botones / toque fuera |
+
 ---
 
 ## 6. Motor de trámites (lógica de presentación crítica)
