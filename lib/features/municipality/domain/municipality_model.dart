@@ -23,7 +23,7 @@ class MunicipalityModel {
   final double? longitude;
   final String? emailMunicipality;
   final String? emailPanic;
-  final int? phone;
+  final String? phone;
 
   const MunicipalityModel({
     required this.idMunicipio,

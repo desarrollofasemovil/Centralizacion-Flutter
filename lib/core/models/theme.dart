@@ -4,11 +4,17 @@ part 'theme.g.dart';
 
 @JsonSerializable()
 class Theme {
+  @JsonKey(defaultValue: '')
   final String backGroundColor;
+  @JsonKey(defaultValue: '')
   final String onPrimaryColorDark;
+  @JsonKey(defaultValue: '')
   final String onPrimaryColorLight;
+  @JsonKey(defaultValue: '')
   final String primaryColor;
+  @JsonKey(defaultValue: '')
   final String secondaryColor;
+  @JsonKey(defaultValue: '')
   final String secondaryColorBlack;
 
   Theme({

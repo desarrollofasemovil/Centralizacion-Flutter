@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_status.dart';
 import 'global_error_interceptor.dart';
 import 'network_provider.dart';
+import 'tenant_headers_interceptor.dart';
 
 /// Cliente [Dio] único compartido por todos los servicios — equivalente al
 /// `OkHttpClient` único que `ApiFactory` reutiliza para las 6 base URLs
-/// (BACKEND §1). Timeouts de 40s, logging solo en debug y el
+/// (BACKEND §1). Timeouts de 40s, cabeceras multi-tenant hacia la API
+/// Centralízate ([TenantHeadersInterceptor]), logging solo en debug y el
 /// [GlobalErrorInterceptor] enganchado al estado global.
 ///
 /// `validateStatus: (_) => true`: el éxito se evalúa por `booleanStatus`, no por
@@ -24,6 +26,9 @@ final dioProvider = Provider<Dio>((ref) {
       validateStatus: (_) => true,
     ),
   );
+
+  // Antes del `LogInterceptor` para que las cabeceras salgan en el log de debug.
+  dio.interceptors.add(TenantHeadersInterceptor());
 
   if (kDebugMode) {
     dio.interceptors.add(

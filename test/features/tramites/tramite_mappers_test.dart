@@ -83,7 +83,7 @@ void main() {
         dataProcessingPrivacy: 'https://test.gov.co/data-policy',
         emailMunicipalities: 'info@test.gov.co',
         emailPanic: 'panic@test.gov.co',
-        phone: 1234567,
+        phone: '1234567',
         passwordFintech: '123456',
         userFintech: 'user',
       );

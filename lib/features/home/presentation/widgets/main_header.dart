@@ -75,18 +75,22 @@ class MainHeader extends StatelessWidget {
               width: 100,
               height: 100,
               padding: const EdgeInsets.all(10),
-              child: CachedNetworkImage(
-                imageUrl: design.escudoUrl,
-                fit: BoxFit.contain,
-                placeholder: (context, url) => const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                errorWidget: (context, url, error) => const Icon(
-                  Icons.location_city,
-                  size: 40,
-                  color: Colors.grey,
-                ),
-              ),
+              // Municipio sin escudo (`idShield` nulo): el mismo ícono que
+              // cuando la imagen falla, sin intentar cargar una URL vacía.
+              child: design.escudoUrl.trim().isEmpty
+                  ? const Icon(Icons.location_city, size: 40, color: Colors.grey)
+                  : CachedNetworkImage(
+                      imageUrl: design.escudoUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      errorWidget: (context, url, error) => const Icon(
+                        Icons.location_city,
+                        size: 40,
+                        color: Colors.grey,
+                      ),
+                    ),
             ),
           ),
           Padding(

@@ -70,7 +70,10 @@ class MunicipalityNotifier extends _$MunicipalityNotifier {
 
 - Un único `Dio` configurado en `core/api/` con timeouts de 40s y un **interceptor global** equivalente a `GlobalErrorInterceptor` (`BACKEND.md §1.1`): publica estado en el provider de estado global y relanza el error.
 - Servicios `retrofit` por microservicio, cada uno con su base URL (`BACKEND.md §2`).
-- **Convención crítica de respuesta:** el éxito se evalúa por `booleanStatus`, no por el HTTP code. En login, el token viaja en `sentencesError`. No trates `sentencesError` siempre como error. Ver `BACKEND.md §4.2`.
+- **Cabeceras multi-tenant:** `TenantHeadersInterceptor` agrega `X-App-Id` / `X-App-Version` / `X-Platform` a toda petición hacia la API Centralízate (y solo a esa). Un flavor nuevo necesita su `appIdentifier` en `FlavorConfig` y su alta en el dashboard. Ver `BACKEND.md §1.2`.
+- **Convención crítica de respuesta:** el éxito se evalúa por `booleanStatus`, no por el HTTP code. No trates `sentencesError` siempre como error: en éxito trae un mensaje. **El login no devuelve token** (la API no tiene autenticación). Ver `BACKEND.md §4.2`.
+- **DTOs de la API Centralízate:** la API declara casi todo nullable. Usa `@JsonKey(defaultValue: ...)` o tipos nullable en vez de `as String` estricto: un `null` no debe impedir abrir un municipio. Ver `BACKEND.md §4.1`.
+- **Un `5xx` bloquea la app** salvo que la petición lo marque con `@Extra({kAllowServerErrorExtra: true})`. Úsalo solo cuando el `5xx` sea un resultado esperado del endpoint, no "servicio caído".
 
 ---
 

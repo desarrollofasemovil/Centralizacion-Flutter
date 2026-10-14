@@ -4,12 +4,15 @@ part 'course_x.g.dart';
 
 @JsonSerializable()
 class CourseX {
-  @JsonKey(name: 'get')
+  @JsonKey(name: 'get', defaultValue: '')
   final String get;
   final int id;
   final int? municipalityId;
+  @JsonKey(defaultValue: '')
   final String name;
+  @JsonKey(defaultValue: '')
   final String post;
+  @JsonKey(defaultValue: false)
   final bool isActive;
 
   CourseX({

@@ -10,12 +10,12 @@ MunicipalityProcedure _$MunicipalityProcedureFromJson(
   Map<String, dynamic> json,
 ) => MunicipalityProcedure(
   id: (json['id'] as num).toInt(),
-  integrationType: json['integrationType'] as String,
-  isActive: json['isActive'] as bool,
+  integrationType: json['integrationType'] as String? ?? '',
+  isActive: json['isActive'] as bool? ?? false,
   municipality: json['municipality'] == null
       ? null
       : Municipality.fromJson(json['municipality'] as Map<String, dynamic>),
-  procedures: Procedures.fromJson(json['procedures'] as Map<String, dynamic>),
+  procedures: _proceduresOrEmpty(json['procedures'] as Map<String, dynamic>?),
 );
 
 Map<String, dynamic> _$MunicipalityProcedureToJson(

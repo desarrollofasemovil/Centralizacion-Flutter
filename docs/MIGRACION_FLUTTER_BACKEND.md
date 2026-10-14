@@ -55,6 +55,31 @@ Intercepta TODAS las respuestas y excepciones de red, y publica un estado global
 
 `AppStatusManager` además tiene reglas de prioridad: un `FORCE_UPDATE` nunca es tapado por un `SERVER_ERROR`; un `SERVER_ERROR` activo no se limpia con un `OPERATIONAL`.
 
+> **Excepción en Flutter:** una petición puede marcar `extra[kAllowServerErrorExtra] = true` (Retrofit:
+> `@Extra({kAllowServerErrorExtra: true})`) para que su `5xx` no bloquee la app. Hoy solo la usa
+> `PUT api/PaymentHistory/{id}/sync-status`, cuyo `502` significa "el banco no respondió, se reintenta" y no
+> "servicio caído" (§3.10).
+
+### 1.2 Cabeceras multi-tenant (`TenantHeadersInterceptor`)
+
+La API Centralízate es multi-tenant (API `docs/api/multi-tenant.md`): `AppTenantMiddleware` resuelve la app y su
+banco patrocinador con `X-App-Id`. Eso decide qué municipios devuelven `GetMunicipality` / `ByDepartamet_{id}`, qué
+overrides de trámites aplica `GetInfoBy{id}` y en qué banco operan `POST api/Auth`, `POST api/User/CreateUser` y
+`GET api/User/by-email`. Sin la cabecera la API cae a la app legacy de Bancolombia, sin ningún error visible.
+
+`lib/core/api/tenant_headers_interceptor.dart` agrega, **solo** a peticiones hacia la API Centralízate
+(producción o el servidor de pruebas, según `NetworkProvider.centralizacionApiUrl`; nunca a impuestos, PQRD,
+autoliquidables ni Google):
+
+| Cabecera | Valor |
+|---|---|
+| `X-App-Id` | `FlavorConfig.appIdentifier` (= `applicationId` del flavor; un test lo compara con Gradle). `municipios` → `com.tramites1cero1.centralizacion` (Bancolombia), `manizales` → `com.tramitesapp.manizales` (Santander). |
+| `X-App-Version` | `AppInfo.version` |
+| `X-Platform` | `android` / `ios`. En web y desktop no se envía: la API solo documenta esos dos valores y la cabecera es opcional. |
+
+Va antes del `LogInterceptor`, así que las cabeceras salen en el log de debug. Un `X-App-Id` mal escrito o sin dar de
+alta en el dashboard (pantalla Aplicaciones) tampoco da error: la app vería el catálogo de Bancolombia.
+
 ---
 
 ## 2. Base URLs (microservicios)
@@ -102,7 +127,7 @@ Agrupados por interfaz Retrofit (archivo `data/network/ApiService.kt` salvo dond
 ### 3.1 AuthApiService — base `CENTRALIZACION_API_URL`
 | Endpoint | Respuesta | Notas |
 |---|---|---|
-| `POST api/Auth` (body `LoginDTO`) | `ValidationResponseDTO` | Login nativo. El token viaja en `sentencesError` cuando es exitoso (ver §5). |
+| `POST api/Auth` (body `LoginDTO`) | `ValidationResponseDTO` | Login nativo. Solo valida credenciales: **no emite token** (`sentencesError` = "Inicio de sesión exitoso"). Opera en el banco del `X-App-Id` (§1.2). Ver §5. |
 | `POST api/User/CreateUser` (body `CreateUserDTO`) | `ValidationResponseDTO` | Registro. |
 | `GET /api/User/by-email/?email=` | `UserDTO?` | Trae el usuario completo tras login. |
 | `GET /api/DocumentType/GetDocumentTypes` | `List<DocumentTypeDTO>` | Tipos de documento. |
@@ -148,7 +173,7 @@ Duplica `getUsers`, `createUser`, `loginUser`, `getUserByEmail`. **Punto de deud
 
 ### 3.10 PaymentHistory — base `CENTRALIZACION_API_URL`
 | `GET api/PaymentHistory/User/{id}` | `PaymentHistoryListDTO` | Historial de pagos del usuario. |
-| `PUT {id}/sync-status` | `ValidationResponseDTO` | Sincroniza estado de un pago. |
+| `PUT api/PaymentHistory/{id}/sync-status` | `ValidationResponseDTO` | Sincroniza el estado de un pago contra la pasarela. Aquí el HTTP **sí** coincide con `codeStatus`: 200 (sincronizado o reprogramado), 400/404 (no existe), **502** (el banco no respondió; se reprograma solo) y 500. Marcado para que su 5xx no bloquee la app (§1.1). ⚠️ El Kotlin declaraba `{id}/sync-status` sin el prefijo del controlador: esa ruta no existe, así que la sincronización a demanda nunca funcionó y solo el job del servidor actualizaba estados. Corregido en Flutter. |
 | `DELETE api/PaymentHistory/User/{idUser}/History/{idHistory}` | `ValidationResponseDTO` | Borra un pago del historial. |
 | `POST api/PaymentHistory/` (body `CreatePaymentHistory`) | `ValidationResponseDTO` | Crea registro de pago. |
 
@@ -160,7 +185,7 @@ Duplica `getUsers`, `createUser`, `loginUser`, `getUserByEmail`. **Punto de deud
 ### 3.12 SendEmailsService — base `CENTRALIZACION_API_URL`
 | `POST api/Email/SendEmail` (body `EmailDto`) | `ValidationResponseDTO` | Email genérico (soporte/ayuda). |
 | `GET api/Email/SendEmail/ValidationCode?To=` | `ValidationResponseExtraDto` | Código de verificación por email. |
-| `POST api/Email/SendEmail/Reservations` (body `EmailDtoReservations`) | `ValidationResponseDTO` | Email de reserva de escenarios. |
+| ~~`POST api/Email/SendEmail/Reservations`~~ | — | **No existe en la API** (el `EmailController` solo tiene `SendEmail`, `SendEmail/ValidationCode`, `SendEmail/Panic` y `SendEmail/reminders`). El correo de reserva lo envía el servidor desde `POST api/reservations`. Eliminado del cliente Flutter junto con `EmailDtoReservations`. |
 | `POST api/Email/SendEmail/Panic` (body `PanicEmailDto`) | `ValidationResponseDTO` | Botón de pánico. |
 
 ### 3.13 PeopleInvitatedService — base `CENTRALIZACION_API_URL`
@@ -170,7 +195,7 @@ Duplica `getUsers`, `createUser`, `loginUser`, `getUserByEmail`. **Punto de deud
 | `POST Tramites/InsertarSolicitudTramite` (body `ProcedureApplicationRequest`) | `Response<ProcedureApplicationResponse>` | Solicitud de trámite. |
 
 ### 3.15 TramitesApiService — base `CENTRALIZACION_API_URL`
-| `GET api/municipios/{id}/tramites` | `List<InfoTramite>` | Trámites por municipio (alterno; los trámites también vienen embebidos en `MunicipalityDTO`). |
+| ~~`GET api/municipios/{id}/tramites`~~ | — | **No existe en la API.** Los trámites vienen embebidos en `GetInfoBy{id}`. Eliminado del cliente Flutter (`TramitesApiService` y su provider). |
 
 ### 3.16 PqrdApiService — base `PQRD_API_URL`
 Inserción:
@@ -194,6 +219,14 @@ Clima. **Actualmente deshabilitado** (código comentado en `MunicipalityViewMode
 
 ### 4.1 ⭐ MunicipalityDTO — objeto central de configuración
 Respuesta de `GET /api/Municipality/GetInfoBy{id}`. Define **toda la identidad y capacidades del municipio**:
+
+> **Nulabilidad (Flutter):** la API declara casi todo nullable (`GetMunicipalitysDto.cs`) y el wizard del dashboard
+> ya crea municipios con campos vacíos (sin credenciales Fintech, banco, tema…). En Flutter, `MunicipalityDTO` y todo
+> lo que embebe (más `Municipality` de `ByDepartamet` y `MunicipalitiesDTO` de `GetMunicipality`) leen `null` como
+> valor vacío: strings `''`, listas `[]`, `isActive` `false` y objetos anidados vacíos. Sin `theme` quedan los grises
+> de `parseColor`; sin `idShield`, el header muestra el ícono de respaldo. Con datos completos nada cambia.
+> **`phone` es `String?`** (en la API es `string?` desde 2025-11; el `Int?` del Kotlin rompía el parseo); se acepta
+> también un número.
 
 ```kotlin
 data class MunicipalityDTO(
@@ -255,11 +288,11 @@ data class ShieldDTO(
 data class ValidationResponseDTO(
     val codeStatus: Int = 0,
     val booleanStatus: Boolean = false,        // éxito/fallo
-    val sentencesError: String = "",           // mensaje O token (en login)
+    val sentencesError: String = "",           // mensaje (en login exitoso: "Inicio de sesión exitoso", NO un token)
     val result: List<MunicipalitiesDTO>? = null // payload en algunos endpoints (lista de municipios)
 )
 ```
-**Convención crítica:** el éxito se evalúa por `booleanStatus`, no por el HTTP code. En login, `sentencesError` transporta el **token** cuando `booleanStatus == true`. Documentar bien esto en Flutter para no tratar `sentencesError` siempre como error.
+**Convención crítica:** el éxito se evalúa por `booleanStatus`, no por el HTTP code. `sentencesError` no siempre es un error: en éxito trae un mensaje informativo. ⚠️ **`POST api/Auth` no emite token** (API `docs/api/auth.md`: la API no tiene autenticación); en login exitoso `sentencesError` es solo "Inicio de sesión exitoso". El Kotlin lo guardaba como `auth_token` creyendo que era un token.
 
 ### 4.3 UserDTO — usuario (persistido en DataStore como JSON)
 ```kotlin
@@ -289,7 +322,7 @@ data class CreateUserDTO(
 ```
 
 ### 4.5 Otros DTOs (catálogo)
-`AppGlobalConfigDTO` (Remote Config, ver §6), `BankDTO`, `CourseDTO`/`CourseX`, `VenueDTO`, `SportsFacility`, `MunicipalityProcedure`/`Procedures`, `QueryField`, `MunicipalitySocialMedia`/`SocialMediaType`, `DocumentTypeDTO`, `LoginDTO`, `EmailDTO`(+ Reservations + Panic), `PaymentHistoryDTO`/`PaymentHistoryListDTO`, `StatusTransactionDto`, `ProcedureApplicationRequest`/`Response`, `TaxDTO`/`TaxQueryRequestDTO`/`TaxQueryResponseDTO`, `BancolombiaGatewayRequestDTO`/`ResponseDTO`, `FintechTransactionRequestDTO`/`ResponseDTO`, `UpdatePasswordRequestDto`, `UpdatePasswordByForgetDto`, `UpdateUserBasicInfoDTO`, `UpdateUserMunicipalityDTO`, `RemindersByUserDto`/`CreateRemindersByUserDto`, `PeopleInvitated`/`PeopleResponse`, `WelcomeCarouselImageDTO`, `TourismContributionDTO`, `GoogleWeatherDTO`, `NewsByMunicipality`, `ValidationResponseExtraDto`.
+`AppGlobalConfigDTO` (Remote Config, ver §6), `BankDTO`, `CourseDTO`/`CourseX`, `VenueDTO`, `SportsFacility`, `MunicipalityProcedure`/`Procedures`, `QueryField`, `MunicipalitySocialMedia`/`SocialMediaType`, `DocumentTypeDTO`, `LoginDTO`, `EmailDTO`(+ Panic), `PaymentHistoryDTO`/`PaymentHistoryListDTO`, `StatusTransactionDto`, `ProcedureApplicationRequest`/`Response`, `TaxDTO`/`TaxQueryRequestDTO`/`TaxQueryResponseDTO`, `BancolombiaGatewayRequestDTO`/`ResponseDTO`, `FintechTransactionRequestDTO`/`ResponseDTO`, `UpdatePasswordRequestDto`, `UpdatePasswordByForgetDto`, `UpdateUserBasicInfoDTO`, `UpdateUserMunicipalityDTO`, `RemindersByUserDto`/`CreateRemindersByUserDto`, `PeopleInvitated`/`PeopleResponse`, `WelcomeCarouselImageDTO`, `TourismContributionDTO`, `GoogleWeatherDTO`, `NewsByMunicipality`, `ValidationResponseExtraDto`.
 
 **PQRD dtos** (paquete `data/model/pqrddto/`): `PqrdAnonimaPost`, `PqrdIdentificacionPost`, `ResponsePQRD`, `Secretaria`, `AsuntoInteres`, `ClasificacionSolicitud`, `TipoSolicitante`, `AtencionPreferencial`, `MedioRespuesta`, `TipoDocumento`, `GrupoInteresPQRD`, `DiscapacidadPQRD`, `GrupoEtnicoPQRD`, `GeneroPQRD`, `RangoEdadPQRD`, `ActividadEconomicaPQRD`, `NivelEstratoPQRD`, `NivelSisbenPQRD`, `EscolaridadPQRD`, `VulnerabilidadPQRD`, `Ciudadano`, `Documentos`, `Ciudad`, `Departamento`.
 
@@ -304,7 +337,7 @@ Flujo (`AuthViewModel.authenticate()` → `AuthRepositoryImpl`):
 1. Validación local: email con `Patterns.EMAIL_ADDRESS`, password ≥ 8 chars.
 2. `POST api/Auth` con `LoginDTO(email, password)` → `ValidationResponseDTO`.
 3. Si `booleanStatus == true`: `GET /api/User/by-email/?email=` → `UserDTO`.
-4. Si `user.loginStatus == true`: se guarda sesión (`saveUserSession` → DataStore JSON) y el **token** (que vino en `loginResult.sentencesError`) vía `saveAuthToken`.
+4. Si `user.loginStatus == true`: se guarda sesión (`saveUserSession` → DataStore JSON) y `loginResult.sentencesError` vía `saveAuthToken`. **No es un token** (la API no emite ninguno): es el mensaje "Inicio de sesión exitoso". Flutter conserva ese guardado por paridad, pero nada lo lee.
 5. Se incrementa contador para In-App Review (Google Play Review API).
 
 ### 5.2 Login con Google — ÚNICO uso de Firebase Auth
@@ -319,7 +352,7 @@ Flujo (`LoginOptionsViewModel`):
 > **Implicación Flutter:** usar `firebase_auth` + `google_sign_in` SOLO para el botón de Google. El login nativo es un POST normal con `dio`. La sesión "real" del usuario vive en la API propia + DataStore, no en Firebase. En iOS, Google Sign-In requiere configurar el `REVERSED_CLIENT_ID` en `Info.plist` y el `GoogleService-Info.plist`.
 
 ### 5.3 Sesión y "sesión única"
-- La sesión persiste como JSON de `UserDTO` en DataStore (`user_data`). El token en `auth_token`.
+- La sesión persiste como JSON de `UserDTO` en DataStore (`user_data`). `auth_token` guarda el mensaje del login, no un token (§5.1).
 - `loginStatus` + el endpoint `ChangeStatusUser/{id}/status/{status}` implementan sesión única (al entrar en un dispositivo se invalida en otro). `LoginOptionsViewModel.signOut()` se llama en `onCreate` de `MainActivity`.
 - `MainActivity` setea `Firebase.crashlytics.setUserId(user.id)` cuando hay sesión.
 
@@ -407,7 +440,7 @@ Para **Trami App Manizales** (app individual):
 1. **Credenciales hardcodeadas** en `StatusOfPayments.LoginRequest` (usuario/clave por defecto en el código fuente). Revisar antes de portar.
 2. **Credenciales fintech** (`userFintech`, `passwordFintech`) viajan dentro del `MunicipalityDTO` al cliente. Evaluar exposición.
 3. **Interfaces de auth duplicadas** (`AuthApiService` vs `ApiCentralizateApps`). Consolidar.
-4. **`sentencesError` multiuso** (mensaje y token). Tipar mejor en Flutter.
+4. **`sentencesError` multiuso**: es un mensaje, nunca un token (`POST api/Auth` no emite ninguno; la API no tiene autenticación).
 5. **6 base URLs** sin versionado de API (`/v1`). Cambios de backend para futuras alcaldías podrían introducir versioning.
 6. **Clima deshabilitado** pero el código sigue presente. Decidir.
 7. **Analytics** señalado por el equipo como reimplementable. No copiar la instrumentación 1:1.

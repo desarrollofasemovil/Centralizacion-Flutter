@@ -4,7 +4,9 @@ part 'procedures.g.dart';
 
 @JsonSerializable()
 class Procedures {
+  @JsonKey(defaultValue: 0)
   final int id;
+  @JsonKey(defaultValue: '')
   final String name;
 
   Procedures({

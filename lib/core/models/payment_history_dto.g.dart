@@ -9,17 +9,17 @@ part of 'payment_history_dto.dart';
 PaymentHistoryDTO _$PaymentHistoryDTOFromJson(Map<String, dynamic> json) =>
     PaymentHistoryDTO(
       id: (json['id'] as num).toInt(),
-      userFirtName: json['userFirtName'] as String,
-      amount: (json['amount'] as num).toDouble(),
-      paymentDate: json['paymentDate'] as String,
-      status: json['status'] as bool,
-      idStatusType: (json['idStatusType'] as num).toInt(),
-      alcaldia: json['alcaldia'] as String,
-      procedureName: json['procedureName'] as String,
-      statusType: json['statusType'] as String,
-      idimpuesto: json['idimpuesto'] as String,
-      factura: json['factura'] as String,
-      codigoEntidad: json['codigoEntidad'] as String,
+      userFirtName: json['userFirtName'] as String? ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      paymentDate: json['paymentDate'] as String? ?? '',
+      status: json['status'] as bool? ?? false,
+      idStatusType: (json['idStatusType'] as num?)?.toInt() ?? 0,
+      alcaldia: json['alcaldia'] as String? ?? '',
+      procedureName: json['procedureName'] as String? ?? '',
+      statusType: json['statusType'] as String? ?? '',
+      idimpuesto: json['idimpuesto'] as String? ?? '',
+      factura: json['factura'] as String? ?? '',
+      codigoEntidad: json['codigoEntidad'] as String? ?? '',
     );
 
 Map<String, dynamic> _$PaymentHistoryDTOToJson(PaymentHistoryDTO instance) =>

@@ -4,12 +4,16 @@ part 'sports_facility.g.dart';
 
 @JsonSerializable()
 class SportsFacility {
+  @JsonKey(defaultValue: '')
   final String calendaryPost;
-  @JsonKey(name: 'get')
+  @JsonKey(name: 'get', defaultValue: '')
   final String get;
   final int id;
+  @JsonKey(defaultValue: '')
   final String name;
+  @JsonKey(defaultValue: '')
   final String reservationPost;
+  @JsonKey(defaultValue: false)
   final bool isActive;
 
   SportsFacility({

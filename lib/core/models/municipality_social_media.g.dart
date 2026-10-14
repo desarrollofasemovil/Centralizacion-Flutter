@@ -10,14 +10,14 @@ MunicipalitySocialMedia _$MunicipalitySocialMediaFromJson(
   Map<String, dynamic> json,
 ) => MunicipalitySocialMedia(
   id: (json['id'] as num).toInt(),
-  isActive: json['isActive'] as bool,
+  isActive: json['isActive'] as bool? ?? false,
   municipality: json['municipality'] == null
       ? null
       : Municipality.fromJson(json['municipality'] as Map<String, dynamic>),
-  socialMediaType: SocialMediaType.fromJson(
-    json['socialMediaType'] as Map<String, dynamic>,
+  socialMediaType: _socialMediaTypeOrEmpty(
+    json['socialMediaType'] as Map<String, dynamic>?,
   ),
-  url: json['url'] as String,
+  url: json['url'] as String? ?? '',
 );
 
 Map<String, dynamic> _$MunicipalitySocialMediaToJson(

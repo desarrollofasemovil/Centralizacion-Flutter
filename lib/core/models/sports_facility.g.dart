@@ -8,12 +8,12 @@ part of 'sports_facility.dart';
 
 SportsFacility _$SportsFacilityFromJson(Map<String, dynamic> json) =>
     SportsFacility(
-      calendaryPost: json['calendaryPost'] as String,
-      get: json['get'] as String,
+      calendaryPost: json['calendaryPost'] as String? ?? '',
+      get: json['get'] as String? ?? '',
       id: (json['id'] as num).toInt(),
-      name: json['name'] as String,
-      reservationPost: json['reservationPost'] as String,
-      isActive: json['isActive'] as bool,
+      name: json['name'] as String? ?? '',
+      reservationPost: json['reservationPost'] as String? ?? '',
+      isActive: json['isActive'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$SportsFacilityToJson(SportsFacility instance) =>

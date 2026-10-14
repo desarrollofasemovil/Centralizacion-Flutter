@@ -13,7 +13,6 @@ import 'reminders_api_service.dart';
 import 'payment_history_api_service.dart';
 import 'fintech_api_service.dart';
 import 'people_invitated_api_service.dart';
-import 'tramites_api_service.dart';
 import 'courses_api_service.dart';
 import 'venues_api_service.dart';
 
@@ -113,13 +112,6 @@ final fintechPaymentsApiServiceProvider = Provider<FintechPaymentsApiService>(
 
 final peopleInvitatedApiServiceProvider = Provider<PeopleInvitatedApiService>(
   (ref) => PeopleInvitatedApiService(
-    ref.watch(dioProvider),
-    baseUrl: NetworkProvider.centralizacionApiUrl,
-  ),
-);
-
-final tramitesApiServiceProvider = Provider<TramitesApiService>(
-  (ref) => TramitesApiService(
     ref.watch(dioProvider),
     baseUrl: NetworkProvider.centralizacionApiUrl,
   ),

@@ -8,8 +8,8 @@ part of 'query_field.dart';
 
 QueryField _$QueryFieldFromJson(Map<String, dynamic> json) => QueryField(
   id: (json['id'] as num).toInt(),
-  queryFieldType: json['queryFieldType'] as String,
-  fieldName: json['fieldName'] as String,
+  queryFieldType: json['queryFieldType'] as String? ?? '',
+  fieldName: json['fieldName'] as String? ?? '',
   municipality: json['municipality'] == null
       ? null
       : Municipality.fromJson(json['municipality'] as Map<String, dynamic>),

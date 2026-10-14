@@ -4,7 +4,7 @@ part 'news_by_municipality.g.dart';
 
 @JsonSerializable()
 class NewsByMunicipality {
-  @JsonKey(name: 'getUrlNew')
+  @JsonKey(name: 'getUrlNew', defaultValue: '')
   final String url;
 
   @JsonKey(name: 'idMunicipality')

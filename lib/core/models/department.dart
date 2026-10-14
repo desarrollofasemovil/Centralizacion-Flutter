@@ -4,7 +4,9 @@ part 'department.g.dart';
 
 @JsonSerializable()
 class Department {
+  @JsonKey(defaultValue: 0)
   final int id;
+  @JsonKey(defaultValue: '')
   final String name;
 
   Department({

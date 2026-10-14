@@ -17,9 +17,6 @@ abstract class SendEmailsApiService {
   @GET('api/Email/SendEmail/ValidationCode')
   Future<ValidationResponseExtraDto> sendEmailValidationCode(@Query('To') String to);
 
-  @POST('api/Email/SendEmail/Reservations')
-  Future<ValidationResponseDTO> sendEmailReservation(@Body() EmailDtoReservations emailDto);
-
   @POST('api/Email/SendEmail/Panic')
   Future<ValidationResponseDTO> sendPanicEmail(@Body() PanicEmailDto panicDto);
 }

@@ -4,9 +4,12 @@ part 'municipality.g.dart';
 
 @JsonSerializable()
 class Municipality {
+  @JsonKey(defaultValue: '')
   final String domain;
   final int id;
+  @JsonKey(defaultValue: '')
   final String name;
+  @JsonKey(defaultValue: false)
   final bool isActive;
 
   Municipality({

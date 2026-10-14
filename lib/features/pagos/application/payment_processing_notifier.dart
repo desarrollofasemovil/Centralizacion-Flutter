@@ -62,7 +62,9 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
       final userId = ref.read(sessionProvider)?.id;
       if (userId != null) {
         final api = ref.read(paymentHistoryApiServiceProvider);
-        final history = await api.getHistoryPaymentByUser(userId);
+        final history = paymentHistoryFromResponse(
+          await api.getHistoryPaymentByUser(userId),
+        );
         if (history.isNotEmpty) {
           final latest = history.reduce((a, b) => a.id > b.id ? a : b);
           await api.syncPaymentStatus(latest.id);
@@ -98,7 +100,9 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
     int idHistory,
   ) async {
     try {
-      final synced = await api.getHistoryPaymentByUser(userId);
+      final synced = paymentHistoryFromResponse(
+        await api.getHistoryPaymentByUser(userId),
+      );
       final status =
           synced.where((h) => h.id == idHistory).firstOrNull?.idStatusType;
       if (status == kPaymentStatusApproved) {

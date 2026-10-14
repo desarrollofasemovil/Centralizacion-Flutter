@@ -7,7 +7,7 @@ part of 'bank_dto.dart';
 // **************************************************************************
 
 BankDTO _$BankDTOFromJson(Map<String, dynamic> json) =>
-    BankDTO(nameBank: json['nameBank'] as String);
+    BankDTO(nameBank: json['nameBank'] as String? ?? '');
 
 Map<String, dynamic> _$BankDTOToJson(BankDTO instance) => <String, dynamic>{
   'nameBank': instance.nameBank,

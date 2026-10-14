@@ -15,10 +15,10 @@ part 'shield_dto.g.dart';
 /// ```
 @JsonSerializable()
 class ShieldDTO {
-  @JsonKey(name: 'nameOfMunicipality')
+  @JsonKey(name: 'nameOfMunicipality', defaultValue: '')
   final String municipalityName;
 
-  @JsonKey(name: 'url')
+  @JsonKey(name: 'url', defaultValue: '')
   final String url;
 
   const ShieldDTO({

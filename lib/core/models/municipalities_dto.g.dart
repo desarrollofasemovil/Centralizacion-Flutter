@@ -9,7 +9,7 @@ part of 'municipalities_dto.dart';
 MunicipalitiesDTO _$MunicipalitiesDTOFromJson(Map<String, dynamic> json) =>
     MunicipalitiesDTO(
       id: (json['id'] as num).toInt(),
-      name: json['name'] as String,
+      name: json['name'] as String? ?? '',
     );
 
 Map<String, dynamic> _$MunicipalitiesDTOToJson(MunicipalitiesDTO instance) =>
