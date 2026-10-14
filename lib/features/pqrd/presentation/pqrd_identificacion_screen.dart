@@ -38,6 +38,7 @@ class _PqrdIdentificacionScreenState
     extends ConsumerState<PqrdIdentificacionScreen> {
   int _currentStep = 1;
   bool _catalogRequested = false;
+  bool _defaultsRequested = false;
   bool _isSubmitting = false;
 
   final _formKey1 = GlobalKey<FormState>();
@@ -86,13 +87,7 @@ class _PqrdIdentificacionScreenState
     }
   }
 
-  void _removeFile() => _update(
-    (s) => s.copyWith(
-      nombreArchivo: null,
-      tipoArchivo: null,
-      contenidoArchivoBase64: null,
-    ),
-  );
+  void _removeFile() => _update((s) => s.copyWith(clearArchivo: true));
 
   // ----------------------------------------------------------------- navegación
   void _next() {
@@ -176,6 +171,18 @@ class _PqrdIdentificacionScreenState
         () => ref
             .read(pqrdDropdownOptionsProvider.notifier)
             .loadCatalogData(mun.entityCode),
+      );
+    }
+    // Con los catálogos ya cargados (aquí o desde la pantalla de elección),
+    // preselecciona los selects una sola vez por entrada a la pantalla.
+    if (mun != null && !dropdowns.isLoading && !_defaultsRequested) {
+      _defaultsRequested = true;
+      Future.microtask(
+        () => _form.applyIdentificationDefaults(
+          dropdowns,
+          departmentName: mun.department.name,
+          cityName: mun.name,
+        ),
       );
     }
 
@@ -504,7 +511,7 @@ class _PqrdIdentificacionScreenState
             items: d.departamentos,
             itemLabel: (s) => s.nombreDepartamento,
             onChanged: (v) {
-              _update((s) => s.copyWith(departamento: v, ciudad: null));
+              _update((s) => s.copyWith(departamento: v, clearCiudad: true));
               if (v != null) {
                 ref
                     .read(pqrdDropdownOptionsProvider.notifier)
