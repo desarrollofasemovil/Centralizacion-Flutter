@@ -213,6 +213,133 @@ class PqrdFormStateNotifier extends Notifier<PqrdFormState> {
     );
   }
 
+  /// Preselección de la PQRSDF con identificación, para no tener que abrir uno
+  /// por uno los ~20 selects. Pedido de producto (2026-10-14); el Kotlin no lo
+  /// hace. Solo llena campos vacíos: no pisa lo que el usuario ya eligió ni el
+  /// autollenado de la sesión ([autofill]).
+  ///
+  /// - Paso 1: la primera opción de cada lista, **menos la Secretaría**: decide
+  ///   a qué dependencia llega la PQRD, así que el usuario la elige a propósito.
+  /// - Paso 2: tipo de documento (primera opción) y, de los opcionales, solo los
+  ///   que tienen una opción neutra ("NO", "No tiene"…). Género, rango de edad,
+  ///   actividad, estrato, escolaridad y vulnerabilidad quedan vacíos: su primera
+  ///   opción es un dato real ("Masculino", "Primera Infancia (0-5 años)"…) que
+  ///   se radicaría como cierto si el usuario no lo cambia.
+  /// - Paso 3: el departamento y la ciudad del municipio de la app
+  ///   ([departmentName], [cityName]), buscados por nombre en el catálogo (la
+  ///   primera opción sería Antioquia / Medellín para todos).
+  Future<void> applyIdentificationDefaults(
+    PqrdDropdownOptionsState options, {
+    required String departmentName,
+    required String cityName,
+  }) async {
+    T? first<T>(List<T> items) => items.isEmpty ? null : items.first;
+
+    final s = state;
+    state = s.copyWith(
+      asuntoInteres: s.asuntoInteres ?? first(options.asuntosInteres),
+      clasificacionSolicitud:
+          s.clasificacionSolicitud ?? first(options.clasificacionesSolicitud),
+      tipoSolicitante: s.tipoSolicitante ?? first(options.tiposSolicitante),
+      atencionPreferencial:
+          s.atencionPreferencial ?? first(options.atencionesPreferenciales),
+      medioRespuesta: s.medioRespuesta ?? first(options.mediosRespuesta),
+      tipoDocumento: s.tipoDocumento ?? first(options.tiposDocumento),
+      grupoInteres:
+          s.grupoInteres ??
+          _neutralOption(options.gruposInteres, (o) => o.descripcion),
+      discapacidad:
+          s.discapacidad ??
+          _neutralOption(options.discapacidades, (o) => o.descripcion),
+      grupoEtnico:
+          s.grupoEtnico ??
+          _neutralOption(options.gruposEtnicos, (o) => o.descripcion),
+      nivelSisben:
+          s.nivelSisben ??
+          _neutralOption(options.nivelesSisben, (o) => o.descripcion),
+    );
+
+    if (state.departamento != null) return;
+    final departamento = _matchByName(
+      options.departamentos,
+      (d) => d.nombreDepartamento,
+      departmentName,
+    );
+    if (departamento == null) return;
+    state = state.copyWith(departamento: departamento, clearCiudad: true);
+
+    await ref
+        .read(pqrdDropdownOptionsProvider.notifier)
+        .loadCiudades(departamento.id);
+    // El usuario pudo cambiar de departamento o elegir ciudad mientras cargaba.
+    if (!identical(state.departamento, departamento) || state.ciudad != null) {
+      return;
+    }
+    final ciudad = _matchByName(
+      ref.read(pqrdDropdownOptionsProvider).ciudades,
+      (c) => c.nombreCiudad,
+      cityName,
+    );
+    if (ciudad != null) state = state.copyWith(ciudad: ciudad);
+  }
+
+  /// `true` si se eligió una atención preferencial real; `false` sin elegir o
+  /// con la opción "NO".
+  @visibleForTesting
+  static bool requiresSpecialAttention(AtencionPreferencial? option) =>
+      option != null && _normalize(option.descripcion) != 'NO';
+
+  static const _neutralLabels = {
+    'NO',
+    'NINGUNO',
+    'NINGUNA',
+    'NO TIENE',
+    'NO APLICA',
+  };
+
+  /// La opción "NO" / "No tiene" de la lista, esté donde esté; `null` si no hay.
+  static T? _neutralOption<T>(List<T> items, String Function(T) label) {
+    for (final item in items) {
+      if (_neutralLabels.contains(_normalize(label(item)))) return item;
+    }
+    return null;
+  }
+
+  /// Busca [name] en [items] sin importar tildes, mayúsculas ni puntuación
+  /// ("Bogotá D.C." = "BOGOTA, D.C."). Si no hay coincidencia exacta acepta un
+  /// prefijo ("Bogotá" → "BOGOTA, D.C."), pero solo si es único.
+  static T? _matchByName<T>(
+    List<T> items,
+    String Function(T) label,
+    String name,
+  ) {
+    final target = _normalize(name);
+    if (target.isEmpty) return null;
+    for (final item in items) {
+      if (_normalize(label(item)) == target) return item;
+    }
+    final prefixed = items.where((item) {
+      final candidate = _normalize(label(item));
+      return candidate.startsWith('$target ') ||
+          target.startsWith('$candidate ');
+    }).toList();
+    return prefixed.length == 1 ? prefixed.single : null;
+  }
+
+  static String _normalize(String value) {
+    const accents = {
+      'Á': 'A',
+      'É': 'E',
+      'Í': 'I',
+      'Ó': 'O',
+      'Ú': 'U',
+      'Ü': 'U',
+      'Ñ': 'N',
+    };
+    final upper = value.toUpperCase().split('').map((c) => accents[c] ?? c);
+    return upper.join().replaceAll(RegExp(r'[^A-Z0-9]+'), ' ').trim();
+  }
+
   Future<ResponsePQRD> submitAnonima(String entityCode) async {
     final docObj = Documentos(
       contentType: state.tipoArchivo ?? '',
@@ -250,7 +377,11 @@ class PqrdFormStateNotifier extends Notifier<PqrdFormState> {
       tipoDocumento: state.tipoDocumento?.id ?? 0,
     );
     final body = PqrdIdentificacionPost(
-      atencionEspecial: state.atencionPreferencial != null,
+      // Sí/no de atención especial, coherente con la opción elegida: "NO" →
+      // false. Antes era `atencionPreferencial != null`, siempre true porque el
+      // select es obligatorio (el Kotlin manda siempre false: `// Reemplaza con
+      // el valor real`, nunca completado).
+      atencionEspecial: requiresSpecialAttention(state.atencionPreferencial),
       ciudad: state.ciudad?.id.toString() ?? '',
       ciudadano: ciudadanoObj,
       codigoEntidad: entityCode,

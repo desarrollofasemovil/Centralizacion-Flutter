@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'dialog_typography.dart';
+
 const _redColor = Color(0xFFE53935);
 
 /// Puerto de `ui/components/ImportantAlertDialog.kt`: diálogo con cabecera
@@ -27,13 +29,13 @@ class ImportantAlertDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
       backgroundColor: scheme.surface,
+      surfaceTintColor: Colors.transparent,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -52,9 +54,11 @@ class ImportantAlertDialog extends StatelessWidget {
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 20),
+                    // .size(60.dp).border(2.5.dp).padding(5.dp): glifo de 50.
                     child: Container(
                       width: 60,
                       height: 60,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2.5),
@@ -62,7 +66,7 @@ class ImportantAlertDialog extends StatelessWidget {
                       child: const Icon(
                         Icons.priority_high_rounded,
                         color: Colors.white,
-                        size: 40,
+                        size: 50,
                       ),
                     ),
                   ),
@@ -70,20 +74,27 @@ class ImportantAlertDialog extends StatelessWidget {
                 if (!hideDismissButton)
                   Align(
                     alignment: Alignment.topRight,
-                    child: InkWell(
-                      onTap: onDismissRequest,
-                      customBorder: const CircleBorder(),
-                      child: Container(
-                        width: 25,
-                        height: 25,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
-                        ),
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 18,
+                    // IconButton.size(25.dp).border(1.5.dp).padding(2.dp): el
+                    // ícono ocupa los 21 que quedan dentro.
+                    child: Semantics(
+                      button: true,
+                      label: 'Cerrar',
+                      child: InkWell(
+                        onTap: onDismissRequest,
+                        customBorder: const CircleBorder(),
+                        child: Container(
+                          width: 25,
+                          height: 25,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 21,
+                          ),
                         ),
                       ),
                     ),
@@ -96,12 +107,22 @@ class ImportantAlertDialog extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(title, style: theme.textTheme.titleLarge),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: DialogTypography.titleLarge.copyWith(
+                    color: scheme.onSurface,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 18),
+                  // bodyMedium con fontSize = 18.sp (lineHeight sigue en 16sp).
+                  style: DialogTypography.withFontSize(
+                    DialogTypography.bodyMedium,
+                    18,
+                  ).copyWith(color: scheme.onSurface),
                 ),
                 // AnimatedVisibility(visible = showProgressBar): fade + expand.
                 AnimatedSize(
@@ -120,7 +141,9 @@ class ImportantAlertDialog extends StatelessWidget {
                               const SizedBox(height: 10),
                               Text(
                                 'redirigiendo...',
-                                style: theme.textTheme.bodyMedium,
+                                style: DialogTypography.bodyMedium.copyWith(
+                                  color: scheme.onSurface,
+                                ),
                               ),
                             ],
                           ),
@@ -140,7 +163,12 @@ class ImportantAlertDialog extends StatelessWidget {
                         side: BorderSide(color: scheme.onSurface),
                         foregroundColor: scheme.onSurface,
                       ),
-                      child: Text(confirmButtonText),
+                      child: Text(
+                        confirmButtonText,
+                        style: DialogTypography.headlineMedium.copyWith(
+                          color: scheme.onSurface,
+                        ),
+                      ),
                     ),
                   ),
                 ],

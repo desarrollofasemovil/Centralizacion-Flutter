@@ -136,6 +136,11 @@ class PqrdFormState {
     String? nombreArchivo,
     String? tipoArchivo,
     String? contenidoArchivoBase64,
+    // `ciudad: null` no la borra (`??` conserva la anterior): al cambiar de
+    // departamento hay que pasar este flag.
+    bool clearCiudad = false,
+    // Igual para el adjunto: "Quitar archivo" borra nombre, tipo y contenido.
+    bool clearArchivo = false,
   }) {
     return PqrdFormState(
       secretaria: secretaria ?? this.secretaria,
@@ -162,7 +167,7 @@ class PqrdFormState {
       vulnerabilidad: vulnerabilidad ?? this.vulnerabilidad,
       pais: pais ?? this.pais,
       departamento: departamento ?? this.departamento,
-      ciudad: ciudad ?? this.ciudad,
+      ciudad: clearCiudad ? null : (ciudad ?? this.ciudad),
       razonSocial: razonSocial ?? this.razonSocial,
       correoElectronico: correoElectronico ?? this.correoElectronico,
       direccion: direccion ?? this.direccion,
@@ -171,9 +176,12 @@ class PqrdFormState {
       descripcion: descripcion ?? this.descripcion,
       aceptaTratamientoDatos: aceptaTratamientoDatos ?? this.aceptaTratamientoDatos,
       aceptaCondicionesUso: aceptaCondicionesUso ?? this.aceptaCondicionesUso,
-      nombreArchivo: nombreArchivo ?? this.nombreArchivo,
-      tipoArchivo: tipoArchivo ?? this.tipoArchivo,
-      contenidoArchivoBase64: contenidoArchivoBase64 ?? this.contenidoArchivoBase64,
+      nombreArchivo:
+          clearArchivo ? null : (nombreArchivo ?? this.nombreArchivo),
+      tipoArchivo: clearArchivo ? null : (tipoArchivo ?? this.tipoArchivo),
+      contenidoArchivoBase64: clearArchivo
+          ? null
+          : (contenidoArchivoBase64 ?? this.contenidoArchivoBase64),
     );
   }
 }

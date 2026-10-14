@@ -2,61 +2,111 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/utils/url_opener.dart';
 import '../../../core/widgets/app_top_bar.dart';
+import '../../../core/widgets/dialog_typography.dart';
 import '../application/pqrd_notifier.dart';
 
 class PqrdsChoiceScreen extends ConsumerWidget {
   const PqrdsChoiceScreen({required this.municipalityId, super.key});
   final int municipalityId;
 
-  void _showHabeasDataDialog(BuildContext context, VoidCallback onConfirm) {
-    showDialog(
+  /// Ley de Habeas Data (Ley 1581 de 2012) en el gestor normativo de Función
+  /// Pública. Es HTTPS: se puede abrir en el navegador in-app, también en iOS.
+  static const _habeasDataUrl =
+      'https://www.funcionpublica.gov.co/eva/gestornormativo/norma_pdf.php?i=49981';
+
+  /// Aviso de Habeas Data antes de entrar a una PQRSDF. Lo muestra el toque en
+  /// cualquiera de las dos tarjetas: "Continuar" sigue al formulario de esa
+  /// tarjeta y "Cancelar" (o la X) se queda en esta pantalla.
+  ///
+  /// Parte del `InformationDialog` de `PqrdsChoiceScreen.kt` (X arriba, título y
+  /// texto), que en el Kotlin de producción está definido pero no se llama. A
+  /// diferencia de ese original, el enlace se puede tocar y los botones son
+  /// Cancelar / Continuar en vez de volver a elegir el tipo de PQRSDF.
+  void _showHabeasDataDialog(
+    BuildContext context, {
+    required VoidCallback onContinue,
+  }) {
+    showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Mensaje del sistema de información',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Ciudadano/a tenga en cuenta que la información a registrar en el siguiente formulario se encuentra protegida bajo la ley del Habeas data - Ley 1581 de 2012, Decreto 1377 de 2013- si quiere conocer más sobre esta ley dé clic aquí:',
-              textAlign: TextAlign.justify,
-              style: TextStyle(fontSize: 14),
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          icon: Align(
+            alignment: Alignment.topRight,
+            child: IconButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              icon: const Icon(Icons.close),
+              tooltip: 'Cerrar',
             ),
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: () {
-                // Abre el PDF de Habeas Data
-              },
-              child: const Text(
-                'http://www.mintic.gov.co/portal/604/articles-4274_documento.pdf',
-                style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline, fontSize: 13),
-                textAlign: TextAlign.center,
+          ),
+          iconColor: scheme.onSurfaceVariant,
+          title: const Text(
+            'Mensaje del sistema de información',
+            textAlign: TextAlign.center,
+          ),
+          // Título por defecto de un AlertDialog de Compose (headlineSmall del
+          // `Type.kt`) con `fontWeight = Bold`.
+          titleTextStyle: DialogTypography.headlineSmall.copyWith(
+            color: scheme.onSurface,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                // Copy del original; solo se corrige la tilde de "dé" y el
+                // espacio de "Decreto 1377".
+                'Ciudadano/a tenga en cuenta que la información a registrar en el siguiente formulario se encuentra protegida bajo la ley del Habeas data - Ley 1581 de 2012, Decreto 1377 de 2013- si quiere conocer más sobre esta ley dé click:',
+                textAlign: TextAlign.justify,
+                style: DialogTypography.withFontSize(
+                  DialogTypography.bodyMedium,
+                  14,
+                ).copyWith(color: scheme.onSurfaceVariant),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () =>
+                    abrirUrl(_habeasDataUrl, toolbarColor: scheme.primary),
+                child: Text(
+                  _habeasDataUrl,
+                  textAlign: TextAlign.center,
+                  style: DialogTypography.withFontSize(
+                    DialogTypography.bodyMedium,
+                    12,
+                  ).copyWith(
+                    color: const Color(0xFF0000FF),
+                    decoration: TextDecoration.underline,
+                    decorationColor: const Color(0xFF0000FF),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Uno al lado del otro, a todo el ancho y separados 5 px.
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        onContinue();
+                      },
+                      child: const Text('Continuar'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              onConfirm();
-            },
-            style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            ),
-            child: const Text('Aceptar y Continuar'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -68,6 +118,19 @@ class PqrdsChoiceScreen extends ConsumerWidget {
     return asyncMun.maybeWhen(
       data: (munDto) {
         final entityCode = munDto.entityCode;
+        // Carga los catálogos y navega al formulario del tipo elegido.
+        void goToForm(String kind) {
+          ref
+              .read(pqrdDropdownOptionsProvider.notifier)
+              .loadCatalogData(entityCode);
+          context.push('/municipality/$municipalityId/pqrd/$kind');
+        }
+
+        void showNotice(String kind) => _showHabeasDataDialog(
+          context,
+          onContinue: () => goToForm(kind),
+        );
+
         return Scaffold(
           appBar: AppTopBar(title: 'PQRSDF', onBack: () => context.pop()),
           body: SingleChildScrollView(
@@ -98,13 +161,7 @@ class PqrdsChoiceScreen extends ConsumerWidget {
                     description: 'Podrá recibir un radicado y hacer seguimiento de su trámite',
                     icon: Icons.person,
                     imagePath: 'assets/images/fondopqrdidentifi.png',
-                    onTap: () {
-                      _showHabeasDataDialog(context, () {
-                        // Carga los catálogos y navega
-                        ref.read(pqrdDropdownOptionsProvider.notifier).loadCatalogData(entityCode);
-                        context.push('/municipality/$municipalityId/pqrd/identificada');
-                      });
-                    },
+                    onTap: () => showNotice('identificada'),
                   ),
                   const SizedBox(height: 24),
                   // Tarjeta PQRSDF Anónima
@@ -113,13 +170,7 @@ class PqrdsChoiceScreen extends ConsumerWidget {
                     description: 'No se guardan sus datos de contacto ni podrá consultar la respuesta',
                     icon: Icons.lock_person,
                     imagePath: 'assets/images/fondopqrds.png',
-                    onTap: () {
-                      _showHabeasDataDialog(context, () {
-                        // Carga los catálogos y navega
-                        ref.read(pqrdDropdownOptionsProvider.notifier).loadCatalogData(entityCode);
-                        context.push('/municipality/$municipalityId/pqrd/anonima');
-                      });
-                    },
+                    onTap: () => showNotice('anonima'),
                   ),
                   const SizedBox(height: 40),
                   ElevatedButton(

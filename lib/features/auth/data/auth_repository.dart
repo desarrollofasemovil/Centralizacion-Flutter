@@ -13,9 +13,20 @@ class LoginResult {
   final String? message;
   final UserDTO? user;
 
-  const LoginResult._(this.success, this.message, this.user);
+  /// El fallo es de validación local (correo/clave mal formados), no del
+  /// backend. La UI lo muestra bajo el campo; el del backend va en diálogo.
+  final bool invalidInput;
+
+  const LoginResult._(
+    this.success,
+    this.message,
+    this.user, {
+    this.invalidInput = false,
+  });
   const LoginResult.success(UserDTO user) : this._(true, null, user);
   const LoginResult.failure(String message) : this._(false, message, null);
+  const LoginResult.invalidInput(String message)
+    : this._(false, message, null, invalidInput: true);
 }
 
 /// Login nativo (correo/clave) contra la API propia — NO usa Firebase Auth
@@ -35,10 +46,10 @@ class AuthRepository {
 
   Future<LoginResult> login(String email, String password) async {
     if (!_emailRegex.hasMatch(email)) {
-      return const LoginResult.failure('Correo electrónico inválido.');
+      return const LoginResult.invalidInput('Correo electrónico inválido.');
     }
     if (password.length < 8) {
-      return const LoginResult.failure(
+      return const LoginResult.invalidInput(
         'La contraseña debe tener al menos 8 caracteres.',
       );
     }

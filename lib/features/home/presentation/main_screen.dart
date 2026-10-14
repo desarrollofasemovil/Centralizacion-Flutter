@@ -15,6 +15,7 @@ import '../../tramites/application/tramite_mappers.dart';
 import '../../tramites/domain/info_tramite.dart';
 import '../application/main_viewmodel.dart';
 import 'widgets/animated_section.dart';
+import 'widgets/external_link_dialog.dart';
 import 'widgets/main_bottom_nav_bar.dart';
 import 'widgets/main_header.dart';
 import 'widgets/main_side_menu_options.dart';
@@ -103,21 +104,27 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final theme = Theme.of(context);
     final domainModel = widget.municipality.toDomainModel();
 
-    // Escuchar si hay alguna URL pendiente para abrir
-    ref.listen<
-      String?
-    >(mainViewModelProvider(widget.municipality.id).select((s) => s.urlToOpen), (
-      prev,
-      next,
-    ) async {
-      if (next != null && next.isNotEmpty) {
+    // Escuchar si hay alguna URL pendiente para abrir (`MainEvent.OpenUrl`).
+    ref.listen<PendingUrl?>(
+      mainViewModelProvider(widget.municipality.id).select((s) => s.urlToOpen),
+      (prev, next) {
+        if (next == null || next.url.isEmpty) return;
+        // Se consume ya (evento de un solo uso): un repintado no la reabre y el
+        // estado no se queda con una URL vieja si la Home se desmonta durante
+        // el aviso.
+        notifier.clearUrlToOpen();
         // Portal tributario / URLs de trámite: se abren en el navegador in-app
         // (Chrome Custom Tabs / Safari VC) tintado con el color del municipio,
-        // igual que `abrirURL(context, url, colorPrimario)` del original.
-        await abrirUrl(next, toolbarColor: theme.colorScheme.primary);
-        notifier.clearUrlToOpen();
-      }
-    });
+        // igual que `abrirURL(context, url, colorPrimario)` del original; con
+        // el aviso de sitio externo delante si `showWarning`.
+        final toolbarColor = theme.colorScheme.primary;
+        openPendingUrl(
+          context,
+          next,
+          opener: (url) => abrirUrl(url, toolbarColor: toolbarColor),
+        );
+      },
+    );
 
     // Nota: el ModalForm NO se muestra automáticamente al entrar/iniciar sesión.
     // Igual que en el original (MainViewModel.kt), solo lo dispara
@@ -235,6 +242,46 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       },
     );
 
+    // "Cambio de municipio" del menú lateral (`MainSideMenuOptions.kt`). Ojo:
+    // en el original la opción "Cambiar de alcaldía" del menú está comentada,
+    // así que hoy nada lo abre (igual aquí); se deja portado para cuando vuelva.
+    ref.listen<bool>(
+      mainViewModelProvider(
+        widget.municipality.id,
+      ).select((s) => s.showChangeLocationDialog),
+      (prev, next) {
+        if (!next) return;
+        final name = ref
+            .read(mainViewModelProvider(widget.municipality.id))
+            .currentMunicipalityName;
+        showDialog<void>(
+          context: context,
+          builder: (ctx) => ConfirmationDialog(
+            title: 'Cambio de municipio',
+            message:
+                'Tu ubicación actual es ${(name == null || name.isEmpty) ? 'Trami App' : name}. Al confirmar, podrás seleccionar un nuevo municipio. ¿Deseas hacer el cambio?',
+            icon: Icons.swap_horiz,
+            confirmButtonText: 'Cambiar',
+            dismissButtonText: 'Cancelar',
+            onDismiss: () => Navigator.of(ctx).pop(),
+            onConfirm: () {
+              Navigator.of(ctx).pop();
+              notifier.onConfirmChangeLocation();
+              if (context.mounted) context.go(AppRoutes.welcome);
+            },
+          ),
+        ).then((_) {
+          // Cancelar, toque fuera o Atrás: resetear el flag (ver arriba).
+          if (!mounted) return;
+          if (ref
+              .read(mainViewModelProvider(widget.municipality.id))
+              .showChangeLocationDialog) {
+            notifier.onDismissChangeLocationDialog();
+          }
+        });
+      },
+    );
+
     ref.listen<bool>(
       mainViewModelProvider(
         widget.municipality.id,
@@ -300,13 +347,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
           child: MainSideMenuOptions(
             user: state.currentUser,
-            currentMunicipalityName: state.currentMunicipalityName ?? "",
-            showChangeLocationDialog: state.showChangeLocationDialog,
-            onDismissDialog: notifier.onDismissChangeLocationDialog,
-            onConfirmChangeLocation: () {
-              notifier.onConfirmChangeLocation();
-              context.go(AppRoutes.welcome);
-            },
             onLoginSuccess: () {
               Navigator.pop(context); // Cerrar drawer
               showLoginBottomSheet(context);

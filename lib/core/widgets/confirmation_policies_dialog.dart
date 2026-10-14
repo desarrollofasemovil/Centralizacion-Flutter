@@ -46,7 +46,11 @@ class ConfirmationPoliciesDialog extends StatelessWidget {
             Text(
               "Políticas y Condiciones",
               textAlign: TextAlign.center,
-              style: theme.textTheme.headlineMedium?.copyWith(
+              // `primaryTextTheme` trae el color para texto SOBRE el color
+              // primario (blanco si es oscuro); el sheet es claro, así que se
+              // fija `onSurface` y se toma solo la letra.
+              style: theme.primaryTextTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
               ),
             ),
@@ -99,14 +103,18 @@ class ConfirmationPoliciesDialog extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 10),
                     child: ElevatedButton(
                       onPressed: onDismiss,
+                      // La letra va en `textStyle` (no en el `Text`): así el
+                      // botón le pone su `foregroundColor`. Con
+                      // `Text(style: titleSmall)` el texto salía en el color
+                      // oscuro del tema y no se leía sobre un primario oscuro.
+                      // En Compose el `Text` no lleva color y hereda el del
+                      // botón.
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _gray600,
                         foregroundColor: Colors.white,
+                        textStyle: theme.textTheme.titleSmall,
                       ),
-                      child: Text(
-                        "Cancelar",
-                        style: theme.textTheme.titleSmall,
-                      ),
+                      child: const Text("Cancelar"),
                     ),
                   ),
                 ),
@@ -116,8 +124,9 @@ class ConfirmationPoliciesDialog extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
                       foregroundColor: theme.colorScheme.onPrimary,
+                      textStyle: theme.textTheme.titleSmall,
                     ),
-                    child: Text("Radicar", style: theme.textTheme.titleSmall),
+                    child: const Text("Radicar"),
                   ),
                 ),
               ],

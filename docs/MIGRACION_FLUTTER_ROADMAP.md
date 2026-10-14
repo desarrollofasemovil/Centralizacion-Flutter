@@ -264,6 +264,58 @@ varios productos.
       `PaymentHistoryDTO` tolera nulos. Corregido también: refrescar sincronizaba FALLIDA en vez de COMENZADA.
 - [ ] **Un test golpea la API real** (`GET /api/Department` devuelve 400 en la suite). Debe usar mock.
 
+## Paridad de diálogos con Kotlin (2026-10-14) — `FRONTEND.md §5.15.1`
+
+- [x] **Ports corregidos** (`ConfirmationDialog`, `ImportantAlertDialog`): glifo de 50 dentro del círculo
+      de 60 (estaba en 44/40), botón relleno sin elevación, tipografía de `Type.kt` (títulos en negrita,
+      botones `headlineSmall`/`headlineMedium`) vía `core/widgets/dialog_typography.dart`. Todos los diálogos
+      que los usan heredan el arreglo.
+- [x] **Aviso de sitio externo** (faltaba): `PendingUrl(url, showWarning)` en `MainUiState.urlToOpen`;
+      "Aviso Importante" + "redirigiendo..." 3 s, no cancelable, para `AbrirUrl`/`AbrirUrlDirecto`/URL tras
+      el ModalForm. Noticias, portal, términos y WhatsApp de pánico abren directo.
+- [x] **Cambio de municipio** (menú lateral y Configuración) con `ConfirmationDialog`. El del menú ya no se
+      abre desde `build()` (`addPostFrameCallback`), sino por `ref.listen`.
+- [x] **Login**: "Inicio de sesión exitoso" sin botones y con cierre automático (2 s / 1,5 s en
+      Configuración); "No se pudo iniciar sesión" en `ImportantAlertDialog` (2 s); error de Google → aviso
+      3,2 s y registro, como `fallbackToRegister`. Se quitó `MainUiState.showLoginSuccessDialog`: tampoco
+      hay nada en Kotlin que lo ponga en `true` (código muerto en ambos).
+- [x] **Auditoría de `AlertDialog` crudos**: eliminar cuenta → `ImportantAlertDialog`; registro, PQRD
+      (resultado y Habeas Data) y Ayuda siguen en `AlertDialog` M3 porque su original Kotlin también lo es
+      (alineados en copy, botones y tipografía).
+- [x] **Habeas Data en PQRSDF** (pedido de producto, 2026-10-14): tarjeta → aviso con el enlace tocable
+      `funcionpublica.gov.co/…norma_pdf.php?i=49981` (Ley 1581) → "Cancelar" / "Continuar" a todo el ancho,
+      separados 5 px; "Continuar" abre el formulario de la tarjeta tocada. Ya no repite los botones de tipo
+      de PQRSDF. Test: `test/features/pqrd/pqrds_choice_habeas_data_test.dart`.
+- [x] **Guardas**: `test/core/dialog_parity_test.dart` (falla con un `AlertDialog(` nuevo en
+      `lib/features/`), `test/core/widgets/brand_dialogs_test.dart`,
+      `test/features/home/external_link_dialog_test.dart`, `login_review_hook_test.dart` ampliado.
+- [ ] **QA en dispositivo** Android + simulador iOS y capturas lado a lado con Kotlin (ver PR).
+
+## PQRSDF con identificación — selects preseleccionados (2026-10-14)
+
+Pedido de producto (el Kotlin no lo hace): al entrar, los selects ya traen un valor para no abrir uno por
+uno los ~20. Solo se llenan campos vacíos (no pisa lo elegido ni el autollenado de la sesión).
+`PqrdFormStateNotifier.applyIdentificationDefaults`.
+
+- [x] **Paso 1**: primera opción de cada lista (Queja, De interés general, Persona natural, NO, Correo
+      electrónico) **menos la Secretaría**, que decide a qué dependencia llega la PQRD y la elige el usuario.
+- [x] **Paso 2**: tipo de documento (primera opción) y solo los opcionales con opción neutra ("NO" /
+      "No Tiene", buscada por texto). Género, rango de edad, actividad, estrato, escolaridad y
+      vulnerabilidad quedan vacíos: su primera opción es un dato real ("Masculino", "Primera Infancia
+      (0-5 años)"…) que se radicaría como cierto.
+- [x] **Paso 3**: departamento y ciudad **del municipio de la app**, buscados por nombre sin tildes ni
+      mayúsculas (la primera opción del catálogo es Antioquia / Medellín para todos).
+- [x] Bug de paso: cambiar de departamento no borraba la ciudad (`copyWith(ciudad: null)` con `??`); ahora
+      `clearCiudad`. Test: `test/features/pqrd/pqrd_identification_defaults_test.dart`.
+- [x] **`AtencionEspecial` al radicar** (aprobado 2026-10-14): era `atencionPreferencial != null`, siempre
+      `true` porque el select es obligatorio (y ahora viene en "NO"); el Kotlin manda siempre `false`
+      (`// Reemplaza con el valor real`, nunca completado). Ahora `true` solo si la opción elegida no es "NO".
+      `IDAtencionPreferencial` / `IDAtencionEspecial` no cambian. **Confirmar con quien mantiene la API de
+      trámites** si el backend usa este booleano.
+- [x] "Quitar archivo" no borraba el adjunto (`copyWith(nombreArchivo: null, …)`, mismo patrón `??`): el
+      botón no hacía nada: el archivo seguía en pantalla y se radicaba con él. Ahora `clearArchivo`, en la
+      PQRD anónima y en la de identificación.
+
 ## Release hardening — navegación (backport de Santander `d553eff`, 2026-10-13)
 
 Port a mano (los repos divergieron el 2026-08-21) de la parte de navegación de `d553eff`. Cada punto

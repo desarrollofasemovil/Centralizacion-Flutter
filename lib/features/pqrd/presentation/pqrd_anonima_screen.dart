@@ -61,11 +61,7 @@ class _PqrdAnonimaScreenState extends ConsumerState<PqrdAnonimaScreen> {
     }
   }
 
-  void _removeFile() => _update((s) => s.copyWith(
-        nombreArchivo: null,
-        tipoArchivo: null,
-        contenidoArchivoBase64: null,
-      ));
+  void _removeFile() => _update((s) => s.copyWith(clearArchivo: true));
 
   Future<void> _submit(String entityCode) async {
     if (!_formKey.currentState!.validate()) return;
