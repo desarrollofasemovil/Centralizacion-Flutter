@@ -18,6 +18,7 @@ class HistoryPayScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(sessionProvider);
     final historyAsync = ref.watch(historyPayNotifierProvider);
+    final syncingIds = ref.watch(historySyncingIdsProvider);
 
     // Cabecera compartida `TopbarNavigation` + adorno de circulos, igual que
     // `HistoryPayScreen.kt`. Ese original NO tiene barra inferior: la barra de
@@ -49,6 +50,7 @@ class HistoryPayScreen extends ConsumerWidget {
                           final card = _HistoryCard(
                             item: item,
                             dateText: _formatDate(item.paymentDate),
+                            isSyncing: syncingIds.contains(item.id),
                           );
                           // Solo los pagos FALLIDA se pueden ocultar deslizando
                           // de derecha a izquierda.
@@ -106,23 +108,12 @@ class HistoryPayScreen extends ConsumerWidget {
     );
   }
 
-  /// Pull-to-refresh: sincroniza con el proveedor los pagos pendientes (antes
-  /// el boton "Sync" de cada tarjeta) y recarga la lista.
-  Future<void> _refresh(WidgetRef ref) async {
-    final notifier = ref.read(historyPayNotifierProvider.notifier);
-    final pending = (ref.read(historyPayNotifierProvider).value ?? const [])
-        .where((p) => p.isInProgress)
-        .map((p) => p.id)
-        .toList();
-    for (final id in pending) {
-      try {
-        await notifier.syncPayment(id);
-      } catch (_) {
-        // Un pago que no se pueda sincronizar no bloquea el resto.
-      }
-    }
-    await notifier.fetchHistory();
-  }
+  /// Pull-to-refresh: sincroniza con el proveedor los pagos en curso (antes
+  /// el boton "Sync" de cada tarjeta) y recarga la lista una sola vez. Solo el
+  /// estado de esas tarjetas se pone a cargar; el resto de la pantalla queda
+  /// quieta (antes parpadeaba una vez por pago).
+  Future<void> _refresh(WidgetRef ref) =>
+      ref.read(historyPayNotifierProvider.notifier).refreshPending();
 
   Future<void> _hide(BuildContext context, WidgetRef ref, int id) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -140,10 +131,13 @@ class HistoryPayScreen extends ConsumerWidget {
     }
   }
 
+  /// `paymentDate` es solo el día (`DateOnly` en la API, p. ej. `2026-10-14`):
+  /// no hay hora que mostrar. Antes se formateaba con `hh:mm a` y todos los
+  /// pagos salían a las "12:00 AM".
   String _formatDate(String rawDate) {
     try {
       final parsed = DateTime.parse(rawDate);
-      return DateFormat('dd/MM/yyyy hh:mm a').format(parsed);
+      return DateFormat('dd/MM/yyyy').format(parsed);
     } catch (_) {
       return rawDate;
     }
@@ -273,9 +267,17 @@ class _DeleteBackground extends StatelessWidget {
 
 /// Port de `HistoryCard`.
 class _HistoryCard extends StatelessWidget {
-  const _HistoryCard({required this.item, required this.dateText});
+  const _HistoryCard({
+    required this.item,
+    required this.dateText,
+    this.isSyncing = false,
+  });
   final PaymentHistoryDTO item;
   final String dateText;
+
+  /// Se está consultando su estado en la pasarela: el ícono y el texto del
+  /// estado se reemplazan por un indicador de carga.
+  final bool isSyncing;
 
   @override
   Widget build(BuildContext context) {
@@ -297,7 +299,7 @@ class _HistoryCard extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
             Expanded(
@@ -306,11 +308,14 @@ class _HistoryCard extends StatelessWidget {
                 children: [
                   Text(
                     _orLoading(item.procedureName),
-                    style: theme.textTheme.headlineSmall,
+                    style: theme.primaryTextTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: scheme.onSurface,
+                    ),
                   ),
                   Text(
                     'Alcaldía de ${_orLoading(item.alcaldia)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    style: theme.primaryTextTheme.bodyLarge?.copyWith(
                       color: scheme.onSurface,
                     ),
                   ),
@@ -321,35 +326,55 @@ class _HistoryCard extends StatelessWidget {
                     children: [
                       Text(
                         '👤 ${_orLoading(item.userFirtName)}',
-                        style: theme.textTheme.bodyMedium,
+                      style: theme.primaryTextTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurface,
+                    ),
                       ),
                       Text(
                         '💰 ${_money(item.amount)}',
-                        style: theme.textTheme.bodyMedium,
+                        style: theme.primaryTextTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurface,
+                        ),
                       ),
                       Text(
                         '📅 ${_orLoading(dateText)}',
-                        style: theme.textTheme.bodyMedium,
+                        style: theme.primaryTextTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurface,
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: color, size: 32),
-                const SizedBox(height: 5),
-                Text(
-                  estado,
-                  style: theme.textTheme.bodySmall?.copyWith(
+            if (isSyncing)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
                     color: color,
-                    fontWeight: FontWeight.bold,
+                    semanticsLabel: 'Verificando el estado del pago',
                   ),
                 ),
-              ],
-            ),
+              )
+            else
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: color, size: 40),
+                  const SizedBox(height: 5),
+                  Text(
+                    estado,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
