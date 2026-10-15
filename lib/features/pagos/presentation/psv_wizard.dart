@@ -16,6 +16,7 @@ import 'package:tramiapp_flutter/core/widgets/validation_error_dialog.dart';
 import 'package:tramiapp_flutter/features/auth/application/auth_providers.dart';
 import 'package:tramiapp_flutter/features/auth/application/signup_providers.dart';
 import '../application/psv_notifier.dart';
+import '../../tramites/domain/procedure_identity.dart';
 
 /// Puerto fiel de `PsvScreen.kt` (+ `Step1Form`, `Step2Form`, `Step3Summary` y
 /// `FormButtons`). Asistente de 3 pasos para el Pago Sin Validación (PSV).
@@ -206,10 +207,11 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
     // Datos del municipio: banco (enruta la pasarela) y procedimiento del
     // impuesto (integrationType + id para el historial).
     final mun = ref.read(municipalityProvider(widget.municipalityId)).value;
-    final matches = (mun?.municipalityProcedures ?? const []).where(
-      (p) => p.procedures.id == widget.taxId,
+    // `widget.taxId` es el `externalId` del trámite (`Id_Impuesto`).
+    final matched = findTaxProcedureByExternalId(
+      mun?.municipalityProcedures ?? const [],
+      widget.taxId,
     );
-    final matched = matches.isNotEmpty ? matches.first : null;
     final integrationType = matched?.integrationType ?? 'psv';
     final procedureId = matched?.id ?? 0;
     final bankName = mun?.bank.nameBank ?? '';

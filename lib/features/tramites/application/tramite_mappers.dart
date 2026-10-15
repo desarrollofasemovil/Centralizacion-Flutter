@@ -1,14 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/models/municipality_dto.dart';
-import '../../../core/models/municipality.dart';
-import '../../../core/models/procedures.dart';
 import '../../../core/models/municipality_procedure.dart';
 import '../../../core/models/municipality_social_media.dart';
 import '../../../core/theme/design.dart';
 import '../../../core/router/app_routes.dart';
+import '../../certificados/domain/certificate_procedure.dart';
 import '../../municipality/domain/municipality_model.dart';
 import '../domain/info_tramite.dart';
 import '../domain/integration_type_model.dart';
+import '../domain/procedure_identity.dart';
 
 // New Color Palettes for Procedures from Color.kt
 const List<Color> kMainProcedureColors = [
@@ -36,63 +37,66 @@ const List<Color> kOtherProcedureColors = [
 const Color kPanicButtonColor = Color(0xFFFF4440);
 const Color kSocialMediaColor = Color(0xFFFFFFFF);
 
-// Mapping of icon assets based on procedure ID (mirrors tramiteConfigMap /
-// R.drawable.* in DataMappers.kt). Cada id usa el mismo SVG que el original.
-String? _getProcedureIcon(int id) {
-  switch (id) {
-    case 1:
-      return 'assets/images/icopredial.svg'; // Predial
-    case 2:
-      return 'assets/images/icoica.svg'; // ICA
-    case 3:
-      return 'assets/images/icodecla.svg'; // Declaración
-    case 5:
-      return 'assets/images/icoservici.svg'; // Servicios
-    case 6:
-      return 'assets/images/icovehi.svg'; // Vehículos
-    case 7:
-      return 'assets/images/icorete.svg'; // Retención ICA
-    case 4:
-      return 'assets/images/icopqrsdf.svg'; // PQRSDF
-    case 10:
-      return 'assets/images/icoataquepanico.svg'; // Botón de pánico
-    case 11:
-      return 'assets/images/icocertresidencia.svg'; // Certificado Residencia
-    case 12:
-      return 'assets/images/icocertpazysalvo.svg'; // Certificado Paz y Salvo
-    case 13:
-      return 'assets/images/icocertourism.svg'; // Aporte a Turismo
-    case 14:
-      return 'assets/images/icoconceptusodelsuelo.svg'; // Concepto Uso del Suelo
-    case 8:
-      return 'assets/images/icocursos.svg'; // Cursos
-    case 9:
-      return 'assets/images/icoreservas.svg'; // Reservas (Escenarios)
-    default:
-      return null;
+// Ícono por `code` (mismo SVG que el `R.drawable.*` de DataMappers.kt); un
+// código que la app no conoce usa el ícono genérico de su tipo.
+String _getProcedureIcon(ProcedureIdentity identity) {
+  switch (identity.code) {
+    case ProcedureCodes.predial:
+      return 'assets/images/icopredial.svg';
+    case ProcedureCodes.ica:
+      return 'assets/images/icoica.svg';
+    case ProcedureCodes.declaracion:
+      return 'assets/images/icodecla.svg';
+    case ProcedureCodes.serviciosPublicos:
+      return 'assets/images/icoservici.svg';
+    case ProcedureCodes.vehiculos:
+      return 'assets/images/icovehi.svg';
+    case ProcedureCodes.reteIca:
+      return 'assets/images/icorete.svg';
+    case ProcedureCodes.pqrsdf:
+      return 'assets/images/icopqrsdf.svg';
+    case ProcedureCodes.botonPanico:
+      return 'assets/images/icoataquepanico.svg';
+    case ProcedureCodes.certResidencia:
+      return 'assets/images/icocertresidencia.svg';
+    case ProcedureCodes.certPazSalvo:
+      return 'assets/images/icocertpazysalvo.svg';
+    case ProcedureCodes.certTurismo:
+      return 'assets/images/icocertourism.svg';
+    case ProcedureCodes.certUsoSuelo:
+      return 'assets/images/icoconceptusodelsuelo.svg';
+    case ProcedureCodes.cursos:
+      return 'assets/images/icocursos.svg';
+    case ProcedureCodes.reservaEspacios:
+      return 'assets/images/icoreservas.svg';
   }
+  return switch (identity.kind) {
+    ProcedureKind.tax => 'assets/images/icopredial.svg',
+    ProcedureKind.certificate => kGenericCertificateIcon,
+    ProcedureKind.pqrsdf => 'assets/images/icopqrsdf.svg',
+    ProcedureKind.publicServices => 'assets/images/icoservici.svg',
+    ProcedureKind.courses => 'assets/images/icocursos.svg',
+    ProcedureKind.venues => 'assets/images/icoreservas.svg',
+    ProcedureKind.panicButton => 'assets/images/icoataquepanico.svg',
+    ProcedureKind.other => 'assets/images/icoportal.svg',
+  };
 }
 
-TramiteCategory? _getProcedureCategory(int id) {
-  switch (id) {
-    case 1:
-    case 2:
-    case 3:
-    case 5:
-    case 6:
-    case 7:
-      return TramiteCategory.main;
-    case 4:
-    case 8:
-    case 9:
-    case 10:
-    case 11:
-    case 12:
-    case 13:
-    case 14:
-      return TramiteCategory.other;
-    default:
-      return null;
+// Impuestos y servicios públicos van en "Trámites"; el resto en "Otros
+// trámites" (misma partición que los ids 1–14 del original).
+TramiteCategory _getProcedureCategory(ProcedureKind kind) => switch (kind) {
+  ProcedureKind.tax || ProcedureKind.publicServices => TramiteCategory.main,
+  _ => TramiteCategory.other,
+};
+
+bool _isHttpUrl(String value) {
+  final lower = value.trim().toLowerCase();
+  return lower.startsWith('http://') || lower.startsWith('https://');
+}
+
+void _logHidden(String procedureName, String reason) {
+  if (kDebugMode) {
+    debugPrint('[tramites] "$procedureName" oculto: $reason');
   }
 }
 
@@ -120,50 +124,45 @@ extension MunicipalityDTOToDomain on MunicipalityDTO {
         .whereType<InfoTramite>()
         .toList();
 
-    // 2. Mapea módulos adicionales (si existen en el JSON)
+    // 2. Mapea módulos adicionales (si existen en el JSON). Sus tiles no son
+    // trámites del catálogo: se identifican por `CURSOS` / `RESERVA_ESPACIOS`.
     InfoTramite? cursosTramite;
-    if (courses.isNotEmpty) {
-      final courseInfo = courses.first;
-      final icon = _getProcedureIcon(8)!;
-      final category = _getProcedureCategory(8)!;
-      final action = NavegarACursos(
-        municipalityId: id,
-        courseId: courseInfo.id,
-        dataPolicyUrl: dataProcessingPrivacy ?? "",
-        privacyPolicyUrl: dataPrivacy ?? "",
-        emailMunicipalities: emailMunicipalities ?? "",
+    final cursosAction = _cursosAction();
+    if (cursosAction != null) {
+      const identity = ProcedureIdentity(
+        kind: ProcedureKind.courses,
+        code: ProcedureCodes.cursos,
       );
       cursosTramite = InfoTramite(
         nombre: "Cursos",
-        icono: icon,
+        icono: _getProcedureIcon(identity),
         color: Colors.transparent, // placeholder
-        accion: action,
+        accion: cursosAction,
         idtramite: 8,
-        isActive: courseInfo.isActive,
-        category: category,
+        isActive: courses.first.isActive,
+        category: _getProcedureCategory(identity.kind),
+        key: ProcedureCodes.cursos,
+        kind: identity.kind,
       );
     }
 
     InfoTramite? sportsTramite;
-    if (sportsFacilities.isNotEmpty) {
-      final sportsInfo = sportsFacilities.first;
-      final icon = _getProcedureIcon(9)!;
-      final category = _getProcedureCategory(9)!;
-      final action = NavegarAvenues(
-        municipalityId: id,
-        venueId: sportsInfo.id,
-        dataPolicyUrl: dataProcessingPrivacy ?? "",
-        privacyPolicyUrl: dataPrivacy ?? "",
-        emailMunicipalities: emailMunicipalities ?? "",
+    final venuesAction = _venuesAction();
+    if (venuesAction != null) {
+      const identity = ProcedureIdentity(
+        kind: ProcedureKind.venues,
+        code: ProcedureCodes.reservaEspacios,
       );
       sportsTramite = InfoTramite(
         nombre: "Reserva de espacios",
-        icono: icon,
+        icono: _getProcedureIcon(identity),
         color: Colors.transparent, // placeholder
-        accion: action,
+        accion: venuesAction,
         idtramite: 9,
-        isActive: sportsInfo.isActive,
-        category: category,
+        isActive: sportsFacilities.first.isActive,
+        category: _getProcedureCategory(identity.kind),
+        key: ProcedureCodes.reservaEspacios,
+        kind: identity.kind,
       );
     }
 
@@ -173,7 +172,9 @@ extension MunicipalityDTOToDomain on MunicipalityDTO {
         .whereType<InfoTramite>()
         .toList();
 
-    // 4. Une todas las fuentes en una sola lista distinta por idtramite
+    // 4. Une todas las fuentes en una sola lista distinta por `key` (no por
+    // `idtramite`: los tiles sintéticos 8/9 chocaban con trámites del catálogo
+    // recreados con esos ids, p. ej. el certificado de turismo en desarrollo).
     final combinedList = <InfoTramite>[
       ...tramitesDesdeApi,
       ...socialTramites,
@@ -183,9 +184,9 @@ extension MunicipalityDTOToDomain on MunicipalityDTO {
       if (sportsTramite != null) sportsTramite,
     ];
 
-    final uniqueTramites = <int, InfoTramite>{};
+    final uniqueTramites = <String, InfoTramite>{};
     for (final item in combinedList) {
-      uniqueTramites.putIfAbsent(item.idtramite, () => item);
+      uniqueTramites.putIfAbsent(item.key, () => item);
     }
     final allTramitesWithPlaceholderColor = uniqueTramites.values.toList();
 
@@ -211,7 +212,7 @@ extension MunicipalityDTOToDomain on MunicipalityDTO {
     final otherTramitesColored = otherTramites.asMap().entries.map((entry) {
       final index = entry.key;
       final tramite = entry.value;
-      if (tramite.idtramite == 10) {
+      if (tramite.kind == ProcedureKind.panicButton) {
         return tramite.copyWith(color: kPanicButtonColor);
       } else {
         final colorIndex = (index ~/ 3) % kOtherProcedureColors.length;
@@ -257,6 +258,28 @@ extension MunicipalityDTOToDomain on MunicipalityDTO {
     );
   }
 
+  NavegarACursos? _cursosAction() {
+    if (courses.isEmpty) return null;
+    return NavegarACursos(
+      municipalityId: id,
+      courseId: courses.first.id,
+      dataPolicyUrl: dataProcessingPrivacy ?? "",
+      privacyPolicyUrl: dataPrivacy ?? "",
+      emailMunicipalities: emailMunicipalities ?? "",
+    );
+  }
+
+  NavegarAvenues? _venuesAction() {
+    if (sportsFacilities.isEmpty) return null;
+    return NavegarAvenues(
+      municipalityId: id,
+      venueId: sportsFacilities.first.id,
+      dataPolicyUrl: dataProcessingPrivacy ?? "",
+      privacyPolicyUrl: dataPrivacy ?? "",
+      emailMunicipalities: emailMunicipalities ?? "",
+    );
+  }
+
   IntegrationTypeModel toIntegrationModel() {
     if (entityCode.trim().isNotEmpty) {
       return TramitesporAPP(
@@ -264,105 +287,175 @@ extension MunicipalityDTOToDomain on MunicipalityDTO {
         campoConsulta: queryFields,
       );
     } else {
-      String findUrl(String name) {
-        final dummyMun = Municipality(
-          domain: '',
-          id: 0,
-          name: '',
-          isActive: false,
-        );
-        final proc = municipalityProcedures.firstWhere(
-          (p) => p.procedures.name.toLowerCase().contains(name.toLowerCase()),
-          orElse: () => MunicipalityProcedure(
-            id: 0,
-            integrationType: "",
-            isActive: false,
-            municipality: dummyMun,
-            procedures: Procedures(id: 0, name: ""),
-          ),
-        );
-        return proc.integrationType;
+      final hasIdentity = responseHasProcedureIdentity(municipalityProcedures);
+      String findUrl(String code) {
+        for (final p in municipalityProcedures) {
+          final identity = resolveProcedure(
+            p.procedures,
+            responseHasIdentity: hasIdentity,
+          );
+          if (identity?.code == code) return p.integrationType;
+        }
+        return "";
       }
 
       return TramitesporURL(
-        urlPredial: findUrl("Predial"),
-        urlIca: findUrl("Industria"),
-        urlPqrds: findUrl("PQRSDF"),
-        urlDeclaracion: findUrl("Declaracion"),
-        urlReteIca: findUrl("ReteIca"),
+        urlPredial: findUrl(ProcedureCodes.predial),
+        urlIca: findUrl(ProcedureCodes.ica),
+        urlPqrds: findUrl(ProcedureCodes.pqrsdf),
+        urlDeclaracion: findUrl(ProcedureCodes.declaracion),
+        urlReteIca: findUrl(ProcedureCodes.reteIca),
       );
     }
   }
 }
 
 extension MunicipalityProcedureToDomain on MunicipalityProcedure {
+  /// Motor de trámites (diseño de identidad §4.1). `null` = no se muestra.
+  ///
+  /// 1. Botón de pánico, cursos y escenarios: por su tipo, aunque el valor
+  ///    empiece por `http` (es su configuración, no un enlace).
+  /// 2. Valor `http(s)`: abrir el enlace, sea cual sea el tipo. Solo los
+  ///    impuestos piden antes los datos del ciudadano (`AbrirUrl`); el resto
+  ///    abre directo (`AbrirUrlDirecto`).
+  /// 3. Si no, el módulo del tipo. Un certificado nunca cae en la consulta de
+  ///    impuestos.
   InfoTramite? toInfoTramite(
     MunicipalityDTO parentDto,
     IntegrationTypeModel integracion,
   ) {
-    final procedureId = procedures.id;
-    final procedureName = procedures.name;
+    final identity = resolveProcedure(
+      procedures,
+      responseHasIdentity: responseHasProcedureIdentity(
+        parentDto.municipalityProcedures,
+      ),
+    );
+    if (identity == null) return null;
 
-    final icon = _getProcedureIcon(procedureId);
-    final category = _getProcedureCategory(procedureId);
-    if (icon == null || category == null) return null;
-
-    final TramiteAccion accion;
-
-    if (procedureId == 10 || procedureName.toLowerCase().contains("pánico")) {
-      accion = AbrirBotonPanico(integrationType, parentDto.emailPanic ?? "");
-    } else if (integrationType.isEmpty && procedureId == 4) {
-      accion = const ShowPqrds();
-    } else if (integrationType.isNotEmpty &&
-        (procedureId == 11 ||
-            procedureId == 12 ||
-            procedureId == 13 ||
-            procedureId == 14)) {
-      accion = NavegarANativo(
-        AppRoutes.certificadosPath(
-          parentDto.id,
-          parentDto.entityCode,
-          procedureId,
-          integrationType,
-        ),
-      );
-    } else if (integrationType.isEmpty && procedureId == 5) {
-      accion = NavegarANativo(
-        AppRoutes.serviciosPublicosMenuPath(parentDto.id),
-      );
-    } else if (integrationType.isNotEmpty &&
-        integrationType.toLowerCase().startsWith("http")) {
-      accion = AbrirUrl(integrationType);
-    } else if (integrationType.toLowerCase() == "psv") {
-      accion = NavegarAPagoSinValidacion(
-        taxId: procedureId,
-        taxName: procedureName,
-        entityCode: parentDto.entityCode,
-        dataPolicyUrl: parentDto.dataProcessingPrivacy ?? "",
-        privacyPolicyUrl: parentDto.dataPrivacy ?? "",
-      );
-    } else {
-      if (integracion is TramitesporAPP) {
-        accion = NavegarAConsultaImpuesto(
-          entityCode: integracion.codigoEntidad,
-          queryFields: integracion.campoConsulta,
-          taxId: procedureId,
-          dataPolicyUrl: parentDto.dataProcessingPrivacy ?? "",
-          privacyPolicyUrl: parentDto.dataPrivacy ?? "",
-        );
-      } else {
-        return null;
-      }
-    }
+    final accion = _resolveAction(identity, parentDto, integracion);
+    if (accion == null) return null;
 
     return InfoTramite(
-      nombre: procedureName,
-      icono: icon,
+      nombre: procedures.name,
+      icono: _getProcedureIcon(identity),
       color: Colors.transparent, // placeholder, will be colored dynamically
       accion: accion,
-      idtramite: procedureId,
+      idtramite: procedures.id,
       isActive: isActive,
-      category: category,
+      category: _getProcedureCategory(identity.kind),
+      key: identity.code ?? 'procedure:${procedures.id}',
+      kind: identity.kind,
+    );
+  }
+
+  TramiteAccion? _resolveAction(
+    ProcedureIdentity identity,
+    MunicipalityDTO parentDto,
+    IntegrationTypeModel integracion,
+  ) {
+    final procedureName = procedures.name;
+    final value = integrationType.trim();
+
+    // 1. Su valor es configuración, nunca un enlace.
+    switch (identity.kind) {
+      case ProcedureKind.panicButton:
+        return AbrirBotonPanico(integrationType, parentDto.emailPanic ?? "");
+      case ProcedureKind.courses:
+        return parentDto._cursosAction();
+      case ProcedureKind.venues:
+        return parentDto._venuesAction();
+      default:
+        break;
+    }
+
+    // 2. Canal enlace externo.
+    if (_isHttpUrl(value)) {
+      return identity.kind == ProcedureKind.tax
+          ? AbrirUrl(value)
+          : AbrirUrlDirecto(value);
+    }
+
+    // 3. Módulo nativo del tipo.
+    switch (identity.kind) {
+      case ProcedureKind.pqrsdf:
+        return const ShowPqrds();
+      case ProcedureKind.certificate:
+        return _certificateAction(identity, parentDto, value);
+      case ProcedureKind.publicServices:
+        return NavegarANativo(
+          AppRoutes.serviciosPublicosMenuPath(parentDto.id),
+        );
+      case ProcedureKind.tax:
+        final taxId = identity.externalId;
+        if (taxId == null) {
+          _logHidden(procedureName, 'impuesto sin externalId');
+          return null;
+        }
+        if (value.toLowerCase() == "psv") {
+          return NavegarAPagoSinValidacion(
+            taxId: taxId,
+            taxName: procedureName,
+            entityCode: parentDto.entityCode,
+            dataPolicyUrl: parentDto.dataProcessingPrivacy ?? "",
+            privacyPolicyUrl: parentDto.dataPrivacy ?? "",
+          );
+        }
+        if (integracion is TramitesporAPP) {
+          return NavegarAConsultaImpuesto(
+            entityCode: integracion.codigoEntidad,
+            queryFields: integracion.campoConsulta,
+            taxId: taxId,
+            dataPolicyUrl: parentDto.dataProcessingPrivacy ?? "",
+            privacyPolicyUrl: parentDto.dataPrivacy ?? "",
+          );
+        }
+        return null;
+      case ProcedureKind.other:
+        // Sin módulo en la app: solo existe como enlace.
+        return null;
+      case ProcedureKind.panicButton:
+      case ProcedureKind.courses:
+      case ProcedureKind.venues:
+        return null; // resueltos en el paso 1
+    }
+  }
+
+  /// `CERT_TURISMO` siempre abre el asistente (se cobra por edad); los demás
+  /// certificados solo con valor. Sin `externalId` o sin id de pasarela no se
+  /// pueden pedir ni pagar, así que se ocultan.
+  TramiteAccion? _certificateAction(
+    ProcedureIdentity identity,
+    MunicipalityDTO parentDto,
+    String value,
+  ) {
+    final procedureName = procedures.name;
+    final isAgePriced = identity.code == ProcedureCodes.certTurismo;
+    if (!isAgePriced && value.isEmpty) return null;
+
+    final externalId = identity.externalId;
+    final gatewayTaxId = identity.gatewayTaxId;
+    if (externalId == null) {
+      _logHidden(procedureName, 'certificado sin externalId');
+      return null;
+    }
+    if (gatewayTaxId == null) {
+      _logHidden(
+        procedureName,
+        'certificado sin id de pasarela (code ${identity.code})',
+      );
+      return null;
+    }
+
+    return NavegarACertificado(
+      municipalityId: parentDto.id,
+      certificate: CertificateProcedure(
+        entityCode: parentDto.entityCode,
+        name: procedureName,
+        code: identity.code,
+        externalId: externalId,
+        gatewayTaxId: gatewayTaxId,
+        value: value,
+      ),
     );
   }
 }
@@ -380,6 +473,7 @@ extension MunicipalitySocialMediaToDomain on MunicipalitySocialMedia {
       idtramite: id + 100, // Evita colisión de IDs
       isActive: isActive,
       category: TramiteCategory.social,
+      key: 'social:$id',
     );
   }
 }

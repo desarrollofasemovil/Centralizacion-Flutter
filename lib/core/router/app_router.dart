@@ -31,6 +31,7 @@ import '../../features/impuestos/presentation/consulta_impuesto_screen.dart';
 import '../../features/impuestos/presentation/respuesta_consulta_screen.dart';
 
 // Certificados
+import '../../features/certificados/domain/certificate_procedure.dart';
 import '../../features/certificados/presentation/certificates_wizard.dart';
 
 // Servicios Publicos
@@ -92,9 +93,11 @@ GoRoute _route({
   required Widget Function(BuildContext, GoRouterState) builder,
   NavTransition enter = NavTransition.standard,
   NavTransition exit = NavTransition.standard,
+  GoRouterRedirect? redirect,
 }) {
   return GoRoute(
     path: path,
+    redirect: redirect,
     pageBuilder: (context, state) =>
         appPage(state, builder(context, state), enter: enter, exit: exit),
   );
@@ -228,18 +231,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Certificados sub-route
           _route(
             path: AppRoutes.certificados,
+            // Sin el certificado (p. ej. una ruta reconstruida sin `extra`) no
+            // hay qué pedir ni cobrar: se vuelve al inicio del municipio.
+            redirect: (context, state) => state.extra is CertificateProcedure
+                ? null
+                : AppRoutes.municipalityPath(
+                    int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+                  ),
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-              final entityCode = state.pathParameters['entityCode'] ?? '';
-              final procedureId =
-                  int.tryParse(state.pathParameters['procedureId'] ?? '') ?? 0;
-              final integrationType =
-                  state.pathParameters['integrationType'] ?? '';
               return CertificatesWizard(
                 municipalityId: id,
-                entityCode: entityCode,
-                procedureId: procedureId,
-                integrationType: integrationType,
+                certificate: state.extra! as CertificateProcedure,
               );
             },
           ),

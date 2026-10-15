@@ -10,30 +10,21 @@ import '../../../core/models/ciudadano.dart';
 import '../../../core/models/documentos.dart';
 import '../../../core/models/tax_dto.dart';
 import '../../auth/application/auth_providers.dart';
+import '../domain/certificate_procedure.dart';
 import '../domain/certificates_state.dart';
 
 class CertificatesFamilyParam {
-  final int taxId;
-  final String entityCode;
-  final String payValue;
+  final CertificateProcedure certificate;
 
-  const CertificatesFamilyParam({
-    required this.taxId,
-    required this.entityCode,
-    required this.payValue,
-  });
+  const CertificatesFamilyParam({required this.certificate});
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is CertificatesFamilyParam &&
-          runtimeType == other.runtimeType &&
-          taxId == other.taxId &&
-          entityCode == other.entityCode &&
-          payValue == other.payValue;
+      other is CertificatesFamilyParam && certificate == other.certificate;
 
   @override
-  int get hashCode => Object.hash(taxId, entityCode, payValue);
+  int get hashCode => certificate.hashCode;
 }
 
 class CertificatesNotifier extends Notifier<CertificatesUiState> {
@@ -47,68 +38,20 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
   RemoteConfigService get _remoteConfig =>
       ref.read(remoteConfigServiceProvider);
 
-  int get _taxId => familyParam.taxId;
-  String get _entityCode => familyParam.entityCode;
+  CertificateProcedure get _certificate => familyParam.certificate;
+  String get _entityCode => _certificate.entityCode;
 
   @override
   CertificatesUiState build() {
-    final procedureIdTax = _getProcedureId(familyParam.taxId);
-    final certificateName = _getCertificateName(familyParam.taxId);
-    final iconPath = _getIconPath(familyParam.taxId);
-
     Future.microtask(() => loadDocumentTypes());
 
     return CertificatesUiState(
-      procedureId: procedureIdTax,
-      titleCertificate: certificateName,
-      certificateIconPath: iconPath,
-      certificateValue: familyParam.payValue,
+      gatewayTaxId: _certificate.gatewayTaxId,
+      isAgePriced: _certificate.isAgePriced,
+      titleCertificate: _certificate.title,
+      certificateIconPath: _certificate.iconPath,
+      certificateValue: _certificate.value,
     );
-  }
-
-  int _getProcedureId(int taxId) {
-    switch (taxId) {
-      case 11:
-        return 43;
-      case 12:
-        return 26;
-      case 13:
-        return 269;
-      case 14:
-        return 20;
-      default:
-        return 0;
-    }
-  }
-
-  String _getCertificateName(int taxId) {
-    switch (taxId) {
-      case 11:
-        return "Certificado de Residencia";
-      case 12:
-        return "Certificado de Paz y Salvo";
-      case 13:
-        return "Contribución al turismo";
-      case 14:
-        return "Concepto de Uso del Suelo";
-      default:
-        return "Certificado";
-    }
-  }
-
-  String _getIconPath(int taxId) {
-    switch (taxId) {
-      case 11:
-        return "assets/images/icocertresidencia.svg";
-      case 12:
-        return "assets/images/icocertpazysalvo.svg";
-      case 13:
-        return "assets/images/icocertourism.svg";
-      case 14:
-        return "assets/images/icoconceptusodelsuelo.svg";
-      default:
-        return "assets/images/icocertresidencia.svg";
-    }
   }
 
   Future<void> loadDocumentTypes() async {
@@ -169,7 +112,7 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
   }
 
   void calculateCertificateValue() {
-    final isTourismCertificate = state.procedureId == 269;
+    final isTourismCertificate = state.isAgePriced;
     if (!isTourismCertificate || state.tipoDocumento == null) {
       if (isTourismCertificate) {
         state = state.copyWith(certificateValue: "0");
@@ -260,7 +203,7 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
     final filtered = value.replaceAll(RegExp(r'\D'), '');
     state = state.copyWith(age: filtered, ageError: null);
 
-    if (state.procedureId == 269) {
+    if (state.isAgePriced) {
       calculateCertificateValue();
     }
   }
@@ -304,7 +247,7 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
     final hasLastName = state.primerApellido.trim().isNotEmpty;
 
     bool ageValid = true;
-    if (state.procedureId == 269) {
+    if (state.isAgePriced) {
       final ageInt = int.tryParse(state.age);
       if (state.age.trim().isEmpty) {
         state = state.copyWith(ageError: "La edad es requerida.");
@@ -385,7 +328,7 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
 
       final request = ProcedureApplicationRequest(
         ciudadano: ciudadano,
-        idTramite: _taxId,
+        idTramite: _certificate.externalId,
         codigoEntidad: _entityCode,
         descripcion: state.descripcion,
         documentos: documentos,
@@ -412,7 +355,7 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
           identification: state.identificacion,
           name: name,
           total: int.tryParse(state.certificateValue ?? '0') ?? 0,
-          taxId: state.procedureId,
+          taxId: state.gatewayTaxId,
           email: state.correoElectronico,
           phone: state.telefonoCelular,
           paymentSource: 2,

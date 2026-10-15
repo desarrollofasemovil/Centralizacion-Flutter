@@ -9,7 +9,18 @@ part of 'procedures.dart';
 Procedures _$ProceduresFromJson(Map<String, dynamic> json) => Procedures(
   id: (json['id'] as num?)?.toInt() ?? 0,
   name: json['name'] as String? ?? '',
+  code: _stringOrNull(json['code']),
+  kind: _stringOrNull(json['kind']),
+  externalId: _intOrNull(json['externalId']),
+  gatewayTaxId: _intOrNull(json['gatewayTaxId']),
 );
 
 Map<String, dynamic> _$ProceduresToJson(Procedures instance) =>
-    <String, dynamic>{'id': instance.id, 'name': instance.name};
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'code': ?instance.code,
+      'kind': ?instance.kind,
+      'externalId': ?instance.externalId,
+      'gatewayTaxId': ?instance.gatewayTaxId,
+    };

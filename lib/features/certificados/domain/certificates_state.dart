@@ -10,7 +10,12 @@ class CertificatesUiState {
   final String? ageError;
   final String? certificateIconPath;
   final int? idCertificate;
-  final int procedureId;
+
+  /// `IDImpuesto` de la pasarela (`CrearTransaccion`).
+  final int gatewayTaxId;
+
+  /// `CERT_TURISMO`: valor por edad y tipo de documento.
+  final bool isAgePriced;
   final String? titleCertificate;
   final String? certificateValue;
   final int currentStep;
@@ -47,7 +52,8 @@ class CertificatesUiState {
     this.ageError,
     this.certificateIconPath,
     this.idCertificate = 0,
-    required this.procedureId,
+    required this.gatewayTaxId,
+    this.isAgePriced = false,
     this.titleCertificate = '',
     this.certificateValue = '',
     this.currentStep = 1,
@@ -81,7 +87,8 @@ class CertificatesUiState {
     String? ageError,
     String? certificateIconPath,
     int? idCertificate,
-    int? procedureId,
+    int? gatewayTaxId,
+    bool? isAgePriced,
     String? titleCertificate,
     String? certificateValue,
     int? currentStep,
@@ -114,7 +121,8 @@ class CertificatesUiState {
       ageError: ageError ?? this.ageError,
       certificateIconPath: certificateIconPath ?? this.certificateIconPath,
       idCertificate: idCertificate ?? this.idCertificate,
-      procedureId: procedureId ?? this.procedureId,
+      gatewayTaxId: gatewayTaxId ?? this.gatewayTaxId,
+      isAgePriced: isAgePriced ?? this.isAgePriced,
       titleCertificate: titleCertificate ?? this.titleCertificate,
       certificateValue: certificateValue ?? this.certificateValue,
       currentStep: currentStep ?? this.currentStep,

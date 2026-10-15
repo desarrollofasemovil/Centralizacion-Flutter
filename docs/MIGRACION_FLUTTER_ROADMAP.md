@@ -316,6 +316,35 @@ uno los ~20. Solo se llenan campos vacíos (no pisa lo elegido ni el autollenado
       botón no hacía nada: el archivo seguía en pantalla y se radicaba con él. Ahora `clearArchivo`, en la
       PQRD anónima y en la de identificación.
 
+## Trámites por identidad: `code` / `kind` / `externalId` (prompt 09, 2026-10-15) — `FRONTEND.md §6`
+
+El API sirve (prompt 08, desplegado en desarrollo) `code`, `kind` y `externalId` por trámite; `Procedures.Id`
+deja de decidir comportamiento porque cambia entre entornos (en desarrollo el 9 es *Contribución al turismo*).
+
+- [x] **Modelo** `Procedures` con `code`, `kind`, `externalId`, `gatewayTaxId` opcionales y lectura tolerante
+      (tipo inesperado → `null`, nunca rompe).
+- [x] **Resolver único** `lib/features/tramites/domain/procedure_identity.dart` (`ProcedureKind`,
+      `resolveProcedure`): identidad del API cuando la respuesta la trae; tabla legacy 1–14 **solo** si ningún
+      trámite trae `kind`; en una respuesta mixta, los que no traen `kind` se ocultan. Es el único lugar que
+      conoce los ids 1–14. Id de pasarela: `gatewayTaxId ?? 43/26/269/20 por code`.
+- [x] **Motor de trámites** por `kind`/`code`: pánico/cursos/escenarios por tipo aunque el valor sea `http`;
+      valor `http(s)` → enlace (solo `TAX` pide el formulario de datos, el resto `AbrirUrlDirecto`); un
+      certificado nunca cae en la consulta de impuestos; `OTHER` sin URL y `kind` desconocido → ocultos. Se
+      quitaron `findUrl("Predial")`… y `contains("pánico")`.
+- [x] **Duplicados por `key` estable** (`code`, `CURSOS` / `RESERVA_ESPACIOS`, `social:{id}`), no por
+      `idtramite`: el certificado de turismo (id 9 en desarrollo) y el tile de Reservas conviven.
+- [x] **Cruce con apidatamovil** por `externalId` (`findTaxProcedureByExternalId`) en el resultado de la
+      consulta y en el PSV; el historial sigue mandando `MunicipalityProcedure.id` de la fila.
+- [x] **Entrada a certificados** con `CertificateProcedure` por `extra` (ruta `/municipality/:id/certificados`):
+      título/ícono por `code`, `IDTramite = externalId`, `IDImpuesto` del resolver, precio por edad si
+      `CERT_TURISMO`. Certificado sin id de pasarela (p. ej. `CERT_TEST` en desarrollo) → oculto con log en debug.
+- [x] Tests: `procedure_identity_test.dart`, `tramite_engine_test.dart` (catálogo con ids recreados 230–243 =
+      mismas acciones que 1–14).
+- [ ] **QA manual contra el servidor de pruebas** (municipio 81): ver notas del PR.
+- [ ] **Portar a la base Santander** en su propio prompt cuando ese repo esté limpio.
+- [ ] Bug previo encontrado (no es de este cambio): certificados y servicios públicos empujan
+      `extra: {'url': …}` a `pagosProcessing`, que lee `'paymentUrl'` → la pasarela abre con URL vacía.
+
 ## Release hardening — navegación (backport de Santander `d553eff`, 2026-10-13)
 
 Port a mano (los repos divergieron el 2026-08-21) de la parte de navegación de `d553eff`. Cada punto
