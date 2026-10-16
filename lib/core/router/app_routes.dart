@@ -46,6 +46,11 @@ class AppRoutes {
   static String serviciosPublicosMenuPath(int id) => '/municipality/$id/servicios-publicos';
   static String pagosPsvPath(int id) => '/municipality/$id/pagos/psv';
   static String pagosProcessingPath(int id) => '/municipality/$id/pagos/processing';
+
+  /// Clave de la URL de la pasarela en el `extra` de [pagosProcessing].
+  static const pagosProcessingUrlKey = 'paymentUrl';
+  static Map<String, Object> pagosProcessingExtra(String paymentUrl) =>
+      {pagosProcessingUrlKey: paymentUrl};
   static String pagosHistoryPath(int id) => '/municipality/$id/pagos/history';
   static String cursosPath(int id) => '/municipality/$id/cursos';
   static String venuesPath(int id) => '/municipality/$id/venues';

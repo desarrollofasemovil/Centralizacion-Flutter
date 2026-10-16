@@ -56,6 +56,13 @@ abstract final class DialogTypography {
     letterSpacing: 0.2,
   );
 
+  /// `bodySmall`: Roboto regular 12sp, lineHeight 14sp.
+  static const bodySmall = TextStyle(
+    fontWeight: FontWeight.w400,
+    fontSize: 12,
+    height: 14 / 12,
+  );
+
   /// Equivalente a `style.copy(fontSize = x.sp)` de Compose: cambia el tamaño
   /// conservando el `lineHeight` absoluto del estilo base.
   static TextStyle withFontSize(TextStyle base, double fontSize) {

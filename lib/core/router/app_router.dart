@@ -342,7 +342,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               final extra = state.extra as Map<String, dynamic>?;
-              final paymentUrl = extra?['paymentUrl'] as String? ?? '';
+              final paymentUrl =
+                  extra?[AppRoutes.pagosProcessingUrlKey] as String? ?? '';
               return PaymentProcessingScreen(
                 municipalityId: id,
                 paymentUrl: paymentUrl,

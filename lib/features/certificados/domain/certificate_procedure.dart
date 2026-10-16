@@ -3,12 +3,20 @@ import '../../tramites/domain/procedure_identity.dart';
 /// Ícono de un certificado cuyo `code` la app no conoce.
 const kGenericCertificateIcon = 'assets/images/icocertresidencia.svg';
 
+/// Si un certificado se ofrece en la app (decisión de Brayan, 2026-10-14):
+/// `CERT_TURISMO` siempre (su valor sale de la edad y Remote Config); el resto
+/// solo cuando la alcaldía le puso valor. Sin valor se oculta: nunca cae en la
+/// consulta de impuestos ni en otra pantalla.
+bool isCertificateOffered({required String? code, required String value}) =>
+    code == ProcedureCodes.certTurismo || value.trim().isNotEmpty;
+
 /// Certificado que abre el asistente, ya resuelto por `resolveProcedure`.
 ///
 /// Viaja como `extra` de la ruta (no como segmentos del path: el valor del
 /// certificado puede ir vacío y rompería el match).
 class CertificateProcedure {
   const CertificateProcedure({
+    required this.municipalityProcedureId,
     required this.entityCode,
     required this.name,
     required this.externalId,
@@ -16,6 +24,10 @@ class CertificateProcedure {
     required this.value,
     this.code,
   });
+
+  /// `MunicipalityProcedure.id` de la fila del municipio (para el historial de
+  /// pagos), no el id del catálogo.
+  final int municipalityProcedureId;
 
   final String entityCode;
 
@@ -54,6 +66,7 @@ class CertificateProcedure {
   @override
   bool operator ==(Object other) =>
       other is CertificateProcedure &&
+      other.municipalityProcedureId == municipalityProcedureId &&
       other.entityCode == entityCode &&
       other.name == name &&
       other.code == code &&
@@ -62,6 +75,13 @@ class CertificateProcedure {
       other.value == value;
 
   @override
-  int get hashCode =>
-      Object.hash(entityCode, name, code, externalId, gatewayTaxId, value);
+  int get hashCode => Object.hash(
+    municipalityProcedureId,
+    entityCode,
+    name,
+    code,
+    externalId,
+    gatewayTaxId,
+    value,
+  );
 }

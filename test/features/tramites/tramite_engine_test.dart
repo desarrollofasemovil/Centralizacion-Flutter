@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tramiapp_flutter/features/certificados/domain/certificate_procedure.dart';
 import 'package:tramiapp_flutter/core/models/municipality_dto.dart';
 import 'package:tramiapp_flutter/features/municipality/domain/municipality_model.dart';
 import 'package:tramiapp_flutter/features/tramites/application/tramite_mappers.dart';
@@ -228,6 +229,8 @@ void main() {
         expect(cert.isAgePriced, isTrue);
         expect(cert.externalId, 13);
         expect(cert.gatewayTaxId, 269);
+        // Fila del municipio (historial de pagos), no el id del catálogo.
+        expect(cert.municipalityProcedureId, 50);
         // Certificado de código desconocido y sin valor: oculto.
         expect(_tile(m, 'Contribución al Turismo bis'), isNull);
       },
@@ -241,6 +244,20 @@ void main() {
         _describe(_tile(m, 'Contribución al Turismo')!.accion),
         'cert:CERT_TURISMO/13/269/',
       );
+    });
+
+    test('isCertificateOffered: turismo siempre, el resto solo con valor', () {
+      expect(isCertificateOffered(code: 'CERT_TURISMO', value: ''), isTrue);
+      expect(isCertificateOffered(code: 'CERT_RESIDENCIA', value: ''), isFalse);
+      expect(
+        isCertificateOffered(code: 'CERT_PAZ_SALVO', value: '  '),
+        isFalse,
+      );
+      expect(
+        isCertificateOffered(code: 'CERT_USO_SUELO', value: '9000'),
+        isTrue,
+      );
+      expect(isCertificateOffered(code: null, value: '9000'), isTrue);
     });
 
     test('certificado sin valor (no turismo) → oculto', () {

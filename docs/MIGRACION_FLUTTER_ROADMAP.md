@@ -342,8 +342,35 @@ deja de decidir comportamiento porque cambia entre entornos (en desarrollo el 9 
       mismas acciones que 1–14).
 - [ ] **QA manual contra el servidor de pruebas** (municipio 81): ver notas del PR.
 - [ ] **Portar a la base Santander** en su propio prompt cuando ese repo esté limpio.
-- [ ] Bug previo encontrado (no es de este cambio): certificados y servicios públicos empujan
+- [~] Bug previo encontrado (no es de este cambio): certificados y servicios públicos empujan
       `extra: {'url': …}` a `pagosProcessing`, que lee `'paymentUrl'` → la pasarela abre con URL vacía.
+      **Certificados corregido en el prompt 07**; servicios públicos sigue pendiente.
+
+## Certificados — paridad con Kotlin, adjunto real y historial (prompt 07, 2026-10-15) — `FRONTEND.md §5.7`
+
+- [x] **A1** La pasarela nunca abría (`'url'` vs `'paymentUrl'`): ahora `AppRoutes.pagosProcessingExtra(url)`.
+- [x] **A2** `copyWith` con banderas `clearX` (errores, adjunto, URL): el error de identificación se va al
+      corregirla y "Quitar archivo" funciona.
+- [x] **A3** Autollenado: tipo de documento por descripción normalizada; sin coincidencia queda vacío.
+- [x] **A4** Estado del envío dentro del notifier `autoDispose.family` (no global).
+- [x] **A5** Regla de visibilidad en `isCertificateOffered` (turismo siempre, el resto con valor). La codificación
+      del valor en la ruta ya no aplica: desde el prompt 09 viaja por `extra`.
+- [x] **Parte B** Validaciones y textos de Kotlin, correo con el patrón compartido, teclado por tipo de documento,
+      precio de turismo, adjunto real (5 MB, pdf/png/jpg, lectura en `Isolate`), orden y textos del envío, sin
+      doble envío.
+- [x] **Parte C** Registro en el historial antes de `CrearTransaccion` (best-effort, no fatal) y pantalla de
+      procesamiento completa. Verificado contra `PaymentHistoryService`/`BancolombiaPseService` del API.
+- [x] **Parte D** UI medida contra los `.kt` (campos, botones dentro del scroll, resumen, aviso, adjunto).
+- [x] Tests: `test/features/certificados/certificates_notifier_test.dart`,
+      `certificates_payment_extra_test.dart`; `tramite_engine_test.dart` ampliado.
+- [x] **`Estado` booleano de `tramitesservices`** (encontrado en QA): `ProcedureApplicationResponse.estado` era
+      `String` como en Kotlin (Gson convierte `true` en `"true"`); en Dart `as String` fallaba al finalizar. Ahora es
+      `bool` con lectura tolerante (`true` o `"true"`), igual que `ResponsePQRD`.
+- [x] **QA en dispositivo** contra el servidor de pruebas (Brayan, 2026-10-16): flujo completo hasta la pasarela.
+      Con el municipio de pruebas 81 la pasarela respondía "No se pudo crear la transacción…" porque su código de
+      entidad era de relleno (`321321321`) y la pasarela es la de producción; con un código de entidad real pasa.
+- [ ] El contenedor redondeado lo pone `TopBarNavigationScaffold` (radio 16, sin el desplazamiento de 10 del
+      Kotlin, que usa 18): se dejó así porque lo comparten 5 pantallas.
 
 ## Release hardening — navegación (backport de Santander `d553eff`, 2026-10-13)
 

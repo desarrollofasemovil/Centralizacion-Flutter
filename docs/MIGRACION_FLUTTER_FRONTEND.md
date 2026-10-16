@@ -187,7 +187,33 @@ Los trámites se renderizan como `TramiteCard` según `municipalityProcedures` d
 
 ### 5.7 Certificados
 - **CertificateStep1/2/3Screen** + `CertificatesViewModel` + `CertificatesNavScreen` — flujo 3 pasos parametrizado por `entityCode`/`procedureId`/`integrationType`.
-- **Flutter (2026-10-15):** `CertificatesWizard` recibe un `CertificateProcedure` (por `extra`, ruta `/municipality/:id/certificados`; sin él vuelve al home): título e ícono por `code` (fallback: nombre del trámite / ícono genérico), `IDTramite = externalId`, `IDImpuesto` = id de pasarela del resolver y precio por edad si `code == CERT_TURISMO` (antes `procedureId == 269`). El valor ya no va en el path: vacío rompía el match. Paridad completa del módulo: prompt 07.
+- **Flutter (2026-10-15):** `CertificatesWizard` recibe un `CertificateProcedure` (por `extra`, ruta `/municipality/:id/certificados`; sin él vuelve al home): título e ícono por `code` (fallback: nombre del trámite / ícono genérico), `IDTramite = externalId`, `IDImpuesto` = id de pasarela del resolver y precio por edad si `code == CERT_TURISMO` (antes `procedureId == 269`). El valor ya no va en el path: vacío rompía el match.
+- **Paridad con Kotlin (prompt 07, 2026-10-15).** Validaciones y textos de `CertificatesViewModel.kt` y de las
+  pantallas (errores por campo en `CertificatesFormErrorState`, cada uno se limpia al cambiar su campo); correo con
+  `isValidEmail` (`core/utils/validators.dart`, equivalente a `Patterns.EMAIL_ADDRESS`, el mismo de la consulta de
+  impuestos); teclado de texto solo para "Pasaporte", "NIT", "Permiso Especial de Permanencia", "Visa", "VISA".
+  UI medida contra los `.kt`: campos outlined de radio 10, botones dentro del scroll (150 de ancho en los pasos 1 y
+  2, `weight(1)` en el 3, "Cancelar" Gray600, "Finalizar" primario con spinner), resumen con elevación 3 y valor
+  `$<n> COP` sin separador de miles, aviso rojo `0xFFEF5350` alineado a la izquierda. Estilos exactos de `Type.kt`
+  vía `DialogTypography` (la app no tiene `TextTheme` propio).
+- **Decisiones de Brayan [D] (difieren de Kotlin a propósito):**
+  - **Visibilidad** (`isCertificateOffered` en `certificate_procedure.dart`): `CERT_TURISMO` siempre; los demás solo
+    con valor, si no se ocultan. Nunca caen en la consulta de impuestos (Kotlin tiene un bug de precedencia).
+  - **Adjunto real:** se manda el base64 del archivo (Kotlin manda `ByteArray.toString()` y `"null"`), **máximo 5 MB**
+    (Kotlin 10), solo `.pdf`/`.png`/`.jpg`/`.jpeg`; la lectura va en un `Isolate`. Sin archivo, textos vacíos.
+  - **Historial de pagos:** tras `InsertarSolicitudTramite` y **antes** de `CrearTransaccion` se espera
+    `POST api/PaymentHistory/` (mismo cuerpo que impuestos/PSV: `statusType 2`, `factura` = referencia en dígitos,
+    `idimpuesto` = id de pasarela, `municipalityProceduresId` = la fila del municipio). Best-effort: si falla se paga
+    igual y queda un no fatal; sin sesión no se registra. Verificado en el API: la consulta de estado PSE usa
+    `CodigoEntidad` + `Factura` + `IDImpuesto`, los mismos valores con que se crea la transacción.
+  - **Pantalla de procesamiento completa** con `AppRoutes.pagosProcessingExtra(url)` (antes mandaba `'url'` y la
+    ruta lee `'paymentUrl'`: la pasarela nunca abría). El snackbar de error sí se muestra (en Kotlin no).
+- **Estado del envío** dentro del notifier `autoDispose.family` (antes era un provider global y un resultado podía
+  colarse en el siguiente certificado). El autollenado elige el tipo de documento por descripción normalizada y lo
+  deja vacío si no hay coincidencia (antes caía en el primero de la lista).
+- **Limitación conocida:** los certificados siempre pagan por la pasarela de Bancolombia, pero la sincronización de
+  estado del API elige la pasarela por el banco del municipio: un certificado en un municipio que no es de
+  Bancolombia se consultaría contra Fintech.
 
 ### 5.8 Servicios Públicos (tema propio)
 - **PublicServicesMenuScreen** + `PublicServicesMenuViewModel`.

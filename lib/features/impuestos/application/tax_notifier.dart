@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/models/query_field.dart';
+import '../../../core/utils/validators.dart';
 import '../data/tax_repository.dart';
 import '../domain/tax.dart';
 
@@ -11,9 +12,6 @@ final taxRepositoryProvider = Provider<TaxRepository>((ref) {
     ref.watch(fintechPaymentsApiServiceProvider),
   );
 });
-
-/// Equivalente a `Patterns.EMAIL_ADDRESS` del original.
-final _emailRegex = RegExp(r"^[\w.+\-]+@[\w\-]+(\.[\w\-]+)+$");
 
 /// Puerto de `TaxQueryUiState` (TaxQueryViewModel.kt).
 class TaxQueryState {
@@ -46,7 +44,7 @@ class TaxQueryState {
   bool get isQueryButtonEnabled =>
       selectedQueryField != null &&
       documentNumber.trim().isNotEmpty &&
-      _emailRegex.hasMatch(email.trim()) &&
+      isValidEmail(email) &&
       acceptsPolicies &&
       acceptsConditions;
 
