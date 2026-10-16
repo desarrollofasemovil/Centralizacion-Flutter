@@ -12,21 +12,21 @@ import 'package:tramiapp_flutter/core/widgets/slide_switcher.dart';
 import 'package:tramiapp_flutter/core/widgets/step_indicator.dart';
 import 'package:tramiapp_flutter/core/widgets/top_bar_navigation.dart';
 import '../application/certificates_notifier.dart';
+import '../domain/certificate_procedure.dart';
 import '../domain/certificates_state.dart';
 
 class CertificatesWizard extends ConsumerStatefulWidget {
   const CertificatesWizard({
     required this.municipalityId,
-    required this.entityCode,
-    required this.procedureId,
-    required this.integrationType,
+    required this.certificate,
     super.key,
   });
 
   final int municipalityId;
-  final String entityCode;
-  final int procedureId;
-  final String integrationType; // corresponds to payValue (cost)
+
+  /// Certificado ya resuelto por código (título, ícono, `IDTramite`,
+  /// `IDImpuesto` y valor).
+  final CertificateProcedure certificate;
 
   @override
   ConsumerState<CertificatesWizard> createState() => _CertificatesWizardState();
@@ -53,11 +53,7 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
   @override
   void initState() {
     super.initState();
-    _param = CertificatesFamilyParam(
-      taxId: widget.procedureId,
-      entityCode: widget.entityCode,
-      payValue: widget.integrationType,
-    );
+    _param = CertificatesFamilyParam(certificate: widget.certificate);
 
     // Initial pre-population
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -234,8 +230,8 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
           extra: {
             'url': next.urlTransaction,
             'reference': next.reference,
-            'entityCode': widget.entityCode,
-            'taxId': widget.procedureId.toString(),
+            'entityCode': widget.certificate.entityCode,
+            'taxId': widget.certificate.externalId.toString(),
           },
         );
       } else if (next is CertificatesResponseError) {
@@ -352,7 +348,7 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
             onChanged: notifier.onIdentificacionChange,
             validator: (v) => notifier.validateIdentificacion(v ?? ''),
           ),
-          if (state.procedureId == 269) ...[
+          if (state.isAgePriced) ...[
             const SizedBox(height: 16),
             TextFormField(
               controller: _ageCtrl,

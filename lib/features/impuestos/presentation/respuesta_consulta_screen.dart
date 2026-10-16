@@ -13,6 +13,7 @@ import '../application/tax_results_notifier.dart';
 import '../domain/tax.dart';
 import 'widgets/tax_card.dart';
 import '../../../core/widgets/app_top_bar.dart';
+import '../../tramites/domain/procedure_identity.dart';
 
 /// Puerto de `TaxResultsScreen` (RespuestaConsultaScreen.kt): lista de
 /// facturas encontradas con pago PSE, descarga y compartir de PDF.
@@ -46,9 +47,12 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
       _showSnack('Espere a que carguen los datos del municipio');
       return;
     }
-    final matched = mun.municipalityProcedures
-        .where((p) => p.procedures.id == tax.taxId)
-        .firstOrNull;
+    // `tax.taxId` es el `Id_Impuesto` de apidatamovil: se cruza con el
+    // `externalId` del trámite, no con su `id` (cambia entre entornos).
+    final matched = findTaxProcedureByExternalId(
+      mun.municipalityProcedures,
+      tax.taxId,
+    );
     // Registro en el historial y transacción, en ese orden (ver `payTax`).
     ref
         .read(taxResultsNotifierProvider.notifier)

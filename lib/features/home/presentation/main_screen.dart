@@ -50,6 +50,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       context.push(AppRoutes.pqrdPath(widget.municipality.id));
     } else if (action is NavegarANativo) {
       context.push(action.ruta);
+    } else if (action is NavegarACertificado) {
+      context.push(
+        AppRoutes.certificadosPath(action.municipalityId),
+        extra: action.certificate,
+      );
     } else if (action is NavegarAPagoSinValidacion) {
       context.push(
         AppRoutes.pagosPsvPath(widget.municipality.id),

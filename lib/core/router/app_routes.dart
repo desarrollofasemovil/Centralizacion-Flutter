@@ -17,7 +17,8 @@ class AppRoutes {
   static const news = '/municipality/:id/news';
   static const taxes = '/municipality/:id/taxes';
   static const pqrd = '/municipality/:id/pqrd';
-  static const certificados = '/municipality/:id/certificados/:entityCode/:procedureId/:integrationType';
+  /// El certificado viaja como `extra` (`CertificateProcedure`), no en el path.
+  static const certificados = '/municipality/:id/certificados';
   static const serviciosPublicosMenu = '/municipality/:id/servicios-publicos';
   static const serviciosPublicosSelectEntity = '/municipality/:id/servicios-publicos/select-entity';
   static const serviciosPublicosInstructions = '/municipality/:id/servicios-publicos/scanner-instructions';
@@ -41,8 +42,7 @@ class AppRoutes {
   static String newsPath(int id) => '/municipality/$id/news';
   static String taxesPath(int id) => '/municipality/$id/taxes';
   static String pqrdPath(int id) => '/municipality/$id/pqrd';
-  static String certificadosPath(int id, String entityCode, int procedureId, String integrationType) =>
-      '/municipality/$id/certificados/$entityCode/$procedureId/$integrationType';
+  static String certificadosPath(int id) => '/municipality/$id/certificados';
   static String serviciosPublicosMenuPath(int id) => '/municipality/$id/servicios-publicos';
   static String pagosPsvPath(int id) => '/municipality/$id/pagos/psv';
   static String pagosProcessingPath(int id) => '/municipality/$id/pagos/processing';

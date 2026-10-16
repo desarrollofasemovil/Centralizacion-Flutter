@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/query_field.dart';
+import '../../certificados/domain/certificate_procedure.dart';
+import 'procedure_identity.dart';
 
 enum TramiteCategory { main, other, social }
 
@@ -32,9 +34,21 @@ class AbrirBotonPanico extends TramiteAccion {
   const AbrirBotonPanico(this.baseWhatsappUrl, this.emailPanic);
 }
 
+/// Abre el asistente de certificados con el trámite ya resuelto.
+class NavegarACertificado extends TramiteAccion {
+  final int municipalityId;
+  final CertificateProcedure certificate;
+  const NavegarACertificado({
+    required this.municipalityId,
+    required this.certificate,
+  });
+}
+
 class NavegarAConsultaImpuesto extends TramiteAccion {
   final String entityCode;
   final List<QueryField> queryFields;
+
+  /// `Id_Impuesto` de apidatamovil (`externalId` del trámite), no su `id`.
   final int taxId;
   final String dataPolicyUrl;
   final String privacyPolicyUrl;
@@ -81,6 +95,7 @@ class NavegarAvenues extends TramiteAccion {
 }
 
 class NavegarAPagoSinValidacion extends TramiteAccion {
+  /// `Id_Impuesto` de apidatamovil (`externalId` del trámite), no su `id`.
   final int taxId;
   final String taxName;
   final String entityCode;
@@ -108,6 +123,14 @@ class InfoTramite {
   final bool isActive;
   final TramiteCategory category;
 
+  /// Clave estable para quitar duplicados: el `code` del trámite (los tiles de
+  /// cursos y escenarios usan `CURSOS` / `RESERVA_ESPACIOS`), nunca `idtramite`,
+  /// que cambia entre entornos.
+  final String key;
+
+  /// Tipo del trámite del catálogo; `null` en las redes sociales.
+  final ProcedureKind? kind;
+
   const InfoTramite({
     required this.nombre,
     required this.icono,
@@ -116,6 +139,8 @@ class InfoTramite {
     required this.idtramite,
     required this.isActive,
     required this.category,
+    required this.key,
+    this.kind,
   });
 
   InfoTramite copyWith({
@@ -135,6 +160,8 @@ class InfoTramite {
       idtramite: idtramite ?? this.idtramite,
       isActive: isActive ?? this.isActive,
       category: category ?? this.category,
+      key: key,
+      kind: kind,
     );
   }
 }

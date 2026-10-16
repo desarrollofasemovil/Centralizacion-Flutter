@@ -187,6 +187,7 @@ Los trámites se renderizan como `TramiteCard` según `municipalityProcedures` d
 
 ### 5.7 Certificados
 - **CertificateStep1/2/3Screen** + `CertificatesViewModel` + `CertificatesNavScreen` — flujo 3 pasos parametrizado por `entityCode`/`procedureId`/`integrationType`.
+- **Flutter (2026-10-15):** `CertificatesWizard` recibe un `CertificateProcedure` (por `extra`, ruta `/municipality/:id/certificados`; sin él vuelve al home): título e ícono por `code` (fallback: nombre del trámite / ícono genérico), `IDTramite = externalId`, `IDImpuesto` = id de pasarela del resolver y precio por edad si `code == CERT_TURISMO` (antes `procedureId == 269`). El valor ya no va en el path: vacío rompía el match. Paridad completa del módulo: prompt 07.
 
 ### 5.8 Servicios Públicos (tema propio)
 - **PublicServicesMenuScreen** + `PublicServicesMenuViewModel`.
@@ -254,32 +255,75 @@ lista de excepciones de `test/core/dialog_parity_test.dart`, que falla ante cual
 
 En `DataMappers.kt` (`MunicipalityDTO.toDomainModel()`), cada trámite del backend se convierte en un `InfoTramite` con ícono, color y **acción** (`TramiteAccion`). Esta lógica define toda la navegación del home y **debe portarse con cuidado**.
 
-### 6.1 Mapa de íconos por ID de procedimiento (`tramiteConfigMap`)
-| ID | Trámite | Categoría |
-|---|---|---|
-| 1 | Predial | MAIN |
-| 2 | ICA | MAIN |
-| 3 | Declaración | MAIN |
-| 5 | Servicios (públicos) | MAIN |
-| 6 | Vehículos | MAIN |
-| 7 | Retención ICA | MAIN |
-| 4 | PQRSDF | OTHER |
-| 10 | Botón de Pánico | OTHER (color `PanicButton`) |
-| 11 | Certificado Residencia | OTHER |
-| 12 | Certificado Paz y Salvo | OTHER |
-| 13 | Aporte a Turismo | OTHER |
-| 14 | Concepto de Uso del Suelo | OTHER |
-| 8 | Cursos | OTHER (módulo especial) |
-| 9 | Reserva de espacios (Escenarios) | OTHER (módulo especial) |
+> ⭐ **Desde 2026-10-15 Flutter resuelve los trámites por identidad, no por `Procedures.Id`** (prompt 09; diseño
+> del hub `docs/2026-10-14-procedure-identity-design.md`; contrato en el repo del API,
+> `docs/api/municipality.md` §"Identidad de los trámites"). El `id` cambia entre entornos y al recrear una fila:
+> en desarrollo el 9 es *Contribución al turismo* y la app lo trataba como Reservas. Kotlin 1.5.0 sigue con la
+> tabla por id de §6.1; Flutter solo la usa como **fallback legacy**.
 
-Si un `procedureId` no está en el mapa → el trámite **no se muestra**.
+### 6.0 Identidad del trámite (`procedure_identity.dart`)
+`procedures` trae (opcionales, omitidos cuando son nulos) `code` (`PREDIAL`, `CERT_TURISMO`… lo genera el API),
+`kind` (`TAX`, `CERTIFICATE`, `PQRSDF`, `PUBLIC_SERVICES`, `COURSES`, `VENUES`, `PANIC_BUTTON`, `OTHER`),
+`externalId` (`Id_Impuesto` de apidatamovil / `IDTramite` de tramitesservices) y, desde la Fase 0,
+`gatewayTaxId`. `resolveProcedure(p, responseHasIdentity:)` en
+`lib/features/tramites/domain/procedure_identity.dart` es **el único lugar de la app que conoce los ids 1–14**:
+
+- **La respuesta trae identidad** (algún trámite tiene `kind`): `kind`/`code`/`externalId` tal como llegan. Un
+  trámite sin `kind` o con uno desconocido **se oculta**, nunca se resuelve por id.
+- **Ninguno trae `kind`** (producción antes del despliegue): tabla legacy de §6.1, `externalId = id`.
+- **Id de pasarela** (`IDImpuesto` de los certificados): `gatewayTaxId ?? constante por code` (`CERT_RESIDENCIA`
+  43, `CERT_PAZ_SALVO` 26, `CERT_TURISMO` 269, `CERT_USO_SUELO` 20). Código desconocido sin `gatewayTaxId` →
+  `null`: el certificado se oculta (no se puede pagar) y se registra en debug.
+
+Un `code` que la app no conoce usa el comportamiento genérico de su `kind` (ícono genérico: impuesto →
+`icopredial`, certificado → `icocertresidencia`, `OTHER` → `icoportal`).
+
+### 6.1 Tabla legacy por ID (`tramiteConfigMap` del original) — solo fallback
+| ID | Trámite | `code` / `kind` | Categoría |
+|---|---|---|---|
+| 1 | Predial | `PREDIAL` / TAX | MAIN |
+| 2 | ICA | `ICA` / TAX | MAIN |
+| 3 | Declaración | `DECLARACION` / TAX | MAIN |
+| 5 | Servicios (públicos) | `SERVICIOS_PUBLICOS` / PUBLIC_SERVICES | MAIN |
+| 6 | Vehículos | `VEHICULOS` / TAX | MAIN |
+| 7 | Retención ICA | `RETE_ICA` / TAX | MAIN |
+| 4 | PQRSDF | `PQRSDF` / PQRSDF | OTHER |
+| 10 | Botón de Pánico | `BOTON_PANICO` / PANIC_BUTTON | OTHER (color `PanicButton`) |
+| 11 | Certificado Residencia | `CERT_RESIDENCIA` / CERTIFICATE | OTHER |
+| 12 | Certificado Paz y Salvo | `CERT_PAZ_SALVO` / CERTIFICATE | OTHER |
+| 13 | Aporte a Turismo | `CERT_TURISMO` / CERTIFICATE | OTHER |
+| 14 | Concepto de Uso del Suelo | `CERT_USO_SUELO` / CERTIFICATE | OTHER |
+| 8 | Cursos | `CURSOS` / COURSES | OTHER (módulo especial) |
+| 9 | Reserva de espacios (Escenarios) | `RESERVA_ESPACIOS` / VENUES | OTHER (módulo especial) |
+
+Categoría por `kind`: TAX y PUBLIC_SERVICES → MAIN; el resto → OTHER. Ícono por `code`. Si el trámite no se
+resuelve → **no se muestra**.
 
 ### 6.2 Tipo de integración (`IntegrationTypeModel`)
 - Si `entityCode` no está vacío → `TramitesporAPP(codigoEntidad, campoConsulta=queryFields)`.
-- Si está vacío → `TramitesporURL(urlPredial, urlIca, urlPqrds, urlDeclaracion, urlReteIca)` extraídas de los `integrationType` de cada procedimiento.
+- Si está vacío → `TramitesporURL(urlPredial, urlIca, urlPqrds, urlDeclaracion, urlReteIca)` extraídas de los `integrationType` de cada procedimiento, **buscadas por `code`** (Kotlin y el Flutter anterior buscaban por subcadena del nombre).
 
 ### 6.3 Resolución de acción por trámite (`toInfoTramite`)
-Orden de reglas (simplificado):
+**Flutter (diseño de identidad §4.1).** El **canal** (en la app / enlace externo) lo decide cada alcaldía en
+`integrationType`: un valor `http://` o `https://` es enlace.
+1. `PANIC_BUTTON` → `AbrirBotonPanico(integrationType, emailPanic)`; `COURSES` → `NavegarACursos`; `VENUES` →
+   `NavegarAvenues` (de `courses` / `sportsFacilities`; sin ellos, oculto). Su valor es configuración (WhatsApp,
+   SharePoint): **nunca** se abre como enlace aunque empiece por `http`.
+2. Valor `http(s)` → abrir el enlace, sea cual sea el tipo. **Solo `TAX`** usa `AbrirUrl` (pide el formulario de
+   datos del ciudadano una vez si no hay sesión ni datos de invitado guardados); **todos los demás** usan
+   `AbrirUrlDirecto` (abre directo, con el aviso de sitio externo). Kotlin pide el formulario para cualquier
+   trámite del catálogo con URL.
+3. Si no, el módulo del tipo:
+   - `PQRSDF` → `ShowPqrds`.
+   - `CERTIFICATE` → `NavegarACertificado(CertificateProcedure)` (ver §5.7). `CERT_TURISMO` siempre (valor
+     opcional, se cobra por edad); los demás solo con valor; sin `externalId` o sin id de pasarela → oculto.
+     **Un certificado nunca cae en la consulta de impuestos** (bug anterior: el 13 sin valor iba a la consulta).
+   - `PUBLIC_SERVICES` → `NavegarANativo(serviciosPublicosMenuPath)`.
+   - `TAX` con `psv` → `NavegarAPagoSinValidacion(taxId = externalId, …)`; `TAX` con `entityCode` →
+     `NavegarAConsultaImpuesto(taxId = externalId, …)`; si no, oculto.
+   - `OTHER` sin URL → oculto. `kind` desconocido → oculto (compatibilidad hacia adelante).
+
+Reglas del original Kotlin (por id y nombre), como referencia:
 1. ID 10 o nombre contiene "Pánico" → `AbrirBotonPanico(integrationType, emailPanic)`.
 2. `integrationType` vacío y ID 4 → `ShowPqrds` (navega a PQRD nativo).
 3. ID 11/12/13/14 con `integrationType` no vacío → `NavegarANativo(CERTIFICATES_STEP1/{entityCode}/{id}/{integrationType})`.
@@ -289,16 +333,28 @@ Orden de reglas (simplificado):
 7. Else, si integración es `TramitesporAPP` → `NavegarAConsultaImpuesto(entityCode, queryFields, taxId, políticas)`.
 8. Else → no hay acción → no se muestra.
 
+**Cruce con servicios externos.** El resultado de la consulta y el PSV buscan el trámite de la alcaldía con
+`findTaxProcedureByExternalId(municipalityProcedures, tax.taxId)` (`externalId` contra el `Id_Impuesto`, solo
+`TAX`), no con `procedures.id`. El historial (`municipalityProceduresId`) usa el `id` de **la fila** encontrada
+(`MunicipalityProcedure.id`), no el del catálogo.
+
 ### 6.4 Asignación de color dinámico
 - MAIN y OTHER reciben color rotando paletas (`MainProcedureColors`, `OtherProcedureColors`) por bloques de 3 (`(index/3) % size`).
-- Pánico (ID 10) conserva su color fijo `PanicButton`.
+- Pánico (`kind` PANIC_BUTTON; ID 10 en el original) conserva su color fijo `PanicButton`.
 - SOCIAL (redes) usa `SocialMediaColor` + íconos por nombre (Facebook/Instagram/X/Youtube/Blogger/TikTok).
 
 ### 6.5 Módulos especiales como trámites
-- Cursos (ID 8): si `courses.firstOrNull()` existe → `TramiteAccion.NavegarACursos(municipalityId, courseId, políticas, email)`.
-- Escenarios (ID 9): si `sportsFacilities.firstOrNull()` existe → `TramiteAccion.NavegarAvenues(...)`.
+- Cursos: si `courses.firstOrNull()` existe → `TramiteAccion.NavegarACursos(municipalityId, courseId, políticas, email)`.
+- Escenarios: si `sportsFacilities.firstOrNull()` existe → `TramiteAccion.NavegarAvenues(...)`.
+- **Duplicados por clave estable (`InfoTramite.key`), no por `idtramite`.** Los tiles sintéticos usan
+  `CURSOS` / `RESERVA_ESPACIOS`; los trámites del catálogo, su `code` (`procedure:{id}` si no traen código); las
+  redes, `social:{id}`. Antes se deduplicaba por `idtramite` 8/9 y en desarrollo *Contribución al turismo*
+  (id 9) tapaba el tile de Reservas y se quedaba con su ícono.
 
-> **Flutter:** portar `toInfoTramite`/`toDomainModel` como funciones puras de mapeo (idealmente con tests unitarios, dado que es la lógica más enredada y propensa a regresiones). Los íconos (`R.drawable.icopredial`, etc.) → assets en Flutter. El nombre de alcaldía se compone como `"Alcaldía de ${name}"`.
+> **Flutter:** `toInfoTramite`/`toDomainModel` son funciones puras de mapeo con tests
+> (`test/features/tramites/tramite_mappers_test.dart`, `tramite_engine_test.dart` con ids recreados 230–243, y
+> `procedure_identity_test.dart`). Los íconos (`R.drawable.icopredial`, etc.) → assets en Flutter. El nombre de
+> alcaldía se compone como `"Alcaldía de ${name}"`.
 
 ---
 
