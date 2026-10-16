@@ -42,6 +42,9 @@ class AppColors {
   /// (departamento/municipio). No usar `onSurface`: en tema oscuro es claro.
   static const textPrimary = Color(0xFF2C2E35);
 
+  /// `Blue` — textos de aceptación de políticas (certificados).
+  static const blue = Color(0xFF1E88E5);
+
   /// `Green` — check de éxito de registro.
   static const successGreen = Color(0xFF42A345);
 

@@ -429,8 +429,7 @@ extension MunicipalityProcedureToDomain on MunicipalityProcedure {
     String value,
   ) {
     final procedureName = procedures.name;
-    final isAgePriced = identity.code == ProcedureCodes.certTurismo;
-    if (!isAgePriced && value.isEmpty) return null;
+    if (!isCertificateOffered(code: identity.code, value: value)) return null;
 
     final externalId = identity.externalId;
     final gatewayTaxId = identity.gatewayTaxId;
@@ -449,6 +448,7 @@ extension MunicipalityProcedureToDomain on MunicipalityProcedure {
     return NavegarACertificado(
       municipalityId: parentDto.id,
       certificate: CertificateProcedure(
+        municipalityProcedureId: id,
         entityCode: parentDto.entityCode,
         name: procedureName,
         code: identity.code,

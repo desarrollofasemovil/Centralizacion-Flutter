@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tramiapp_flutter/core/router/app_routes.dart';
 import 'package:tramiapp_flutter/core/router/safe_pop.dart';
-import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
-import 'package:tramiapp_flutter/core/models/tipo_documento.dart';
+import 'package:tramiapp_flutter/core/theme/app_colors.dart';
+import 'package:tramiapp_flutter/core/widgets/dialog_typography.dart';
+import 'package:tramiapp_flutter/core/widgets/pqrd_dropdown.dart';
 import 'package:tramiapp_flutter/core/widgets/slide_switcher.dart';
 import 'package:tramiapp_flutter/core/widgets/step_indicator.dart';
 import 'package:tramiapp_flutter/core/widgets/top_bar_navigation.dart';
@@ -15,6 +18,8 @@ import '../application/certificates_notifier.dart';
 import '../domain/certificate_procedure.dart';
 import '../domain/certificates_state.dart';
 
+/// Asistente de certificados en 3 pasos. Port de `CertificatesNavScreen.kt` +
+/// `CertificateStep1/2/3Screen.kt`.
 class CertificatesWizard extends ConsumerStatefulWidget {
   const CertificatesWizard({
     required this.municipalityId,
@@ -33,9 +38,6 @@ class CertificatesWizard extends ConsumerStatefulWidget {
 }
 
 class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
-  final _formKey1 = GlobalKey<FormState>();
-  final _formKey2 = GlobalKey<FormState>();
-
   final _identificacionCtrl = TextEditingController();
   final _primerNombreCtrl = TextEditingController();
   final _segundoNombreCtrl = TextEditingController();
@@ -48,31 +50,36 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
   final _ageCtrl = TextEditingController();
   final _descripcionCtrl = TextEditingController();
 
-  late CertificatesFamilyParam _param;
+  late final CertificatesFamilyParam _param;
 
   @override
   void initState() {
     super.initState();
     _param = CertificatesFamilyParam(certificate: widget.certificate);
 
-    // Initial pre-population
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = ref.read(certificatesNotifierProvider(_param));
-      _updateControllers(state);
+      if (!mounted) return;
+      _syncControllers(ref.read(certificatesNotifierProvider(_param)));
     });
   }
 
-  void _updateControllers(CertificatesUiState state) {
-    _identificacionCtrl.text = state.identificacion;
-    _primerNombreCtrl.text = state.primerNombre;
-    _segundoNombreCtrl.text = state.segundoNombre;
-    _primerApellidoCtrl.text = state.primerApellido;
-    _segundoApellidoCtrl.text = state.segundoApellido;
-    _correoCtrl.text = state.correoElectronico;
-    _direccionCtrl.text = state.direccion;
-    _celularCtrl.text = state.telefonoCelular;
-    _ageCtrl.text = state.age;
-    _descripcionCtrl.text = state.descripcion;
+  /// Lleva al texto de los campos los valores que cambia el notifier (el
+  /// autollenado de la sesión, la edad filtrada a dígitos, etc.).
+  void _syncControllers(CertificatesUiState s) {
+    void sync(TextEditingController c, String value) {
+      if (c.text != value) c.text = value;
+    }
+
+    sync(_identificacionCtrl, s.identificacion);
+    sync(_primerNombreCtrl, s.primerNombre);
+    sync(_segundoNombreCtrl, s.segundoNombre);
+    sync(_primerApellidoCtrl, s.primerApellido);
+    sync(_segundoApellidoCtrl, s.segundoApellido);
+    sync(_correoCtrl, s.correoElectronico);
+    sync(_direccionCtrl, s.direccion);
+    sync(_celularCtrl, s.telefonoCelular);
+    sync(_ageCtrl, s.age);
+    sync(_descripcionCtrl, s.descripcion);
   }
 
   @override
@@ -94,573 +101,644 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
     try {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+        allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
       );
+      final file = result?.files.single;
+      final path = file?.path;
+      if (file == null || path == null) return;
 
-      if (result != null && result.files.single.path != null) {
-        final path = result.files.single.path!;
-        final file = File(path);
-        final sizeBytes = await file.length();
-
-        // 10 MB Limit
-        if (sizeBytes > 10 * 1024 * 1024) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('El archivo excede el tamaño máximo de 10 MB.'),
-              ),
-            );
-          }
-          return;
-        }
-
-        final bytes = await file.readAsBytes();
-        final base64String = base64Encode(bytes);
-        final name = result.files.single.name;
-        final extension = result.files.single.extension;
-        final mimeType = _getMimeType(extension);
-
-        notifier.onFileSelected(
-          name: name,
-          mimeType: mimeType,
-          base64Content: base64String,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al seleccionar archivo: $e')),
-        );
-      }
+      await notifier.attachFile(
+        fileName: file.name,
+        sizeBytes: file.size,
+        // Lectura y base64 fuera del hilo de la UI (hasta 5 MB).
+        readBase64: () =>
+            Isolate.run(() => base64Encode(File(path).readAsBytesSync())),
+      );
+    } catch (_) {
+      notifier.onFilePickFailed();
     }
   }
 
-  String? _getMimeType(String? extension) {
-    if (extension == null) return null;
-    switch (extension.toLowerCase()) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'pdf':
-        return 'application/pdf';
-      default:
-        return 'application/octet-stream';
-    }
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
+
+  void _close() =>
+      context.popOrGo(AppRoutes.municipalityPath(widget.municipalityId));
 
   @override
   Widget build(BuildContext context) {
-    final asyncMun = ref.watch(municipalityProvider(widget.municipalityId));
-    final state = ref.watch(certificatesNotifierProvider(_param));
-    final notifier = ref.read(certificatesNotifierProvider(_param).notifier);
-    final responseState = ref.watch(certificatesResponseStateProvider);
+    final provider = certificatesNotifierProvider(_param);
+    final state = ref.watch(provider);
+    final notifier = ref.read(provider.notifier);
 
-    // Sync input text controllers with notifier state updates (e.g. from autofill)
-    ref.listen<CertificatesUiState>(certificatesNotifierProvider(_param), (
-      previous,
-      next,
-    ) {
-      if (previous == null || previous.identificacion != next.identificacion) {
-        if (_identificacionCtrl.text != next.identificacion) {
-          _identificacionCtrl.text = next.identificacion;
-        }
-      }
-      if (previous == null || previous.primerNombre != next.primerNombre) {
-        if (_primerNombreCtrl.text != next.primerNombre) {
-          _primerNombreCtrl.text = next.primerNombre;
-        }
-      }
-      if (previous == null || previous.segundoNombre != next.segundoNombre) {
-        if (_segundoNombreCtrl.text != next.segundoNombre) {
-          _segundoNombreCtrl.text = next.segundoNombre;
-        }
-      }
-      if (previous == null || previous.primerApellido != next.primerApellido) {
-        if (_primerApellidoCtrl.text != next.primerApellido) {
-          _primerApellidoCtrl.text = next.primerApellido;
-        }
-      }
-      if (previous == null ||
-          previous.segundoApellido != next.segundoApellido) {
-        if (_segundoApellidoCtrl.text != next.segundoApellido) {
-          _segundoApellidoCtrl.text = next.segundoApellido;
-        }
-      }
-      if (previous == null ||
-          previous.correoElectronico != next.correoElectronico) {
-        if (_correoCtrl.text != next.correoElectronico) {
-          _correoCtrl.text = next.correoElectronico;
-        }
-      }
-      if (previous == null || previous.direccion != next.direccion) {
-        if (_direccionCtrl.text != next.direccion) {
-          _direccionCtrl.text = next.direccion;
-        }
-      }
-      if (previous == null ||
-          previous.telefonoCelular != next.telefonoCelular) {
-        if (_celularCtrl.text != next.telefonoCelular) {
-          _celularCtrl.text = next.telefonoCelular;
-        }
-      }
-      if (previous == null || previous.age != next.age) {
-        if (_ageCtrl.text != next.age) {
-          _ageCtrl.text = next.age;
-        }
-      }
-      if (previous == null || previous.descripcion != next.descripcion) {
-        if (_descripcionCtrl.text != next.descripcion) {
-          _descripcionCtrl.text = next.descripcion;
-        }
-      }
+    ref.listen<CertificatesUiState>(provider, (_, next) {
+      _syncControllers(next);
     });
 
-    // Listen for submission responses
-    ref.listen<CertificatesResponseState>(certificatesResponseStateProvider, (
-      prev,
-      next,
-    ) {
-      if (next is CertificatesResponseSuccess) {
-        ref.read(certificatesResponseStateProvider.notifier).reset();
-        // Redirect to WebView processing screen
-        context.push(
-          AppRoutes.pagosProcessingPath(widget.municipalityId),
-          extra: {
-            'url': next.urlTransaction,
-            'reference': next.reference,
-            'entityCode': widget.certificate.entityCode,
-            'taxId': widget.certificate.externalId.toString(),
-          },
-        );
-      } else if (next is CertificatesResponseError) {
-        ref.read(certificatesResponseStateProvider.notifier).reset();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.message), backgroundColor: Colors.red),
-        );
-      }
+    ref.listen<String?>(provider.select((s) => s.fileError), (_, next) {
+      if (next == null) return;
+      _showSnack(next);
+      notifier.clearFileError();
     });
 
-    final title = state.titleCertificate ?? 'Certificado';
-    final isReady =
-        asyncMun.hasValue &&
-        !state.isLoading &&
-        responseState is! CertificatesResponseLoading;
+    ref.listen<CertificatesResponseState>(
+      provider.select((s) => s.submission),
+      (_, next) {
+        if (next is CertificatesResponseSuccess) {
+          notifier.resetSubmission();
+          context.push(
+            AppRoutes.pagosProcessingPath(widget.municipalityId),
+            // Antes mandaba `'url'` y la ruta lee `'paymentUrl'`: la pasarela
+            // nunca abría.
+            extra: AppRoutes.pagosProcessingExtra(next.urlTransaction),
+          );
+        } else if (next is CertificatesResponseError) {
+          notifier.resetSubmission();
+          // En Kotlin este snackbar nunca se veía (su `ScaffoldState` no estaba
+          // conectado a nada).
+          _showSnack(next.message);
+        }
+      },
+    );
+
+    final scheme = Theme.of(context).colorScheme;
 
     return PopScope(
       canPop: state.currentStep == 1,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          notifier.onPreviousStep();
-        }
+        if (!didPop) notifier.onPreviousStep();
       },
-      // Cabecera compartida `TopbarNavigation` del original (franja primaria con
-      // insignia del certificado, título y descripción, que colapsa al hacer
-      // scroll). Antes era un `AppBar` plano con la flecha por defecto.
       child: TopBarNavigationScaffold(
-        iconAsset:
-            state.certificateIconPath ?? 'assets/images/icocertresidencia.svg',
-        title: title,
+        iconAsset: state.certificateIconPath ?? kGenericCertificateIcon,
+        title: state.titleCertificate ?? 'Certificado',
         description: 'Pide, paga y recibe tu certificado.',
         onBack: () {
           if (state.currentStep == 1) {
-            context.popOrGo(AppRoutes.municipalityPath(widget.municipalityId));
+            _close();
           } else {
             notifier.onPreviousStep();
           }
         },
-        bottomBar: isReady ? _buildBottomButtons(state, notifier) : null,
-        body: !isReady
-            ? const SizedBox(
-                height: 280,
-                child: Center(child: CircularProgressIndicator()),
-              )
-            : GestureDetector(
-                // Toque fuera de los campos = cerrar teclado, igual que el
-                // `clickable { focusManager.clearFocus() }` del original.
-                behavior: HitTestBehavior.translucent,
-                onTap: () => FocusScope.of(context).unfocus(),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      StepIndicator(currentStep: state.currentStep),
-                      const SizedBox(height: 24),
-                      // AnimatedContent "StepAnimation" (slide + fade).
-                      SlideSwitcher(
-                        index: state.currentStep,
-                        child: switch (state.currentStep) {
-                          1 => _buildStep1(state, notifier),
-                          2 => _buildStep2(state, notifier),
-                          _ => _buildStep3(state, notifier),
-                        },
-                      ),
-                    ],
-                  ),
+        body: GestureDetector(
+          // Toque fuera de los campos = cerrar teclado (`clearFocus()`).
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 20, left: 32, right: 32),
+                  child: StepIndicator(currentStep: state.currentStep),
                 ),
-              ),
+                const SizedBox(height: 18),
+                // AnimatedContent "StepAnimation" (slide + fade).
+                SlideSwitcher(
+                  index: state.currentStep,
+                  child: switch (state.currentStep) {
+                    1 => _buildStep1(state, notifier, scheme),
+                    2 => _buildStep2(state, notifier, scheme),
+                    _ => _buildStep3(state, notifier, scheme),
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildStep1(CertificatesUiState state, CertificatesNotifier notifier) {
-    return Form(
-      key: _formKey1,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Datos Básicos de la Solicitud',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<TipoDocumento>(
-            decoration: const InputDecoration(
-              labelText: 'Tipo de documento*',
-              border: OutlineInputBorder(),
-            ),
-            initialValue: state.tipoDocumento,
-            items: state.listTipoDocumento
-                .map(
-                  (t) => DropdownMenuItem<TipoDocumento>(
-                    value: t,
-                    child: Text(t.descripcion),
-                  ),
-                )
-                .toList(),
-            onChanged: (val) {
-              if (val != null) {
-                notifier.onTipoDocumentoChange(val);
-              }
+  // ---------------------------------------------------------------------------
+  // Campos (OutlinedTextField del original)
+  // ---------------------------------------------------------------------------
+
+  /// `OutlinedTextField` con los colores de `outLineTextColor`: esquinas 10,
+  /// etiqueta `bodyMedium` (Gray400 en reposo, primario al enfocar) y fondo =
+  /// `background`. [hasSupportingText] reserva el renglón de `supportingText`
+  /// como en Compose, que es el aire entre campos del original.
+  Widget _field({
+    required ColorScheme scheme,
+    required TextEditingController controller,
+    required String label,
+    required ValueChanged<String> onChanged,
+    String? error,
+    bool hasSupportingText = false,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    double? height,
+  }) {
+    OutlineInputBorder border(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: color, width: width),
+        );
+
+    final field = TextField(
+      controller: controller,
+      onChanged: onChanged,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      style: DialogTypography.bodyMedium.copyWith(color: scheme.onSurface),
+      // `singleLine = true` en todos los campos del original.
+      maxLines: height == null ? 1 : null,
+      expands: height != null,
+      textAlignVertical: height == null ? null : TextAlignVertical.center,
+      textInputAction: TextInputAction.done,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: DialogTypography.bodyMedium.copyWith(
+          color: AppColors.gray400,
+        ),
+        floatingLabelStyle: DialogTypography.bodyMedium.copyWith(
+          color: error != null ? scheme.error : scheme.primary,
+        ),
+        filled: true,
+        fillColor: scheme.surfaceContainerLowest,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        border: border(AppColors.gray400),
+        enabledBorder: border(AppColors.gray400),
+        focusedBorder: border(scheme.primary, 2),
+        errorBorder: border(scheme.error),
+        focusedErrorBorder: border(scheme.error, 2),
+        errorText: error,
+        errorStyle: DialogTypography.bodySmall.copyWith(color: scheme.error),
+        helperText: hasSupportingText ? ' ' : null,
+        helperStyle: DialogTypography.bodySmall,
+      ),
+    );
+
+    if (height == null) return field;
+    return SizedBox(height: height, child: field);
+  }
+
+  Widget _requiredFieldsNote() => const Text(
+    'Los campos con  * son obligatorios',
+    style: DialogTypography.bodySmall,
+  );
+
+  // ---------------------------------------------------------------------------
+  // Paso 1 — CertificateStep1Screen.kt
+  // ---------------------------------------------------------------------------
+
+  /// Teclado de texto solo para estos tipos exactos; número para el resto.
+  TextInputType _documentKeyboard(String? description) => switch (description) {
+    'Pasaporte' ||
+    'NIT' ||
+    'Permiso Especial de Permanencia' ||
+    'Visa' ||
+    'VISA' => TextInputType.text,
+    _ => TextInputType.number,
+  };
+
+  Widget _buildStep1(
+    CertificatesUiState state,
+    CertificatesNotifier notifier,
+    ColorScheme scheme,
+  ) {
+    final errors = state.errors;
+    return Column(
+      key: const ValueKey('certificates-step-1'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (state.isLoading)
+          const Center(child: CircularProgressIndicator())
+        else ...[
+          PqrdDropdown(
+            // El dropdown toma el valor inicial: se recrea cuando el
+            // autollenado elige el tipo.
+            key: ValueKey(state.tipoDocumento?.id),
+            label: 'Tipo de documento*',
+            hint: '*Tipo de documento',
+            value: state.tipoDocumento,
+            items: state.listTipoDocumento,
+            itemLabel: (t) => t.descripcion,
+            onChanged: (t) {
+              if (t != null) notifier.onTipoDocumentoChange(t);
             },
-            validator: (v) => v == null ? 'Seleccione tipo de documento' : null,
           ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _identificacionCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Identificación*',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: _getKeyboardType(state.tipoDocumento?.descripcion),
-            onChanged: notifier.onIdentificacionChange,
-            validator: (v) => notifier.validateIdentificacion(v ?? ''),
-          ),
-          if (state.isAgePriced) ...[
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _ageCtrl,
-              decoration: InputDecoration(
-                labelText: 'Edad*',
-                border: const OutlineInputBorder(),
-                errorText: state.ageError,
+          if (errors.tipoDocumentoError)
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Text(
+                'Seleccione un tipo de documento',
+                style: DialogTypography.bodySmall.copyWith(color: scheme.error),
               ),
-              keyboardType: TextInputType.number,
-              onChanged: notifier.onAgeChange,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'La edad es requerida';
-                }
-                final ageInt = int.tryParse(v);
-                if (ageInt == null || ageInt < 0 || ageInt > 120) {
-                  return 'Introduzca una edad válida (0-120)';
-                }
-                return null;
-              },
             ),
-          ],
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _primerNombreCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Primer nombre*',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: notifier.onPrimerNombreChange,
-            validator: (v) => (v == null || v.trim().isEmpty)
-                ? 'El primer nombre es requerido'
-                : null,
+          const SizedBox(height: 8),
+          _field(
+            scheme: scheme,
+            controller: _identificacionCtrl,
+            label: 'Identificación*',
+            onChanged: notifier.onIdentificacionChange,
+            keyboardType: _documentKeyboard(state.tipoDocumento?.descripcion),
+            error: state.identificacionError,
+            hasSupportingText: true,
           ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _segundoNombreCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Segundo nombre',
-              border: OutlineInputBorder(),
+          if (state.isAgePriced)
+            _field(
+              scheme: scheme,
+              controller: _ageCtrl,
+              label: 'Edad*',
+              onChanged: notifier.onAgeChange,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              error: state.ageError,
+              hasSupportingText: true,
             ),
+          _field(
+            scheme: scheme,
+            controller: _primerNombreCtrl,
+            label: 'Primer nombre*',
+            onChanged: notifier.onPrimerNombreChange,
+            error: errors.primerNombreError
+                ? 'El primer nombre es requerido.'
+                : null,
+            hasSupportingText: true,
+          ),
+          _field(
+            scheme: scheme,
+            controller: _segundoNombreCtrl,
+            label: 'Segundo nombre',
             onChanged: notifier.onSegundoNombreChange,
           ),
           const SizedBox(height: 16),
-          TextFormField(
+          _field(
+            scheme: scheme,
             controller: _primerApellidoCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Primer apellido*',
-              border: OutlineInputBorder(),
-            ),
+            label: 'Primer apellido*',
             onChanged: notifier.onPrimerApellidoChange,
-            validator: (v) => (v == null || v.trim().isEmpty)
-                ? 'El primer apellido es requerido'
+            error: errors.primerApellidoError
+                ? 'El primer apellido es requerido.'
                 : null,
+            hasSupportingText: true,
           ),
-          const SizedBox(height: 16),
-          TextFormField(
+          _field(
+            scheme: scheme,
             controller: _segundoApellidoCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Segundo apellido',
-              border: OutlineInputBorder(),
-            ),
+            label: 'Segundo apellido',
             onChanged: notifier.onSegundoApellidoChange,
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Los campos con * son obligatorios',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
+          const SizedBox(height: 5),
         ],
-      ),
+        _requiredFieldsNote(),
+        const SizedBox(height: 20),
+        _stepButtons(
+          scheme: scheme,
+          // En el paso 1 "Cancelar" cierra el módulo.
+          onCancel: _close,
+          onNext: state.isNextButtonEnabled ? notifier.onNextStep : null,
+        ),
+      ],
     );
   }
 
-  TextInputType _getKeyboardType(String? docType) {
-    if (docType == null) return TextInputType.number;
-    final lower = docType.toLowerCase();
-    if (lower.contains('pasaporte') ||
-        lower.contains('nit') ||
-        lower.contains('visa')) {
-      return TextInputType.text;
-    }
-    return TextInputType.number;
-  }
+  // ---------------------------------------------------------------------------
+  // Paso 2 — CertificateStep2Screen.kt
+  // ---------------------------------------------------------------------------
 
-  Widget _buildStep2(CertificatesUiState state, CertificatesNotifier notifier) {
-    return Form(
-      key: _formKey2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Información de Contacto y Soporte',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
+  Widget _buildStep2(
+    CertificatesUiState state,
+    CertificatesNotifier notifier,
+    ColorScheme scheme,
+  ) {
+    final errors = state.errors;
+    return Column(
+      key: const ValueKey('certificates-step-2'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (state.isLoading)
+          const Center(child: CircularProgressIndicator())
+        else ...[
+          _field(
+            scheme: scheme,
             controller: _correoCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Correo electrónico*',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.emailAddress,
+            label: 'Correo electrónico*',
             onChanged: notifier.correoElectronicoChange,
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) {
-                return 'El correo electrónico es requerido';
-              }
-              final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-              if (!emailRegex.hasMatch(v)) {
-                return 'Ingrese un correo electrónico válido';
-              }
-              return null;
-            },
+            keyboardType: TextInputType.emailAddress,
+            error: errors.correoElectronicoError
+                ? 'Ingrese un correo electrónico válido.'
+                : null,
+            hasSupportingText: true,
           ),
-          const SizedBox(height: 16),
-          TextFormField(
+          _field(
+            scheme: scheme,
             controller: _direccionCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Dirección',
-              border: OutlineInputBorder(),
-            ),
+            label: 'Dirección',
             onChanged: notifier.onDireccionChange,
           ),
           const SizedBox(height: 16),
-          TextFormField(
+          _field(
+            scheme: scheme,
             controller: _celularCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Teléfono celular*',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.phone,
+            label: 'Teléfono celular*',
             onChanged: notifier.onTelefonoCelularChange,
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) {
-                return 'El teléfono celular es requerido';
-              }
-              if (v.trim().length != 10) {
-                return 'Ingrese un número válido de 10 dígitos';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _descripcionCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Descripción*',
-              alignLabelWithHint: true,
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 4,
-            onChanged: notifier.onDescripcionChange,
-            validator: (v) => (v == null || v.trim().isEmpty)
-                ? 'La descripción no puede estar vacía'
+            keyboardType: TextInputType.phone,
+            error: errors.telefonoCelularError
+                ? 'Ingrese un número válido.'
                 : null,
+            hasSupportingText: true,
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Documento de soporte (Opcional - Máx. 10 MB, solo PDF o imágenes)',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          // 150 de alto como en Kotlin. Allí es `singleLine`: aquí no admite
+          // saltos de línea, pero el texto se ajusta dentro del recuadro.
+          _field(
+            scheme: scheme,
+            controller: _descripcionCtrl,
+            label: 'Descripción *',
+            onChanged: notifier.onDescripcionChange,
+            inputFormatters: [FilteringTextInputFormatter.deny('\n')],
+            error: errors.descripcionError
+                ? 'La descripción no puede estar vacía.'
+                : null,
+            hasSupportingText: true,
+            height: 150,
           ),
-          const SizedBox(height: 8),
-          if (state.nombreArchivo == null)
-            OutlinedButton.icon(
-              onPressed: () => _pickFile(notifier),
-              icon: const Icon(Icons.attach_file),
-              label: const Text('Adjuntar documentos'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+        ],
+        _attachment(state, notifier, scheme),
+        _requiredFieldsNote(),
+        const SizedBox(height: 20),
+        _stepButtons(
+          scheme: scheme,
+          // En el paso 2 "Cancelar" vuelve al paso anterior.
+          onCancel: notifier.onPreviousStep,
+          onNext: state.isNextButtonEnabled ? notifier.onNextStep : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _attachment(
+    CertificatesUiState state,
+    CertificatesNotifier notifier,
+    ColorScheme scheme,
+  ) {
+    if (!state.hasFile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(5),
+            child: Row(
+              children: [
+                ElevatedButton(
+                  onPressed: () => _pickFile(notifier),
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
+                  ),
+                  child: const Icon(Icons.attach_file),
+                ),
+                const SizedBox(width: 3),
+                const Text(
+                  'Adjuntar documentos',
+                  style: DialogTypography.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          Material(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => _pickFile(notifier),
+              child: const Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  'Seleccionar documentos',
+                  style: DialogTypography.bodyMedium,
                 ),
               ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.green),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      state.nombreArchivo!,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.cancel, color: Colors.red),
-                    onPressed: notifier.clearFile,
-                  ),
-                ],
+            ),
+          ),
+        ],
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.gray300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: AppColors.successGreen,
+            semanticLabel: 'Archivo adjuntado',
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                state.nombreArchivo!,
+                overflow: TextOverflow.ellipsis,
+                style: DialogTypography.bodyMedium,
               ),
             ),
-          const SizedBox(height: 8),
-          const Text(
-            'Los campos con * son obligatorios',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          IconButton(
+            tooltip: 'Quitar archivo',
+            onPressed: notifier.clearFile,
+            icon: const Icon(Icons.cancel),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStep3(CertificatesUiState state, CertificatesNotifier notifier) {
-    final valueText =
-        (state.certificateValue != null && state.certificateValue!.isNotEmpty)
-        ? '\$${state.certificateValue} COP'
-        : '\$0 COP';
+  /// Botones de los pasos 1 y 2: dentro del scroll, después del formulario.
+  Widget _stepButtons({
+    required ColorScheme scheme,
+    required VoidCallback onCancel,
+    required VoidCallback? onNext,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10, right: 10, bottom: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            width: 150,
+            child: _filledButton(
+              label: 'Cancelar',
+              background: AppColors.gray600,
+              foreground: scheme.onPrimary,
+              onPressed: onCancel,
+            ),
+          ),
+          SizedBox(
+            width: 150,
+            child: _filledButton(
+              label: 'Siguiente',
+              background: scheme.primary,
+              foreground: scheme.onPrimary,
+              onPressed: onNext,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// `Button` de Compose: relleno, sin elevación, padding 12/18, texto
+  /// `headlineMedium`.
+  Widget _filledButton({
+    required String label,
+    required Color background,
+    required Color foreground,
+    required VoidCallback? onPressed,
+    Widget? child,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        backgroundColor: background,
+        foregroundColor: foreground,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
+        textStyle: DialogTypography.headlineMedium,
+      ),
+      child: child ?? Text(label, maxLines: 1, softWrap: false),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Paso 3 — CertificateStep3Screen.kt
+  // ---------------------------------------------------------------------------
+
+  Widget _buildStep3(
+    CertificatesUiState state,
+    CertificatesNotifier notifier,
+    ColorScheme scheme,
+  ) {
+    final isSubmitting = state.submission is CertificatesResponseLoading;
+    final value = (state.certificateValue ?? '').isEmpty
+        ? '0'
+        : state.certificateValue!;
 
     return Column(
+      key: const ValueKey('certificates-step-3'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Resumen de solicitud',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        const Padding(
+          padding: EdgeInsets.all(5),
+          child: Text(
+            'Resumen de solicitud',
+            style: DialogTypography.titleMedium,
+          ),
         ),
         const SizedBox(height: 16),
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+        Material(
+          color: scheme.surface,
+          elevation: 3,
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _buildSummaryRow('Trámite:', state.titleCertificate ?? ''),
-                const Divider(),
-                _buildSummaryRow(
+                _summaryRow('Trámite:', state.titleCertificate ?? 'Trámite'),
+                const SizedBox(height: 5),
+                _summaryRow(
                   'Nombre:',
                   '${state.primerNombre} ${state.primerApellido}',
                 ),
-                const Divider(),
-                _buildSummaryRow('Correo:', state.correoElectronico),
-                const Divider(),
-                _buildSummaryRow('Identificación:', state.identificacion),
-                const Divider(),
-                _buildSummaryRow('Valor a Pagar:', valueText, isBold: true),
+                const SizedBox(height: 5),
+                _summaryRow('Correo:', state.correoElectronico),
+                const SizedBox(height: 5),
+                _summaryRow('Identificación:', state.identificacion),
+                const SizedBox(height: 5),
+                // Sin separador de miles, como el original.
+                _summaryRow('Valor a Pagar:', '\$$value COP', isBold: true),
               ],
             ),
           ),
         ),
         const SizedBox(height: 16),
+        _policyRow(
+          checked: state.aceptaTratamientoDatos,
+          onChanged: notifier.onTratamientoDatosAcepted,
+          text: 'Acepto la política de tratamiento de datos personales.',
+        ),
+        _policyRow(
+          checked: state.aceptaCondicionesUso,
+          onChanged: notifier.onCondicionesUsoAcepted,
+          text: 'Acepto las Condiciones de Uso y las políticas de privacidad.',
+        ),
+        const SizedBox(height: 24),
+        _warningBox(scheme),
+        const SizedBox(height: 24),
         Row(
           children: [
-            Checkbox(
-              value: state.aceptaTratamientoDatos,
-              onChanged: (val) =>
-                  notifier.onTratamientoDatosAcepted(val ?? false),
+            Expanded(
+              child: _filledButton(
+                label: 'Cancelar',
+                background: AppColors.gray600,
+                foreground: scheme.onPrimary,
+                onPressed: isSubmitting ? null : notifier.onPreviousStep,
+              ),
             ),
-            const Expanded(
-              child: Text(
-                'Acepto la política de tratamiento de datos personales.',
-                style: TextStyle(fontSize: 13, color: Colors.blue),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _filledButton(
+                label: 'Finalizar',
+                background: scheme.primary,
+                foreground: scheme.onPrimary,
+                onPressed:
+                    state.aceptaTratamientoDatos &&
+                        state.aceptaCondicionesUso &&
+                        !isSubmitting
+                    ? notifier.submitSolicitudTramite
+                    : null,
+                child: isSubmitting
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : null,
               ),
             ),
           ],
         ),
-        Row(
-          children: [
-            Checkbox(
-              value: state.aceptaCondicionesUso,
-              onChanged: (val) =>
-                  notifier.onCondicionesUsoAcepted(val ?? false),
-            ),
-            const Expanded(
-              child: Text(
-                'Acepto las Condiciones de Uso y las políticas de privacidad.',
-                style: TextStyle(fontSize: 13, color: Colors.blue),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Card(
-          color: Colors.red[400],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        // Aire para el indicador de inicio de iOS (Kotlin no lo tiene).
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _summaryRow(String label, String value, {bool isBold = false}) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: DialogTypography.bodyMedium.copyWith(
+            fontWeight: FontWeight.w700,
+            color: onSurface,
           ),
-          child: const Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.info, color: Colors.white, size: 28),
-                    SizedBox(width: 8),
-                    Text(
-                      'Importante',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12),
-                Text(
-                  'Al seleccionar "Finalizar", será llevado a la pasarela de pagos donde podrá finalizar la transacción de forma segura. Asegúrese de revisar que los datos y el valor a pagar sean correctos.',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: DialogTypography.bodyMedium.copyWith(
+              fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
+              color: onSurface,
             ),
           ),
         ),
@@ -668,107 +746,60 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool isBold = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: TextStyle(
-                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                color: isBold ? Colors.black : Colors.black87,
-              ),
-            ),
+  Widget _policyRow({
+    required bool checked,
+    required ValueChanged<bool> onChanged,
+    required String text,
+  }) {
+    return Row(
+      children: [
+        Checkbox(value: checked, onChanged: (v) => onChanged(v ?? false)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: DialogTypography.bodySmall.copyWith(color: AppColors.blue),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildBottomButtons(
-    CertificatesUiState state,
-    CertificatesNotifier notifier,
-  ) {
-    final showBack = state.currentStep > 1;
-    final isSubmit = state.currentStep == 3;
-    final isSubmitEnabled =
-        state.aceptaTratamientoDatos && state.aceptaCondicionesUso;
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border(top: BorderSide(color: Colors.grey[200]!)),
-      ),
-      child: Row(
-        children: [
-          if (showBack) ...[
-            Expanded(
-              child: OutlinedButton(
-                onPressed: notifier.onPreviousStep,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+  Widget _warningBox(ColorScheme scheme) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: const Color(0xFFEF5350),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.info, color: Colors.white, size: 36),
+                const SizedBox(width: 8),
+                Text(
+                  'Importante',
+                  style: DialogTypography.titleLarge.copyWith(
+                    color: Colors.white,
                   ),
                 ),
-                child: const Text('Atrás'),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'Al seleccionar "Finalizar", será llevado a la pasarela de pagos '
+              'donde podrá finalizar la transacción de forma segura. Asegúrese '
+              'de revisar que los datos y el valor a pagar sean correctos.',
+              style: DialogTypography.bodySmall.copyWith(
+                color: scheme.onPrimary,
               ),
             ),
-            const SizedBox(width: 16),
-          ] else ...[
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => context.pop(),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  foregroundColor: Colors.grey[700],
-                  side: BorderSide(color: Colors.grey[350]!),
-                ),
-                child: const Text('Cancelar'),
-              ),
-            ),
-            const SizedBox(width: 16),
           ],
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                if (state.currentStep == 1) {
-                  if (_formKey1.currentState!.validate()) {
-                    notifier.onNextStep();
-                  }
-                } else if (state.currentStep == 2) {
-                  if (_formKey2.currentState!.validate()) {
-                    notifier.onNextStep();
-                  }
-                } else {
-                  if (isSubmitEnabled) {
-                    notifier.submitSolicitudTramite();
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                backgroundColor: isSubmit
-                    ? (isSubmitEnabled ? Colors.green[600] : Colors.grey[300])
-                    : Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(isSubmit ? 'Finalizar' : 'Siguiente'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

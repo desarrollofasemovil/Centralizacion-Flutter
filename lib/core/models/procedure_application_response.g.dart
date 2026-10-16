@@ -9,9 +9,9 @@ part of 'procedure_application_response.dart';
 ProcedureApplicationResponse _$ProcedureApplicationResponseFromJson(
   Map<String, dynamic> json,
 ) => ProcedureApplicationResponse(
-  estado: json['Estado'] as String,
-  ticket: json['Ticket'] as String,
-  mensaje: json['Mensaje'] as String?,
+  estado: _estadoFromJson(json['Estado']),
+  ticket: _textFromJson(json['Ticket']),
+  mensaje: _optionalTextFromJson(json['Mensaje']),
 );
 
 Map<String, dynamic> _$ProcedureApplicationResponseToJson(
