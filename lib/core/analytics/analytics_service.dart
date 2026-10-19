@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/portal_externo/domain/portal_visit.dart';
 import '../../features/tramites/domain/info_tramite.dart';
 import '../models/payment_history_dto.dart';
 
@@ -75,10 +76,7 @@ class AnalyticsService {
   /// permitía cruzar el municipio con los demás eventos.
   Future<void> setMunicipality({required int id, required String name}) async {
     final slug = municipalitySlug(name);
-    await setUserProperty(
-      'municipio',
-      _truncate(slug, _maxUserPropertyLength),
-    );
+    await setUserProperty('municipio', _truncate(slug, _maxUserPropertyLength));
     await setUserProperty('municipio_id', id.toString());
     await logEvent(
       'seleccion_municipio',
@@ -302,6 +300,97 @@ class AnalyticsService {
     );
   }
 
+  // ── Portales externos (Fase 2) ─────────────────────────────────────────
+
+  /// Parámetros comunes de una visita a un portal externo de trámite.
+  Map<String, Object> _portalParams(PortalVisit visit) => {
+    'municipio_id': visit.municipalityId,
+    'tramite_codigo': _truncate(visit.tramite.codigo, _maxParamLength),
+    'tramite_id': visit.tramite.id,
+    'tramite_nombre': _truncate(visit.tramite.nombre, _maxParamLength),
+    'url_dominio': _host(visit.url),
+  };
+
+  /// El portal se abrió de verdad (pasó el aviso de sitio externo y, si hacía
+  /// falta, el formulario de datos). `clic_url_directa` cuenta el toque; la
+  /// diferencia entre los dos es quien abandona antes de salir de la app.
+  Future<void> logPortalOpened(PortalVisit visit) async {
+    await logEvent('portal_externo_abierto', parameters: _portalParams(visit));
+  }
+
+  /// El usuario volvió a la app desde el portal, tras [away] fuera.
+  /// [appRestarted]: Android cerró la app mientras estaba en el portal y la
+  /// visita se resolvió al volver a abrirla (el tiempo incluye el reinicio).
+  Future<void> logPortalReturned(
+    PortalVisit visit, {
+    required Duration away,
+    required bool appRestarted,
+  }) async {
+    await logEvent(
+      'portal_externo_regreso',
+      parameters: {
+        ..._portalParams(visit),
+        'segundos_fuera': away.inSeconds,
+        'rango_tiempo': timeAwayRange(away),
+        'app_reiniciada': appRestarted ? 'si' : 'no',
+      },
+    );
+  }
+
+  Future<void> logPortalSurveyShown(
+    PortalVisit visit, {
+    required Duration away,
+  }) async {
+    await logEvent(
+      'encuesta_portal_mostrada',
+      parameters: {
+        ..._portalParams(visit),
+        'rango_tiempo': timeAwayRange(away),
+      },
+    );
+  }
+
+  /// Respuesta de la microencuesta. [problem] solo con
+  /// [PortalSurveyAnswer.problem].
+  Future<void> logPortalSurveyAnswered(
+    PortalVisit visit, {
+    required Duration away,
+    required PortalSurveyAnswer answer,
+    PortalSurveyProblem? problem,
+  }) async {
+    await logEvent(
+      'encuesta_portal_respuesta',
+      parameters: {
+        ..._portalParams(visit),
+        'rango_tiempo': timeAwayRange(away),
+        'respuesta': answer.value,
+        if (problem != null) 'motivo': problem.value,
+      },
+    );
+  }
+
+  /// Cerró la encuesta sin terminarla, en el [step] en que iba.
+  Future<void> logPortalSurveyDismissed(
+    PortalVisit visit, {
+    required PortalSurveyStep step,
+  }) async {
+    await logEvent(
+      'encuesta_portal_descartada',
+      parameters: {..._portalParams(visit), 'paso': step.value},
+    );
+  }
+
+  /// Rango del tiempo fuera, para agrupar en GA4 sin una dimensión por
+  /// segundo: `menos_15s`, `15_60s`, `1_3min`, `3_10min`, `mas_10min`.
+  static String timeAwayRange(Duration away) {
+    final s = away.inSeconds;
+    if (s < 15) return 'menos_15s';
+    if (s < 60) return '15_60s';
+    if (s < 180) return '1_3min';
+    if (s < 600) return '3_10min';
+    return 'mas_10min';
+  }
+
   /// `aprobado` / `pendiente` / `rechazado` según `idStatusType` (tabla
   /// `Availibity`: 1 APROBADA, 2 COMENZADA, 3 FALLIDA, 4 EXPIRADA).
   static String paymentResult(int idStatusType) => switch (idStatusType) {
@@ -400,6 +489,41 @@ enum VerificationScreen {
   final String value;
 }
 
+/// Respuesta a "¿Pudiste hacer tu pago?" (`encuesta_portal_respuesta`).
+enum PortalSurveyAnswer {
+  paid('pague'),
+  checkedNotPaid('consulte_no_pague'),
+  problem('problema'),
+  justBrowsing('solo_mirando');
+
+  const PortalSurveyAnswer(this.value);
+
+  final String value;
+}
+
+/// Motivo cuando la respuesta es [PortalSurveyAnswer.problem].
+enum PortalSurveyProblem {
+  invoiceNotFound('no_encontre_factura'),
+  pageFailed('pagina_fallo'),
+  paymentRejected('pago_rechazado'),
+  noPaymentMethod('sin_medio_pago'),
+  other('otro');
+
+  const PortalSurveyProblem(this.value);
+
+  final String value;
+}
+
+/// Paso de la encuesta en que el usuario la cerró.
+enum PortalSurveyStep {
+  question('pregunta'),
+  problem('motivo');
+
+  const PortalSurveyStep(this.value);
+
+  final String value;
+}
+
 /// Pestañas de `MainBottomNavBar`, en el orden de sus índices.
 enum BottomNavDestination {
   inicio('clic_inicio'),
@@ -418,17 +542,47 @@ enum BottomNavDestination {
 /// coinciden.
 String municipalitySlug(String name) {
   const accents = {
-    'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a',
-    'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e',
-    'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i',
-    'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o',
-    'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u',
+    'á': 'a',
+    'à': 'a',
+    'ä': 'a',
+    'â': 'a',
+    'é': 'e',
+    'è': 'e',
+    'ë': 'e',
+    'ê': 'e',
+    'í': 'i',
+    'ì': 'i',
+    'ï': 'i',
+    'î': 'i',
+    'ó': 'o',
+    'ò': 'o',
+    'ö': 'o',
+    'ô': 'o',
+    'ú': 'u',
+    'ù': 'u',
+    'ü': 'u',
+    'û': 'u',
     'ñ': 'n',
-    'Á': 'A', 'À': 'A', 'Ä': 'A', 'Â': 'A',
-    'É': 'E', 'È': 'E', 'Ë': 'E', 'Ê': 'E',
-    'Í': 'I', 'Ì': 'I', 'Ï': 'I', 'Î': 'I',
-    'Ó': 'O', 'Ò': 'O', 'Ö': 'O', 'Ô': 'O',
-    'Ú': 'U', 'Ù': 'U', 'Ü': 'U', 'Û': 'U',
+    'Á': 'A',
+    'À': 'A',
+    'Ä': 'A',
+    'Â': 'A',
+    'É': 'E',
+    'È': 'E',
+    'Ë': 'E',
+    'Ê': 'E',
+    'Í': 'I',
+    'Ì': 'I',
+    'Ï': 'I',
+    'Î': 'I',
+    'Ó': 'O',
+    'Ò': 'O',
+    'Ö': 'O',
+    'Ô': 'O',
+    'Ú': 'U',
+    'Ù': 'U',
+    'Ü': 'U',
+    'Û': 'U',
     'Ñ': 'N',
   };
   final ascii = name.trim().split('').map((c) => accents[c] ?? c).join();
