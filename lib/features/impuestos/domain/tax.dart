@@ -32,15 +32,20 @@ class Tax {
   });
 
   bool get isExpired {
-    final parsedDate = _parseDueDate(dueDate);
+    final parsedDate = parseDueDate(dueDate);
     if (parsedDate == null) return false;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     return parsedDate.isBefore(today);
   }
 
-  DateTime? _parseDueDate(String dateString) {
-    final formats = [
+  /// Puerto de `parseDueDate` de `Tax.kt`: los mismos formatos y en el mismo
+  /// orden. Tiene que ser `parseStrict`: `DateFormat.parse` es tolerante y
+  /// desborda días y meses en vez de fallar, así que `yyyy/dd/MM` (el primero)
+  /// "leía" `31/10/2026` como 10/10/0199 y la factura salía vencida.
+  /// `LocalDate.parse` del original sí falla y pasa al siguiente formato.
+  static DateTime? parseDueDate(String dateString) {
+    const formats = [
       'yyyy/dd/MM',
       'dd/MM/yyyy',
       'MM/yyyy/dd',
@@ -48,9 +53,10 @@ class Tax {
       'yyyy/MM/dd',
     ];
 
+    final value = dateString.trim();
     for (final fmt in formats) {
       try {
-        return DateFormat(fmt).parse(dateString);
+        return DateFormat(fmt).parseStrict(value);
       } catch (_) {
         continue;
       }
