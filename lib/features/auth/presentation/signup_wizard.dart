@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/models/create_user_dto.dart';
 import '../../../core/models/document_type_dto.dart';
@@ -187,6 +188,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       }
 
       // Registro OK en backend → el usuario queda logueado (igual que el base).
+      // `sign_up` va aquí, con el usuario ya creado (el original lo mandaba al
+      // tocar "Registrarse"; eso ahora es `inicio_registro`).
+      ref
+          .read(analyticsServiceProvider)
+          .logSignUp(_fromGoogle ? AuthMethod.google : AuthMethod.email);
       _registrationHadSession = false;
       if (_fromGoogle && _draft != null) {
         // Google: recién ahora creamos el usuario Firebase (fix de fantasmas)

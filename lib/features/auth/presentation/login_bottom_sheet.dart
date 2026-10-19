@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/review/review_prompt_service.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
@@ -55,8 +56,20 @@ Future<void> showLoginBottomSheet(
   );
 
   if (!context.mounted) return;
+  final container = ProviderScope.containerOf(context, listen: false);
+  final analytics = container.read(analyticsServiceProvider);
   switch (result) {
     case _SheetResult.loggedIn || _SheetResult.loggedInWithGoogle:
+      // `login` estándar de GA4 al confirmarse la sesión (el original lo
+      // mandaba en `AuthScreen.kt`; el `ContinueWithGoogle` que disparaba al
+      // tocar el botón, antes de saber si entraba, ya no se usa).
+      unawaited(
+        analytics.logLogin(
+          result == _SheetResult.loggedInWithGoogle
+              ? AuthMethod.google
+              : AuthMethod.email,
+        ),
+      );
       // Como el original: sin botones, se cierra solo (o tocando fuera).
       await showDialog<void>(
         context: context,
@@ -76,12 +89,17 @@ Future<void> showLoginBottomSheet(
       // existe.
       if (result == _SheetResult.loggedIn && context.mounted) {
         unawaited(
-          ProviderScope.containerOf(context, listen: false)
-              .read(reviewPromptServiceProvider)
-              .onSuccessfulLogin(),
+          container.read(reviewPromptServiceProvider).onSuccessfulLogin(),
         );
       }
     case _SheetResult.goToRegister:
+      // Con borrador = vino de Google sin cuenta; sin borrador = "Registrarse".
+      final fromGoogle = container.read(registrationDraftProvider) != null;
+      unawaited(
+        analytics.logSignUpStarted(
+          fromGoogle ? AuthMethod.google : AuthMethod.email,
+        ),
+      );
       context.push(AppRoutes.signup);
     case _SheetResult.recover:
       context.push(AppRoutes.recoverPassword);

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics/analytics_service.dart';
+import '../../../core/analytics/municipality_tracker.dart';
 import '../../../core/models/municipality_dto.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/storage/user_preferences.dart';
@@ -38,6 +40,37 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _trackMunicipality();
+  }
+
+  @override
+  void didUpdateWidget(covariant MainScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.municipality.id != widget.municipality.id) {
+      _trackMunicipality();
+    }
+  }
+
+  /// Propiedad de usuario `municipio` + tópico FCM del municipio (ver
+  /// [MunicipalityTracker]); el original lo disparaba desde `MainScreen.kt`.
+  void _trackMunicipality() {
+    ref
+        .read(municipalityTrackerProvider)
+        .onMunicipalityShown(
+          id: widget.municipality.id,
+          name: widget.municipality.name,
+        );
+  }
+
+  void _logBottomNav(BottomNavDestination destination) {
+    ref
+        .read(analyticsServiceProvider)
+        .logBottomNavClick(destination, municipalityId: widget.municipality.id);
+  }
 
   void _handleNavigation(InfoTramite tramite) {
     final name = tramite.nombre;
@@ -539,18 +572,22 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           selectedRoute: state.selectedRoute,
           onTap: (index) async {
             if (index == 0) {
+              _logBottomNav(BottomNavDestination.inicio);
               notifier.onRouteChanged("inicio");
             } else if (index == 1) {
               final url = domainModel.newsUrl;
               if (url.isNotEmpty) {
+                _logBottomNav(BottomNavDestination.noticias);
                 await abrirUrl(url, toolbarColor: theme.colorScheme.primary);
               }
             } else if (index == 2) {
               final url = domainModel.domain;
               if (url.isNotEmpty) {
+                _logBottomNav(BottomNavDestination.portal);
                 await abrirUrl(url, toolbarColor: theme.colorScheme.primary);
               }
             } else if (index == 3) {
+              _logBottomNav(BottomNavDestination.historial);
               context.push(AppRoutes.pagosHistoryPath(widget.municipality.id));
             }
           },
