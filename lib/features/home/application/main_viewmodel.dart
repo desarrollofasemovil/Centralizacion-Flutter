@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as dev;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/models/user_dto.dart';
 import '../../../core/storage/user_preferences.dart';
 import '../../auth/application/auth_providers.dart';
@@ -268,6 +269,12 @@ class MainViewModel extends Notifier<MainUiState> {
   }
 
   void onTramiteClicked(InfoTramite tramite) {
+    // Antes del filtro de activos: el clic en un trámite «en desarrollo» también
+    // se cuenta (`clic_tramite_inactivo`), es demanda que hoy no se ve.
+    ref
+        .read(analyticsServiceProvider)
+        .logTramiteClick(tramite, municipalityId: municipalityId);
+
     if (!tramite.isActive) {
       state = state.copyWith(showInDevelopmentDialog: true);
       return;

@@ -91,29 +91,23 @@ class PushNotificationsService {
     }
   }
 
-  /// Suscripción al tópico del municipio: `theme_<NombreMunicipioNormalizado>`
-  Future<void> subscribeToMunicipality(String name) async {
-    final prefix = FlavorConfig.instance.fcmTopicPrefix;
-    // Normalizar: quitar acentos, espacios -> _
-    final normalized = name
-        .replaceAll(RegExp(r'[áäâà]'), 'a')
-        .replaceAll(RegExp(r'[éëêè]'), 'e')
-        .replaceAll(RegExp(r'[íïîì]'), 'i')
-        .replaceAll(RegExp(r'[óöôò]'), 'o')
-        .replaceAll(RegExp(r'[úüûù]'), 'u')
-        .replaceAll(RegExp(r'[ñ]'), 'n')
-        .replaceAll(RegExp(r'[ÁÄÂÀ]'), 'A')
-        .replaceAll(RegExp(r'[ÉËÊÈ]'), 'E')
-        .replaceAll(RegExp(r'[ÍÏÎÌ]'), 'I')
-        .replaceAll(RegExp(r'[ÓÖÔÒ]'), 'O')
-        .replaceAll(RegExp(r'[ÚÜÛÙ]'), 'U')
-        .replaceAll(RegExp(r'[Ñ]'), 'N')
-        .replaceAll(RegExp(r'\s+'), '_')
-        .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+  /// Último tópico suscrito con éxito en este proceso (`lastSubscribedTopic`
+  /// del original): evita repetir la llamada cada vez que se reconstruye la Home.
+  String? _lastSubscribedTopic;
 
-    final topic = '$prefix$normalized';
+  /// Suscripción al tópico del municipio: `theme_<NombreMunicipioNormalizado>`
+  /// (puerto de `manageFirebaseSubscription` de `MunicipalityViewModel.kt`).
+  ///
+  /// Es **acumulativa** como en el original: al cambiar de municipio no se
+  /// desuscribe del anterior.
+  Future<void> subscribeToMunicipality(String name) async {
+    final normalized = municipalitySlug(name);
+    if (normalized.isEmpty) return;
+    final topic = '${FlavorConfig.instance.fcmTopicPrefix}$normalized';
+    if (topic == _lastSubscribedTopic) return;
     try {
       await _messaging.subscribeToTopic(topic);
+      _lastSubscribedTopic = topic;
       await _analytics.logEvent('fcm_subscribed', parameters: {'topic': topic});
     } catch (_) {}
   }
