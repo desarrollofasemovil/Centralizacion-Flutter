@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/api/services/payment_history_api_service.dart';
 import '../../../core/models/payment_history_dto.dart';
@@ -55,9 +56,25 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
   /// Acción «Verificar estado del pago»: sincroniza la última transacción
   /// registrada del usuario para que el Historial muestre el estado real.
   /// Devuelve `true` cuando la pantalla debe navegar al Historial.
-  Future<bool> onCheckStatusClick() async {
+  ///
+  /// [municipalityId] y [origin] solo alimentan la analítica del embudo
+  /// (`pago_verificado`, `purchase`, `pago_error`).
+  Future<bool> onCheckStatusClick({
+    required int municipalityId,
+    required PaymentOrigin origin,
+  }) async {
     if (!state.isCheckEnabled) return false;
     state = state.copyWith(isVerifying: true);
+    final analytics = ref.read(analyticsServiceProvider);
+    void logError({Object? error, String? reason}) => unawaited(
+      analytics.logPaymentError(
+        municipalityId: municipalityId,
+        origin: origin,
+        stage: PaymentStage.verification,
+        error: error,
+        reason: reason,
+      ),
+    );
     try {
       final userId = ref.read(sessionProvider)?.id;
       if (userId != null) {
@@ -68,48 +85,70 @@ class PaymentProcessingNotifier extends Notifier<PaymentProcessingState> {
         if (history.isNotEmpty) {
           final latest = history.reduce((a, b) => a.id > b.id ? a : b);
           await api.syncPaymentStatus(latest.id);
-          // Reseña de la tienda si el pago pasó a aprobado con esta
-          // verificación (FSM-59). Si ya lo estaba, no se relee. Sin `await`:
-          // la navegación al Historial no espera esa lectura extra.
-          if (latest.idStatusType != kPaymentStatusApproved) {
-            unawaited(
-              _reviewIfApproved(
-                api,
-                ref.read(reviewPromptServiceProvider),
-                userId,
-                latest.id,
-              ),
-            );
-          }
+          // Estado tras sincronizar: analítica y reseña de la tienda (FSM-59).
+          // Sin `await`: la navegación al Historial no espera esa lectura.
+          unawaited(
+            _afterSync(
+              api,
+              ref.read(reviewPromptServiceProvider),
+              analytics,
+              userId: userId,
+              before: latest,
+              municipalityId: municipalityId,
+              origin: origin,
+            ),
+          );
+        } else {
+          // Se abrió la pasarela pero el pago no quedó en el historial.
+          logError(reason: 'historial_vacio');
         }
       }
-    } catch (_) {
+    } catch (e) {
       // Igual que el runCatching del original: la verificación es best-effort;
       // el Historial mostrará el estado que tenga el backend.
+      logError(error: e);
     }
     state = state.copyWith(isVerifying: false);
     return true;
   }
 
   /// Corre después de que la pantalla navegó (el notifier autoDispose ya
-  /// puede estar liberado): por eso recibe el servicio y la API, no `ref`.
-  static Future<void> _reviewIfApproved(
+  /// puede estar liberado): por eso recibe los servicios, no `ref`.
+  ///
+  /// Relee el pago sincronizado y registra `pago_verificado`. Si pasó a
+  /// aprobado con **esta** verificación, también `purchase` y la reseña; si ya
+  /// estaba aprobado (pago viejo, o el registro del nuevo falló) no se cuenta
+  /// como compra.
+  static Future<void> _afterSync(
     PaymentHistoryApiService api,
     ReviewPromptService review,
-    int userId,
-    int idHistory,
-  ) async {
+    AnalyticsService analytics, {
+    required int userId,
+    required PaymentHistoryDTO before,
+    required int municipalityId,
+    required PaymentOrigin origin,
+  }) async {
     try {
       final synced = paymentHistoryFromResponse(
         await api.getHistoryPaymentByUser(userId),
+      ).where((h) => h.id == before.id).firstOrNull;
+      if (synced == null) return;
+      await analytics.logPaymentVerified(
+        municipalityId: municipalityId,
+        payment: synced,
+        screen: VerificationScreen.processing,
+        origin: origin,
       );
-      final status =
-          synced.where((h) => h.id == idHistory).firstOrNull?.idStatusType;
-      if (status == kPaymentStatusApproved) {
+      if (synced.idStatusType == kPaymentStatusApproved &&
+          before.idStatusType != kPaymentStatusApproved) {
+        await analytics.logPaymentApproved(
+          municipalityId: municipalityId,
+          payment: synced,
+        );
         await review.onPositiveMoment(ReviewTrigger.paymentApproved);
       }
     } catch (_) {
-      // Best-effort: sin red, simplemente no se pide la reseña.
+      // Best-effort: sin red, simplemente no se mide ni se pide la reseña.
     }
   }
 }

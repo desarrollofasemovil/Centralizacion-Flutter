@@ -238,6 +238,7 @@ class _ConsultaImpuestoScreenState
                     data: (munDto) => ElevatedButton(
                       onPressed: state.isQueryButtonEnabled && !state.isLoading
                           ? () => notifier.onQueryClicked(
+                              municipalityId: widget.municipalityId,
                               entityCode: munDto.entityCode,
                               taxId: widget.taxId,
                             )

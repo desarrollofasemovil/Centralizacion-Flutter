@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/analytics/analytics_service.dart';
 import '../../impuestos/application/tax_notifier.dart';
 import '../../impuestos/data/tax_repository.dart';
 import '../../impuestos/domain/tax.dart';
@@ -26,6 +29,7 @@ class PsvFormNotifier extends Notifier<PsvFormState> {
   /// de `PsvPaymentViewModel.kt`. Best-effort: si falla, el pago continúa,
   /// pero queda el rastro no fatal ([registerPaymentHistory]).
   Future<void> createHistoryPay({
+    required int municipalityId,
     required int amount,
     required String idImpuesto,
     required String factura,
@@ -34,6 +38,8 @@ class PsvFormNotifier extends Notifier<PsvFormState> {
   }) async {
     await registerPaymentHistory(
       ref,
+      municipalityId: municipalityId,
+      origin: PaymentOrigin.psv,
       amount: amount,
       idImpuesto: idImpuesto,
       factura: factura,
@@ -68,12 +74,44 @@ class PsvFormNotifier extends Notifier<PsvFormState> {
       queryField: 'Manual',
     );
 
-    return await _taxRepository.createTransaction(
-      tax: tax,
-      email: state.email,
-      bankName: state.selectedBank,
-      municipalityId: municipalityId,
-      integrationType: integrationType,
+    try {
+      final info = await _taxRepository.createTransaction(
+        tax: tax,
+        email: state.email,
+        bankName: state.selectedBank,
+        municipalityId: municipalityId,
+        integrationType: integrationType,
+      );
+      if (info.url.trim().isEmpty) {
+        _logPaymentError(
+          municipalityId,
+          PaymentStage.noUrl,
+          reason: 'url_vacia',
+        );
+      }
+      return info;
+    } catch (e) {
+      _logPaymentError(municipalityId, PaymentStage.transaction, error: e);
+      rethrow;
+    }
+  }
+
+  void _logPaymentError(
+    int municipalityId,
+    PaymentStage stage, {
+    Object? error,
+    String? reason,
+  }) {
+    unawaited(
+      ref
+          .read(analyticsServiceProvider)
+          .logPaymentError(
+            municipalityId: municipalityId,
+            origin: PaymentOrigin.psv,
+            stage: stage,
+            error: error,
+            reason: reason,
+          ),
     );
   }
 }

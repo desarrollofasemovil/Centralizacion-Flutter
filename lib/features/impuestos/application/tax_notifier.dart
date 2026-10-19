@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/models/query_field.dart';
 import '../../../core/utils/validators.dart';
@@ -126,17 +129,39 @@ class TaxQueryNotifier extends Notifier<TaxQueryState> {
   }
 
   Future<void> onQueryClicked({
+    required int municipalityId,
     required String entityCode,
     required int taxId,
   }) async {
     if (!state.isQueryButtonEnabled || state.isLoading) return;
     state = state.copyWith(isLoading: true, clearQueryError: true);
+    final queryField = state.selectedQueryField!.fieldName;
+    final analytics = ref.read(analyticsServiceProvider);
+    unawaited(
+      analytics.logTaxQuerySent(
+        municipalityId: municipalityId,
+        taxId: taxId,
+        entityCode: entityCode,
+        queryField: queryField,
+      ),
+    );
     try {
       final taxes = await _repository.getTaxes(
         entityCode: entityCode,
         queryData: state.documentNumber.trim(),
-        queryField: state.selectedQueryField!.fieldName,
+        queryField: queryField,
         taxId: taxId,
+      );
+      unawaited(
+        analytics.logTaxQueryResult(
+          municipalityId: municipalityId,
+          taxId: taxId,
+          outcome: taxes.isNotEmpty
+              ? TaxQueryOutcome.found
+              : TaxQueryOutcome.noDebt,
+          count: taxes.length,
+          totalValue: taxes.fold(0, (sum, t) => sum + t.value),
+        ),
       );
       if (taxes.isNotEmpty) {
         state = state.copyWith(isLoading: false, querySuccess: taxes);
@@ -144,6 +169,14 @@ class TaxQueryNotifier extends Notifier<TaxQueryState> {
         state = state.copyWith(isLoading: false, showNoResultsDialog: true);
       }
     } catch (e) {
+      unawaited(
+        analytics.logTaxQueryResult(
+          municipalityId: municipalityId,
+          taxId: taxId,
+          outcome: TaxQueryOutcome.error,
+          error: e,
+        ),
+      );
       state = state.copyWith(isLoading: false, queryError: e.toString());
     }
   }

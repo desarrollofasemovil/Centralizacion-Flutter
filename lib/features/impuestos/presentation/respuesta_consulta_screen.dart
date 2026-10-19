@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/review/review_prompt_service.dart';
 import '../../../core/utils/url_opener.dart';
 import '../application/tax_results_notifier.dart';
@@ -94,8 +96,12 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
         notifier.onNavigationHandled();
         // Pasamos a la pantalla de estado del pago (abre la pasarela allí).
         context.push(
-          '/municipality/${widget.municipalityId}/pagos/processing',
-          extra: {'paymentUrl': paymentUrl},
+          AppRoutes.pagosProcessingPath(widget.municipalityId),
+          extra: AppRoutes.pagosProcessingExtra(
+            paymentUrl,
+            origin: PaymentOrigin.taxQuery,
+            taxId: widget.taxes.firstOrNull?.taxId,
+          ),
         );
       }
       final genericUrl = next.genericUrlToOpen;

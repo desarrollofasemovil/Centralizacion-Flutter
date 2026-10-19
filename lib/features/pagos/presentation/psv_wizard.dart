@@ -7,7 +7,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:tramiapp_flutter/core/analytics/analytics_service.dart';
 import 'package:tramiapp_flutter/core/municipality/municipality_repository.dart';
+import 'package:tramiapp_flutter/core/router/app_routes.dart';
 import 'package:tramiapp_flutter/core/utils/formatters.dart';
 import 'package:tramiapp_flutter/core/widgets/app_back_button.dart';
 import 'package:tramiapp_flutter/core/widgets/policy_checkboxes.dart';
@@ -235,6 +237,7 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
     try {
       // 1. Historial de pago (createHistoryPay del original).
       await notifier.createHistoryPay(
+        municipalityId: widget.municipalityId,
         amount: _amountValue,
         idImpuesto: widget.taxId.toString(),
         factura: _invoiceCtrl.text.trim(),
@@ -254,8 +257,12 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       context.push(
-        '/municipality/${widget.municipalityId}/pagos/processing',
-        extra: {'paymentUrl': gatewayInfo.url},
+        AppRoutes.pagosProcessingPath(widget.municipalityId),
+        extra: AppRoutes.pagosProcessingExtra(
+          gatewayInfo.url,
+          origin: PaymentOrigin.psv,
+          taxId: widget.taxId,
+        ),
       );
     } catch (e) {
       if (!mounted) return;

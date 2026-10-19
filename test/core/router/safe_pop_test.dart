@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tramiapp_flutter/core/analytics/analytics_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tramiapp_flutter/core/router/app_routes.dart';
 import 'package:tramiapp_flutter/core/router/safe_pop.dart';
@@ -21,7 +22,10 @@ class _ReadyProcessing extends PaymentProcessingNotifier {
       const PaymentProcessingState(secondsRemaining: 0);
 
   @override
-  Future<bool> onCheckStatusClick() async => true;
+  Future<bool> onCheckStatusClick({
+    required int municipalityId,
+    required PaymentOrigin origin,
+  }) async => true;
 }
 
 /// Mismo esquema que el router real: rutas del municipio como hermanas planas

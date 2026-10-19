@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../analytics/analytics_service.dart';
 import '../flavor/flavor_config.dart';
 import '../remote_config/remote_config_service.dart';
 import '../storage/user_preferences.dart';
@@ -347,6 +348,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               return PaymentProcessingScreen(
                 municipalityId: id,
                 paymentUrl: paymentUrl,
+                origin:
+                    extra?[AppRoutes.pagosProcessingOriginKey]
+                        as PaymentOrigin? ??
+                    PaymentOrigin.taxQuery,
+                taxId: extra?[AppRoutes.pagosProcessingTaxIdKey] as int?,
               );
             },
           ),

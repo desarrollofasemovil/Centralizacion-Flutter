@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/api/services/payment_history_api_service.dart';
 import '../../../core/models/payment_history_dto.dart';
@@ -76,25 +77,33 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
   }
 
   /// Sincroniza un pago y recarga la lista en silencio. Si falla, relanza.
-  Future<void> syncPayment(int idHistory) =>
-      _syncAndReload([idHistory], rethrowErrors: true);
+  /// Con [municipalityId] registra la analítica del pago (`pago_verificado`).
+  Future<void> syncPayment(int idHistory, {int? municipalityId}) =>
+      _syncAndReload(
+        [idHistory],
+        rethrowErrors: true,
+        municipalityId: municipalityId,
+      );
 
   /// Deslizar para refrescar: sincroniza con la pasarela todos los pagos en
   /// curso (COMENZADA, como el original) y recarga la lista **una sola vez** al
   /// final. Mientras tanto esas tarjetas muestran el estado cargando
   /// ([historySyncingIdsProvider]). Un pago que no se pueda sincronizar no
   /// detiene a los demás.
-  Future<void> refreshPending() async {
+  ///
+  /// Con [municipalityId] registra la analítica de cada pago sincronizado.
+  Future<void> refreshPending({int? municipalityId}) async {
     final pending = [
       for (final p in _lastLoaded)
         if (p.isInProgress) p.id,
     ];
-    await _syncAndReload(pending);
+    await _syncAndReload(pending, municipalityId: municipalityId);
   }
 
   Future<void> _syncAndReload(
     List<int> ids, {
     bool rethrowErrors = false,
+    int? municipalityId,
   }) async {
     final wasApproved = {
       for (final id in ids) id: _statusOf(id) == kPaymentStatusApproved,
@@ -110,6 +119,9 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
       }
       await fetchHistory(silent: true);
       if (!ref.mounted) return;
+      if (municipalityId != null) {
+        _logVerified(ids, wasApproved, municipalityId);
+      }
       // Reseña de la tienda cuando un pago pasa a aprobado (FSM-59). Una sola
       // vez aunque se aprueben varios en el mismo refresco.
       final approvedNow = ids.any(
@@ -124,6 +136,36 @@ class HistoryPayNotifier extends Notifier<AsyncValue<PaymentHistoryListDTO>> {
       }
     } finally {
       if (ref.mounted) syncing.remove(ids);
+    }
+  }
+
+  /// `pago_verificado` por cada pago sincronizado y `purchase` por los que
+  /// pasaron a aprobado aquí: es donde se resuelven los pagos que en
+  /// «Verificar estado» todavía estaban pendientes.
+  void _logVerified(
+    List<int> ids,
+    Map<int, bool> wasApproved,
+    int municipalityId,
+  ) {
+    final analytics = ref.read(analyticsServiceProvider);
+    for (final id in ids) {
+      final payment = _lastLoaded.where((p) => p.id == id).firstOrNull;
+      if (payment == null) continue;
+      unawaited(
+        analytics.logPaymentVerified(
+          municipalityId: municipalityId,
+          payment: payment,
+          screen: VerificationScreen.history,
+        ),
+      );
+      if (!wasApproved[id]! && payment.idStatusType == kPaymentStatusApproved) {
+        unawaited(
+          analytics.logPaymentApproved(
+            municipalityId: municipalityId,
+            payment: payment,
+          ),
+        );
+      }
     }
   }
 

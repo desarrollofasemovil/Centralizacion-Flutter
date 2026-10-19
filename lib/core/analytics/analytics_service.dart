@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/tramites/domain/info_tramite.dart';
+import '../models/payment_history_dto.dart';
 
 /// Capa de analíticas sobre Firebase Analytics (BACKEND §6/§9).
 /// Centraliza el logueo de eventos en un solo lugar para mayor flexibilidad.
@@ -171,6 +173,162 @@ class AnalyticsService {
     await logEvent('inicio_registro', parameters: {'method': method});
   }
 
+  // ── Embudo de pago por pasarela integrada (Fase 1) ─────────────────────
+
+  /// Toque en "Consultar" del formulario de impuestos. `tipo_consulta` es el
+  /// nombre del campo (p. ej. `Documento`), nunca el número consultado.
+  Future<void> logTaxQuerySent({
+    required int municipalityId,
+    required int taxId,
+    required String entityCode,
+    required String queryField,
+  }) async {
+    await logEvent(
+      'consulta_impuesto_enviada',
+      parameters: {
+        'municipio_id': municipalityId,
+        'impuesto_id': taxId,
+        'entidad_codigo': _truncate(entityCode, _maxParamLength),
+        'tipo_consulta': _truncate(queryField, _maxParamLength),
+      },
+    );
+  }
+
+  /// Respuesta de la consulta: facturas encontradas, sin deuda (lista vacía)
+  /// o error. Con facturas manda cuántas y el total en COP: es lo que el
+  /// contribuyente *debe*, para compararlo con lo que termina pagando.
+  Future<void> logTaxQueryResult({
+    required int municipalityId,
+    required int taxId,
+    required TaxQueryOutcome outcome,
+    int count = 0,
+    int totalValue = 0,
+    Object? error,
+  }) async {
+    await logEvent(
+      'consulta_impuesto_resultado',
+      parameters: {
+        'municipio_id': municipalityId,
+        'impuesto_id': taxId,
+        'resultado': outcome.value,
+        if (outcome == TaxQueryOutcome.found) ...{
+          'cantidad': count,
+          'valor_total': totalValue,
+        },
+        if (outcome == TaxQueryOutcome.error) 'motivo': errorReason(error),
+      },
+    );
+  }
+
+  /// Se abre la URL de la pasarela (pantalla «Procesando tu pago»). Solo el
+  /// dominio: la URL trae el token de la transacción.
+  Future<void> logGatewayOpened({
+    required int municipalityId,
+    required PaymentOrigin origin,
+    required String paymentUrl,
+    int? taxId,
+  }) async {
+    await logEvent(
+      'pasarela_abierta',
+      parameters: {
+        'municipio_id': municipalityId,
+        'origen': origin.value,
+        'url_dominio': _host(paymentUrl),
+        'impuesto_id': ?taxId,
+      },
+    );
+  }
+
+  /// Estado de un pago del historial después de sincronizarlo con la pasarela.
+  /// [screen] dice dónde se verificó: el botón «Verificar estado» o el
+  /// refresco del Historial (ahí no se sabe el origen del pago).
+  Future<void> logPaymentVerified({
+    required int municipalityId,
+    required PaymentHistoryDTO payment,
+    required VerificationScreen screen,
+    PaymentOrigin? origin,
+  }) async {
+    await logEvent(
+      'pago_verificado',
+      parameters: {
+        'municipio_id': municipalityId,
+        'origen': ?origin?.value,
+        'resultado': paymentResult(payment.idStatusType),
+        'estado_id': payment.idStatusType,
+        'pantalla': screen.value,
+        'valor': payment.amount,
+      },
+    );
+  }
+
+  /// `purchase` estándar de GA4 (ingresos en los informes de monetización).
+  /// Solo para pagos que el **backend** confirma aprobados; el monto es el del
+  /// historial. `transaction_id` = id del historial: GA4 descarta un segundo
+  /// `purchase` con el mismo id, así que verificar dos veces no duplica.
+  Future<void> logPaymentApproved({
+    required int municipalityId,
+    required PaymentHistoryDTO payment,
+  }) async {
+    if (payment.idStatusType != kPaymentStatusApproved) return;
+    await logEvent(
+      'purchase',
+      parameters: {
+        'currency': 'COP',
+        'value': payment.amount,
+        'transaction_id': 'hist_${payment.id}',
+        'municipio_id': municipalityId,
+        'impuesto_id': _truncate(payment.idimpuesto, _maxParamLength),
+      },
+    );
+  }
+
+  /// Fallo en el camino al pago. [error] se reduce a un código ([errorReason]):
+  /// el mensaje de Dio incluye la URL, que lleva el documento consultado.
+  Future<void> logPaymentError({
+    required int municipalityId,
+    required PaymentOrigin origin,
+    required PaymentStage stage,
+    Object? error,
+    String? reason,
+  }) async {
+    await logEvent(
+      'pago_error',
+      parameters: {
+        'municipio_id': municipalityId,
+        'origen': origin.value,
+        'etapa': stage.value,
+        'motivo': _truncate(reason ?? errorReason(error), _maxParamLength),
+      },
+    );
+  }
+
+  /// `aprobado` / `pendiente` / `rechazado` según `idStatusType` (tabla
+  /// `Availibity`: 1 APROBADA, 2 COMENZADA, 3 FALLIDA, 4 EXPIRADA).
+  static String paymentResult(int idStatusType) => switch (idStatusType) {
+    kPaymentStatusApproved => 'aprobado',
+    2 => 'pendiente',
+    3 || 4 => 'rechazado',
+    _ => 'desconocido',
+  };
+
+  /// Código corto y sin datos del usuario para el parámetro `motivo`.
+  static String errorReason(Object? error) {
+    if (error is DioException) {
+      return switch (error.type) {
+        DioExceptionType.connectionTimeout ||
+        DioExceptionType.sendTimeout ||
+        DioExceptionType.receiveTimeout => 'timeout',
+        DioExceptionType.connectionError => 'sin_conexion',
+        DioExceptionType.badResponse =>
+          'http_${error.response?.statusCode ?? 'desconocido'}',
+        DioExceptionType.cancel => 'cancelado',
+        _ => 'red',
+      };
+    }
+    if (error == null) return 'desconocido';
+    return _truncate(error.runtimeType.toString(), _maxParamLength);
+  }
+
   static String _truncate(String value, int max) =>
       value.length <= max ? value : value.substring(0, max);
 
@@ -188,6 +346,58 @@ class AnalyticsService {
 abstract final class AuthMethod {
   static const String email = 'correo';
   static const String google = 'google';
+}
+
+/// Resultado de `consulta_impuesto_resultado`.
+enum TaxQueryOutcome {
+  found('encontrado'),
+  noDebt('sin_deuda'),
+  error('error');
+
+  const TaxQueryOutcome(this.value);
+
+  final String value;
+}
+
+/// De dónde viene un pago: consulta de impuestos, pago sin validación o
+/// certificados (las tres terminan en «Procesando tu pago»).
+enum PaymentOrigin {
+  taxQuery('consulta_impuesto'),
+  psv('psv'),
+  certificate('certificado');
+
+  const PaymentOrigin(this.value);
+
+  final String value;
+}
+
+/// Paso del pago en el que ocurrió un `pago_error`.
+enum PaymentStage {
+  /// Registro previo en el historial (`POST api/PaymentHistory/`).
+  historyRegistration('registro_historial'),
+
+  /// Creación de la transacción en la pasarela.
+  transaction('transaccion'),
+
+  /// La pasarela no devolvió URL.
+  noUrl('sin_url'),
+
+  /// Sincronización del estado al verificar.
+  verification('verificacion');
+
+  const PaymentStage(this.value);
+
+  final String value;
+}
+
+/// Dónde se verificó el estado de un pago.
+enum VerificationScreen {
+  processing('procesamiento'),
+  history('historial');
+
+  const VerificationScreen(this.value);
+
+  final String value;
 }
 
 /// Pestañas de `MainBottomNavBar`, en el orden de sus índices.

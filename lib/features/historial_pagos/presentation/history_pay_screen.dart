@@ -112,8 +112,9 @@ class HistoryPayScreen extends ConsumerWidget {
   /// el boton "Sync" de cada tarjeta) y recarga la lista una sola vez. Solo el
   /// estado de esas tarjetas se pone a cargar; el resto de la pantalla queda
   /// quieta (antes parpadeaba una vez por pago).
-  Future<void> _refresh(WidgetRef ref) =>
-      ref.read(historyPayNotifierProvider.notifier).refreshPending();
+  Future<void> _refresh(WidgetRef ref) => ref
+      .read(historyPayNotifierProvider.notifier)
+      .refreshPending(municipalityId: municipalityId);
 
   Future<void> _hide(BuildContext context, WidgetRef ref, int id) async {
     final messenger = ScaffoldMessenger.of(context);

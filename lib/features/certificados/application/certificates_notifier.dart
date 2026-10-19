@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/api/services/pqrd_api_service.dart';
 import '../../../core/api/services/tax_api_service.dart';
@@ -34,15 +37,23 @@ const _foreignDocuments = {
 class CertificatesFamilyParam {
   final CertificateProcedure certificate;
 
-  const CertificatesFamilyParam({required this.certificate});
+  /// Municipio del asistente; solo alimenta la analítica del pago.
+  final int municipalityId;
+
+  const CertificatesFamilyParam({
+    required this.certificate,
+    this.municipalityId = 0,
+  });
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is CertificatesFamilyParam && certificate == other.certificate;
+      other is CertificatesFamilyParam &&
+          certificate == other.certificate &&
+          municipalityId == other.municipalityId;
 
   @override
-  int get hashCode => certificate.hashCode;
+  int get hashCode => Object.hash(certificate, municipalityId);
 }
 
 /// Puerto de `CertificatesViewModel.kt`.
@@ -486,6 +497,8 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
     if (ref.read(sessionProvider) != null) {
       await registerPaymentHistory(
         ref,
+        municipalityId: familyParam.municipalityId,
+        origin: PaymentOrigin.certificate,
         amount: total,
         idImpuesto: form.gatewayTaxId.toString(),
         factura: referencia,
@@ -517,6 +530,7 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
       );
       final url = transaction.url ?? '';
       if (url.isEmpty) {
+        _logPaymentError(PaymentStage.noUrl, reason: 'url_vacia');
         return CertificatesResponseError(
           "Error al registrar la transacción: ${transaction.message ?? ''}"
               .trim(),
@@ -527,6 +541,7 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
         reference: referencia,
       );
     } on DioException catch (e) {
+      _logPaymentError(PaymentStage.transaction, error: e);
       if (e.response != null) {
         return CertificatesResponseError(
           "Error al registrar la transacción: ${e.response?.statusMessage ?? ''}"
@@ -535,8 +550,23 @@ class CertificatesNotifier extends Notifier<CertificatesUiState> {
       }
       return CertificatesResponseError("Error: ${e.message}");
     } catch (e) {
+      _logPaymentError(PaymentStage.transaction, error: e);
       return CertificatesResponseError("Error: $e");
     }
+  }
+
+  void _logPaymentError(PaymentStage stage, {Object? error, String? reason}) {
+    unawaited(
+      ref
+          .read(analyticsServiceProvider)
+          .logPaymentError(
+            municipalityId: familyParam.municipalityId,
+            origin: PaymentOrigin.certificate,
+            stage: stage,
+            error: error,
+            reason: reason,
+          ),
+    );
   }
 }
 
