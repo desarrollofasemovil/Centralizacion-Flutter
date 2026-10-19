@@ -133,8 +133,14 @@ documento consultado): `timeout`, `sin_conexion`, `http_<código>`, `red`, `canc
 
 ### Verificación en dispositivo
 
-Ver la sección al final del PR / de este archivo (se completa al probar en el celular contra el
-servidor de pruebas).
+**Pendiente.** Cubierto por tests unitarios (`test/core/analytics/payment_funnel_analytics_test.dart`,
+`test/features/pagos/payment_funnel_analytics_test.dart`); en el celular solo se confirmó que la app
+reporta (`seleccion_municipio`, `fcm_subscribed`). Los eventos del embudo falta verlos por logcat
+contra el servidor de pruebas. `purchase` necesita un pago aprobado por la pasarela de pruebas.
+
+> Ojo al verificar: un APK compilado desde un worktree sale **sin** `google-services.json`
+> (está en `.gitignore`) y Analytics queda apagado (`E/FA Missing google_app_id`). Y el logcat
+> `FA-SVC` mezcla eventos de otras apps del celular: filtrar por el pid de la app.
 
 ## Próximas fases (propuesta)
 
