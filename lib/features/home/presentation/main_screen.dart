@@ -12,6 +12,8 @@ import '../../../core/storage/user_preferences.dart';
 import '../../../core/utils/url_opener.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
+import '../../portal_externo/application/portal_visit_tracker.dart';
+import '../../portal_externo/presentation/portal_survey_sheet.dart';
 import '../../reminders/presentation/reminders_section.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../../tramites/domain/info_tramite.dart';
@@ -41,10 +43,47 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  /// Detecta el regreso desde un portal externo (Custom Tab) para medir la
+  /// visita y, si toca, mostrar la microencuesta (ver [PortalVisitTracker]).
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
     _trackMunicipality();
+    final tracker = ref.read(portalVisitTrackerProvider.notifier);
+    _lifecycle = AppLifecycleListener(
+      onHide: tracker.onAppHidden,
+      onResume: tracker.onAppResumed,
+    );
+    // Tras el primer frame, cuando ya escucha la encuesta pendiente: resuelve
+    // una visita que quedó abierta si Android cerró la app en el portal.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) tracker.restorePendingVisit();
+    });
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  /// Abre [pending] y, si viene de un trámite con portal externo, registra la
+  /// visita.
+  Future<bool> _openPendingUrl(PendingUrl pending, Color toolbarColor) async {
+    final tramite = pending.tramite;
+    final tracker = ref.read(portalVisitTrackerProvider.notifier);
+    if (tramite != null) {
+      tracker.onPortalOpened(
+        tramite,
+        municipalityId: widget.municipality.id,
+        url: pending.url,
+      );
+    }
+    final opened = await abrirUrl(pending.url, toolbarColor: toolbarColor);
+    if (!opened && tramite != null) tracker.onPortalOpenFailed();
+    return opened;
   }
 
   @override
@@ -159,8 +198,22 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         openPendingUrl(
           context,
           next,
-          opener: (url) => abrirUrl(url, toolbarColor: toolbarColor),
+          opener: (_) => _openPendingUrl(next, toolbarColor),
         );
+      },
+    );
+
+    // Regreso de un portal externo con encuesta pendiente: se muestra solo si
+    // la Home está al frente (no encima de otro diálogo o pantalla).
+    ref.listen<PortalSurveyRequest?>(
+      portalVisitTrackerProvider.select((s) => s.survey),
+      (prev, next) {
+        if (next == null) return;
+        if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
+        final tracker = ref.read(portalVisitTrackerProvider.notifier);
+        final request = tracker.takeSurvey();
+        if (request == null) return;
+        showPortalSurveySheet(context, request: request, tracker: tracker);
       },
     );
 

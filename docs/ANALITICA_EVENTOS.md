@@ -133,16 +133,89 @@ documento consultado): `timeout`, `sin_conexion`, `http_<código>`, `red`, `canc
 
 ### Verificación en dispositivo
 
-**Pendiente.** Cubierto por tests unitarios (`test/core/analytics/payment_funnel_analytics_test.dart`,
-`test/features/pagos/payment_funnel_analytics_test.dart`); en el celular solo se confirmó que la app
-reporta (`seleccion_municipio`, `fcm_subscribed`). Los eventos del embudo falta verlos por logcat
-contra el servidor de pruebas. `purchase` necesita un pago aprobado por la pasarela de pruebas.
+**Verificado (2026-10-19):** Brayan recorrió el flujo completo en el celular contra el servidor de
+pruebas y los eventos del embudo llegaron con sus parámetros, incluido `purchase` con el monto de la
+transacción. Cubierto además por tests unitarios (`test/core/analytics/payment_funnel_analytics_test.dart`,
+`test/features/pagos/payment_funnel_analytics_test.dart`).
 
 > Ojo al verificar: un APK compilado desde un worktree sale **sin** `google-services.json`
 > (está en `.gitignore`) y Analytics queda apagado (`E/FA Missing google_app_id`). Y el logcat
 > `FA-SVC` mezcla eventos de otras apps del celular: filtrar por el pid de la app.
 
+## Fase 2 — portales externos y microencuesta (2026-10-19)
+
+Cuando un trámite manda al portal tributario del municipio (`AbrirUrl` / `AbrirUrlDirecto`), la
+app pierde el rastro: Chrome Custom Tabs y Safari View Controller **no exponen la URL** que el
+usuario visita (es una garantía de privacidad del navegador). Se mide lo observable — cuánto tiempo
+estuvo fuera — y, para los impuestos, se pregunta con una microencuesta de un toque si pudo pagar.
+Código: `lib/features/portal_externo/`.
+
+Las redes sociales (categoría `social`) y el WhatsApp del botón de pánico no cuentan como portal.
+
+### Flujo
+
+```
+clic_url_directa → [formulario de datos] → [aviso de sitio externo, 3 s]
+  → portal_externo_abierto → (usuario en el portal) → portal_externo_regreso
+  → encuesta_portal_mostrada → encuesta_portal_respuesta | encuesta_portal_descartada
+```
+
+La encuesta sale **al volver a la Home**, solo si: el trámite es un **impuesto**, estuvo fuera
+**20 s o más** y no se le preguntó por **ese trámite en ese municipio en los últimos 15 días**. Si
+otra pantalla o diálogo está encima de la Home al volver, no sale.
+
+### Eventos
+
+Comunes⁶: `municipio_id`, `tramite_codigo`, `tramite_id`, `tramite_nombre`, `url_dominio`.
+
+| Evento | Cuándo | Parámetros |
+|---|---|---|
+| `portal_externo_abierto` | el portal se abre de verdad (pasó formulario y aviso) | comunes⁶ |
+| `portal_externo_regreso` | vuelve a la app desde el portal | comunes⁶, `segundos_fuera`, `rango_tiempo`⁷, `app_reiniciada` (`si`/`no`) |
+| `encuesta_portal_mostrada` | se muestra la encuesta | comunes⁶, `rango_tiempo`⁷ |
+| `encuesta_portal_respuesta` | responde | comunes⁶, `rango_tiempo`⁷, `respuesta`⁸, `motivo`⁹ (solo con `problema`) |
+| `encuesta_portal_descartada` | la cierra sin terminar | comunes⁶, `paso` (`pregunta` / `motivo`) |
+
+⁶ Los mismos de `clic_url_directa`; `url_dominio` es solo el dominio (la URL del portal puede traer
+el documento).
+
+⁷ `rango_tiempo`: `menos_15s`, `15_60s`, `1_3min`, `3_10min`, `mas_10min`.
+
+⁸ `respuesta`: `pague`, `consulte_no_pague`, `problema`, `solo_mirando`.
+
+⁹ `motivo`: `no_encontre_factura`, `pagina_fallo`, `pago_rechazado`, `sin_medio_pago`, `otro`.
+
+### Detalles
+
+- **Android cierra la app con la Custom Tab al frente** (pasó en un Xiaomi a los 20 s). Por eso la
+  visita en curso se guarda en `SharedPreferences` (`portal_visit_pending`) y, si el proceso murió,
+  se resuelve al volver a montar la Home (`app_reiniciada = si`; el tiempo incluye el reinicio). La
+  encuesta solo sale en ese caso si volvió antes de 60 min.
+- Solo cuenta como regreso un `resumed` precedido de que la app se ocultara (evita falsos regresos
+  por bajar la barra de notificaciones antes de que cargue la pestaña).
+- **iOS:** Safari View Controller se presenta dentro de la app (el ciclo de vida no cambia) y
+  `flutter_custom_tabs` no expone su `didFinish`. En iOS solo se registra `portal_externo_abierto`;
+  regreso y encuesta quedan pendientes de una señal nativa.
+- Las respuestas viven **solo en Analytics** (sin endpoint ni datos personales).
+
+### Para los informes
+
+- **Dimensiones de evento:** `respuesta`, `motivo` (ya registrada en la Fase 1), `rango_tiempo`,
+  `app_reiniciada`, `paso`. **Métrica:** `segundos_fuera` (unidad: segundos).
+- **Tasa de respuesta** = `encuesta_portal_respuesta` / `encuesta_portal_mostrada`.
+
+### Verificación en dispositivo (2026-10-19)
+
+En el Xiaomi contra el servidor de pruebas: visita corta sin encuesta (19 s), visita de 77 s con
+encuesta respondida (`problema` → `pagina_fallo`), y proceso matado con la Custom Tab al frente
+(`am kill`): al volver a la Home llegó `portal_externo_regreso` con `app_reiniciada = si` y salió
+la encuesta; cerrarla con la X registró `encuesta_portal_descartada` (`paso = pregunta`).
+
 ## Próximas fases (propuesta)
 
-- **Fase 2 — portales externos:** detectar el regreso a la app (tiempo fuera) y microencuesta de
-  1 toque ("¿Pudiste pagar?").
+- **Cruce con la pasarela (opción 1):** registrar en el backend la salida al portal (usuario,
+  municipio, trámite, hora) y cruzarla con las transacciones de la pasarela para conocer pagos y
+  montos reales hechos fuera de la app. Requiere endpoint nuevo, acceso a los datos de la pasarela
+  y cobertura en la autorización de Habeas Data.
+- **iOS:** detectar el cierre de Safari View Controller (delegado nativo) para tener regreso y
+  encuesta también en iPhone.

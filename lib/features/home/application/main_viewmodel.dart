@@ -21,10 +21,15 @@ enum ModalFormMode { generic, panicButton }
 /// Sin `==` a propósito: cada instancia es un evento nuevo, así que tocar dos
 /// veces el mismo trámite vuelve a disparar el `ref.listen` de la Home.
 class PendingUrl {
-  const PendingUrl(this.url, {required this.showWarning});
+  const PendingUrl(this.url, {required this.showWarning, this.tramite});
 
   final String url;
   final bool showWarning;
+
+  /// Trámite que abre el portal externo, para medir la visita y la encuesta
+  /// (`PortalVisitTracker`). `null` en lo que no es un portal de trámite:
+  /// redes sociales y el WhatsApp del botón de pánico.
+  final InfoTramite? tramite;
 }
 
 class MainUiState {
@@ -42,6 +47,9 @@ class MainUiState {
   /// (equivalente a `urlToOpen` del `_uiState` original: dato almacenado, no
   /// dispara la apertura). No confundir con [urlToOpen], que sí es el disparador.
   final String? pendingUrl;
+
+  /// Trámite de [pendingUrl] (ver [PendingUrl.tramite]); se limpia con ella.
+  final InfoTramite? pendingUrlTramite;
 
   /// Disparador de apertura in-app: cuando cambia a una URL no vacía, la UI la
   /// consume con `clearUrlToOpen()` y la abre con `abrirUrl()` —antes del aviso
@@ -67,6 +75,7 @@ class MainUiState {
     this.pendingPanicAction,
     this.modalMode,
     this.pendingUrl,
+    this.pendingUrlTramite,
     this.urlToOpen,
     this.showExitDialog = false,
     this.isDarkTheme = false,
@@ -88,6 +97,7 @@ class MainUiState {
     AbrirBotonPanico? pendingPanicAction,
     ModalFormMode? modalMode,
     String? pendingUrl,
+    InfoTramite? pendingUrlTramite,
     PendingUrl? urlToOpen,
     bool? showExitDialog,
     bool? isDarkTheme,
@@ -118,6 +128,9 @@ class MainUiState {
           : (pendingPanicAction ?? this.pendingPanicAction),
       modalMode: clearModalMode ? null : (modalMode ?? this.modalMode),
       pendingUrl: clearPendingUrl ? null : (pendingUrl ?? this.pendingUrl),
+      pendingUrlTramite: clearPendingUrl
+          ? null
+          : (pendingUrlTramite ?? this.pendingUrlTramite),
       urlToOpen: clearUrlToOpen ? null : (urlToOpen ?? this.urlToOpen),
       showExitDialog: showExitDialog ?? this.showExitDialog,
       isDarkTheme: isDarkTheme ?? this.isDarkTheme,
@@ -225,10 +238,18 @@ class MainViewModel extends Notifier<MainUiState> {
     state = state.copyWith(isPqrdVisible: false);
   }
 
-  void showModalForm(ModalFormMode mode, {String? url}) {
+  void showModalForm(
+    ModalFormMode mode, {
+    String? url,
+    InfoTramite? tramite,
+  }) {
     // La URL va a `pendingUrl` (dato almacenado), NO a `urlToOpen`: así el PT
     // NO se abre hasta que el usuario complete el formulario y pulse "Continuar".
-    state = state.copyWith(modalMode: mode, pendingUrl: url);
+    state = state.copyWith(
+      modalMode: mode,
+      pendingUrl: url,
+      pendingUrlTramite: tramite,
+    );
   }
 
   void onModalDismissed() {
@@ -248,6 +269,7 @@ class MainViewModel extends Notifier<MainUiState> {
     // primer "Continuar" (solo al segundo toque). Limpiar `modalMode` de forma
     // síncrona hace que ese `.then()` vea `modalMode == null` y no interfiera.
     final url = state.pendingUrl;
+    final urlTramite = state.pendingUrlTramite;
     final panicAction = state.pendingPanicAction;
     state = state.copyWith(clearModalMode: true, clearPendingUrl: true);
 
@@ -264,7 +286,9 @@ class MainViewModel extends Notifier<MainUiState> {
     } else if (url != null) {
       // Recién ahora se dispara la apertura del PT (equivalente al
       // `_event.send(OpenUrl(urlToOpen))` de `processConfirmation` original).
-      state = state.copyWith(urlToOpen: PendingUrl(url, showWarning: true));
+      state = state.copyWith(
+        urlToOpen: PendingUrl(url, showWarning: true, tramite: urlTramite),
+      );
     }
   }
 
@@ -284,18 +308,31 @@ class MainViewModel extends Notifier<MainUiState> {
     if (action is ShowPqrds) {
       state = state.copyWith(isPqrdVisible: !state.isPqrdVisible);
     } else if (action is AbrirUrl) {
+      final portal = _portalTramite(tramite);
       getEffectiveUser().then((userData) {
         if (userData != null) {
           state = state.copyWith(
-            urlToOpen: PendingUrl(action.url, showWarning: true),
+            urlToOpen: PendingUrl(
+              action.url,
+              showWarning: true,
+              tramite: portal,
+            ),
           );
         } else {
-          showModalForm(ModalFormMode.generic, url: action.url);
+          showModalForm(
+            ModalFormMode.generic,
+            url: action.url,
+            tramite: portal,
+          );
         }
       });
     } else if (action is AbrirUrlDirecto) {
       state = state.copyWith(
-        urlToOpen: PendingUrl(action.url, showWarning: true),
+        urlToOpen: PendingUrl(
+          action.url,
+          showWarning: true,
+          tramite: _portalTramite(tramite),
+        ),
       );
     } else if (action is AbrirBotonPanico) {
       state = state.copyWith(pendingPanicAction: action);
@@ -311,6 +348,11 @@ class MainViewModel extends Notifier<MainUiState> {
       // la UI reaccionará de manera estándar o las resolverá directamente
     }
   }
+
+  /// Las redes sociales también son `AbrirUrlDirecto`, pero no son un portal
+  /// de trámite: no se mide su visita ni se pregunta por un pago.
+  static InfoTramite? _portalTramite(InfoTramite tramite) =>
+      tramite.category == TramiteCategory.social ? null : tramite;
 
   void onChangeLocationClicked() {
     state = state.copyWith(showChangeLocationDialog: true);

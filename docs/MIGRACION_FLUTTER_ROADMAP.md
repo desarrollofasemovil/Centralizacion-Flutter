@@ -60,6 +60,7 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 - [x] FlutterFire: Crashlytics, Analytics, Remote Config, Messaging
 - [x] Eventos de Analytics y tópico FCM por municipio (2026-10-19) — la migración había dejado `AnalyticsService` sin llamadas y sin `subscribeToTopic`. Paridad con Kotlin + propiedad de usuario `municipio`, parámetros sin URLs/PII y `login`/`sign_up` en el momento correcto. Catálogo en [`ANALITICA_EVENTOS.md`](ANALITICA_EVENTOS.md)
 - [x] Analítica Fase 1: embudo del pago por pasarela integrada (2026-10-19) — `consulta_impuesto_enviada/_resultado`, `pasarela_abierta`, `pago_verificado`, `purchase` (COP, solo con aprobado confirmado por el backend, `transaction_id` = id del historial) y `pago_error`. Impuestos, PSV y certificados. Ver [`ANALITICA_EVENTOS.md`](ANALITICA_EVENTOS.md)
+- [x] Analítica Fase 2: portales externos (2026-10-19) — `portal_externo_abierto/_regreso` (tiempo fuera, sobrevive a que Android cierre la app) y microencuesta "¿Pudiste hacer tu pago?" para impuestos (≥ 20 s fuera, una vez cada 15 días por trámite). En iOS solo la apertura. Ver [`ANALITICA_EVENTOS.md`](ANALITICA_EVENTOS.md)
 - [x] Remote Config con las 4 keys: `welcome_carousel_images`, `app_status_config`, `send_to_welcome`, `tourism_tax_rates` — `BACKEND.md §6.1`
 - [x] Theming dinámico desde backend (`Theme` hex → `ThemeData`) — `core/theme/` (`color_parser`, `design`, `app_theme`)
 - [x] Navegación con go_router (equivalente a los grafos anidados) — `FRONTEND.md §2`
