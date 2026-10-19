@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Usamos la cámara para escanear el código de barras de tus facturas de servicios públicos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Necesitamos acceder a tus archivos para adjuntar documentos a tus trámites.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -63,6 +67,30 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!-- Google Sign-In (google_sign_in 7): cliente iOS del GoogleService-Info.plist.
+	     GIDServerClientID = cliente web (el default_web_client_id de Android), para que
+	     el idToken tenga la misma audiencia en las dos plataformas. -->
+	<key>GIDClientID</key>
+	<string>577349260806-c7qn2inp54hk69cqiljc6ubtse0mjmfj.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>577349260806-r9e7vm4sauc66uf1h9tuv1iqa63q5j60.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- REVERSED_CLIENT_ID: retorno del flujo de Google al app. -->
+				<string>com.googleusercontent.apps.577349260806-c7qn2inp54hk69cqiljc6ubtse0mjmfj</string>
+			</array>
+		</dict>
+	</array>
+	<!-- FCM: recibir notificaciones remotas con la app en segundo plano. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>

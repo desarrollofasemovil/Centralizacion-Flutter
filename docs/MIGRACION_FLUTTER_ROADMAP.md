@@ -44,7 +44,7 @@ cerrar iOS, consolidar componentes compartidos, pulir detalles visuales y public
 - [x] FlutterFire: `firebase_options_municipios.dart` apuntando al proyecto Firebase actual (`betaappcentralizate`, Android; iOS pendiente)
 - [x] Copiar `CLAUDE.md` y los `MIGRACION_FLUTTER_*.md` a la raíz del proyecto Flutter (ya viven en la raíz del repo y en `docs/`)
 - [~] GitHub Actions: build APK + IPA por flavor (mac-runner) — APK `municipios` hecho (ver [`CI_CD.md`](CI_CD.md)); faltan `manizales` e IPA
-- [ ] **Iniciar Apple Developer Account** (proceso externo, puede tardar hasta 2 semanas) 🍎
+- [x] **Iniciar Apple Developer Account** (proceso externo, puede tardar hasta 2 semanas) 🍎 — cuenta creada (2026-10-19)
 
 > ✅ **Fase 0 verificada**: `flutter analyze` limpio + `assembleMunicipiosDebug` genera `app-municipios-debug.apk`. Notas: AGP 9 requirió habilitar `coreLibraryDesugaring` (lo pide `flutter_local_notifications`) y se quitó `flutter_inappwebview`. Firma release lista vía `key.properties` (pendiente la contraseña del keystore).
 
@@ -401,13 +401,22 @@ tiene tests que fallan con el código anterior.
 > multiplataforma y las 6 base URLs son HTTPS (sin bloqueo de ATS), así que el trabajo es de
 > configuración nativa, no de migración. **Requiere un Mac y la cuenta de Apple Developer.**
 
-- [ ] **`NSCameraUsageDescription` en `Info.plist`** — sin esto `mobile_scanner` **crashea al abrir**
-      el escáner de servicios públicos. Es el fallo más inmediato al arrancar en iOS.
+- [x] **`NSCameraUsageDescription` y `NSPhotoLibraryUsageDescription` en `Info.plist`** (2026-10-19). Sin la
+      cámara, `mobile_scanner` crashea al abrir el escáner; y el texto se exige por el código enlazado (ITMS-90683),
+      aunque el módulo de servicios públicos esté desactivado en backend. `file_picker` exige la de galería.
+- [x] **App iOS registrada en Firebase** (`1:577349260806:ios:c70540fa…`, 2026-10-19) y opciones `ios` en
+      `firebase_options_municipios.dart`: ya no lanza `UnsupportedError` al arrancar. El `GoogleService-Info.plist`
+      no se versiona ni se empaqueta (igual que `google-services.json`); Firebase se inicializa con las opciones Dart.
+- [x] **Bundle ID iOS = `com.tramites1cero1.centralizacion`** (2026-10-19, mismo de Android; no había app previa en la App Store).
+      En `project.pbxproj` (Runner y RunnerTests). Falta registrarlo en Apple Developer **con Push Notifications marcada
+      antes de generar el perfil** (si no, el perfil sale sin `aps-environment` y la subida falla).
+- [x] Solo iPhone (`TARGETED_DEVICE_FAMILY = 1`): la app es vertical; con iPad Apple exige las 4 orientaciones (error 90474 en 101 Fintech).
+- [x] Push: `Runner.entitlements` con `aps-environment` y `UIBackgroundModes` → `remote-notification` en `Info.plist`.
 - [ ] Resto de permisos en `Info.plist` (ubicación, notificaciones)
 - [ ] Schemes/configs por flavor en Xcode
-- [ ] `GoogleService-Info.plist` por flavor (no existe ninguno)
-- [ ] APNs Auth Key (.p8) en Firebase para FCM
-- [ ] `REVERSED_CLIENT_ID` para Google Sign-In
+- [~] `GoogleService-Info.plist` por flavor — `municipios` listo (copia local, ignorada por git); `manizales` pendiente
+- [ ] APNs Auth Key (.p8) en Firebase para FCM — **sin ella no llegan push a iOS** (paso de consola)
+- [x] Google Sign-In en `Info.plist`: `GIDClientID`, `GIDServerClientID` (cliente web) y `REVERSED_CLIENT_ID` como URL scheme
 - [x] Descarga de PDFs sin DownloadManager (`dio` + `open_filex`)
 - [ ] Safe Area / home indicator en layouts con bottom nav
 - [ ] Pruebas en iPhone físico → TestFlight
