@@ -211,6 +211,19 @@ encuesta respondida (`problema` → `pagina_fallo`), y proceso matado con la Cus
 (`am kill`): al volver a la Home llegó `portal_externo_regreso` con `app_reiniciada = si` y salió
 la encuesta; cerrarla con la X registró `encuesta_portal_descartada` (`paso = pregunta`).
 
+## BigQuery (vinculado el 2026-10-19)
+
+Exportación **diaria** de Google Analytics desde Firebase al proyecto `betaappcentralizate`, en
+**sandbox** (sin facturación): cada tabla `events_AAAAMMDD` **expira a los 60 días**. Para guardar
+historial hay que activar la facturación y cambiar la expiración por defecto del dataset antes de
+que se borren las primeras tablas.
+
+Consultas listas en [`analitica/consultas_bigquery.sql`](analitica/consultas_bigquery.sql):
+encuesta por municipio y trámite, tasa de respuesta, problemas por portal, credibilidad de "pagué"
+según el tiempo fuera, estimación de pagos en portales externos, recaudo de `purchase` por
+municipio y mes, embudo de la pasarela integrada y abandono antes del portal. Excluyen los celulares
+de QA (el servidor de pruebas manda al mismo proyecto de Firebase).
+
 ## Próximas fases (propuesta)
 
 - **Cruce con la pasarela (opción 1):** registrar en el backend la salida al portal (usuario,
