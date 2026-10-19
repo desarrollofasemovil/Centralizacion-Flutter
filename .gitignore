@@ -54,6 +54,9 @@ key.properties
 # google-services.json por flavor (contiene claves de proyecto; mantener fuera de VCS)
 /android/app/src/municipios/google-services.json
 /android/app/src/manizales/google-services.json
+# Equivalente iOS: las opciones viven en lib/firebase/firebase_options_*.dart; el plist es solo copia local
+/ios/Runner/GoogleService-Info.plist
+/ios/**/GoogleService-Info.plist
 
 # agents claude
 *.env

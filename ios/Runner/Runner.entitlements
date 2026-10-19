@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Push (FCM → APNs). `development` es lo correcto aquí también para App
+	     Store: al exportar para distribución, Xcode lo sustituye por el valor del
+	     perfil de aprovisionamiento (`production`). El App ID
+	     com.tramites1cero1.centralizacion tiene que tener la capacidad Push
+	     Notifications activada ANTES de generar el perfil, o el perfil no la
+	     incluye y la subida falla. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

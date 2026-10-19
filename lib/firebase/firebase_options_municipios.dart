@@ -2,10 +2,11 @@
 //
 // Android construido a partir del `google-services.json` existente (cliente
 // com.tramites1cero1.centralizacion). Web tomado de la config del SDK JS
-// registrada en la consola de Firebase para el mismo proyecto. iOS se
-// completa en la Fase 5 cuando se tenga el `GoogleService-Info.plist`. Cuando
-// se regenere con FlutterFire CLI, este archivo será reemplazado por el
-// generado.
+// registrada en la consola de Firebase para el mismo proyecto. iOS tomado del
+// `GoogleService-Info.plist` de la app `com.tramites1cero1.centralizacion`
+// (registrada el 2026-10-19); el plist no se versiona ni se empaqueta: Firebase
+// se inicializa con estas opciones. Cuando se regenere con FlutterFire CLI,
+// este archivo será reemplazado por el generado.
 //
 // ignore_for_file: type=lint
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
@@ -21,9 +22,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'iOS se configura en la Fase 5 (falta GoogleService-Info.plist).',
-        );
+        return ios;
       default:
         throw UnsupportedError(
           'FirebaseOptions no configuradas para $defaultTargetPlatform.',
@@ -37,6 +36,17 @@ class DefaultFirebaseOptions {
     messagingSenderId: '577349260806',
     projectId: 'betaappcentralizate',
     storageBucket: 'betaappcentralizate.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyCES6wYEjkMJEizDXRmE_OOgeGGeRwuBQ8',
+    appId: '1:577349260806:ios:c70540fa8ea2ec50ff1587',
+    messagingSenderId: '577349260806',
+    projectId: 'betaappcentralizate',
+    storageBucket: 'betaappcentralizate.firebasestorage.app',
+    iosClientId:
+        '577349260806-c7qn2inp54hk69cqiljc6ubtse0mjmfj.apps.googleusercontent.com',
+    iosBundleId: 'com.tramites1cero1.centralizacion',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
