@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/url_opener.dart';
 import '../application/payment_processing_notifier.dart';
@@ -17,11 +18,17 @@ class PaymentProcessingScreen extends ConsumerStatefulWidget {
   const PaymentProcessingScreen({
     required this.municipalityId,
     required this.paymentUrl,
+    this.origin = PaymentOrigin.taxQuery,
+    this.taxId,
     super.key,
   });
 
   final int municipalityId;
   final String paymentUrl;
+
+  /// Flujo que trajo al usuario aquí y su impuesto (solo para analítica).
+  final PaymentOrigin origin;
+  final int? taxId;
 
   @override
   ConsumerState<PaymentProcessingScreen> createState() =>
@@ -37,6 +44,14 @@ class _PaymentProcessingScreenState
     // el header de la Custom Tab teñido del color primario (como el original).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.paymentUrl.trim().isNotEmpty && mounted) {
+        ref
+            .read(analyticsServiceProvider)
+            .logGatewayOpened(
+              municipalityId: widget.municipalityId,
+              origin: widget.origin,
+              paymentUrl: widget.paymentUrl,
+              taxId: widget.taxId,
+            );
         abrirUrl(
           widget.paymentUrl,
           toolbarColor: Theme.of(context).colorScheme.primary,
@@ -48,7 +63,10 @@ class _PaymentProcessingScreenState
   Future<void> _onCheckStatus() async {
     final shouldNavigate = await ref
         .read(paymentProcessingNotifierProvider.notifier)
-        .onCheckStatusClick();
+        .onCheckStatusClick(
+          municipalityId: widget.municipalityId,
+          origin: widget.origin,
+        );
     if (shouldNavigate && mounted) {
       // Rutas del ShellRoute = hermanas planas: un `go` directo a History la
       // dejaría como única página y su botón Atrás no tendría a dónde volver.

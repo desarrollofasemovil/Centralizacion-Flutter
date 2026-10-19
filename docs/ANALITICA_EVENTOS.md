@@ -71,10 +71,72 @@ Llegaron con sus parámetros: `seleccion_municipio`, `fcm_subscribed`, propiedad
 `login` con correo. Sin probar en dispositivo: `clic_psv`, `clic_boton_panico`,
 `clic_navegacion_nativa`, `clic_tramite_inactivo`, `login` con Google, `inicio_registro`, `sign_up`.
 
+## Fase 1 — embudo del pago por pasarela integrada (2026-10-19)
+
+Mide cuánto pagan realmente los contribuyentes por la pasarela de la app, sin encuestas: el
+backend ya guarda estado y monto en el historial de pagos (`GET api/PaymentHistory/User/{id}`).
+
+```
+consulta_impuesto_enviada → consulta_impuesto_resultado (encontrado)
+  → pasarela_abierta → pago_verificado (aprobado / pendiente / rechazado) → purchase
+                     ↘ pago_error (en cualquier paso)
+```
+
+El PSV y los certificados entran directo en `pasarela_abierta` (no tienen consulta).
+
+### Eventos
+
+| Evento | Cuándo | Parámetros |
+|---|---|---|
+| `consulta_impuesto_enviada` | toca "Consultar" (`TaxQueryNotifier`) | `municipio_id`, `impuesto_id`, `entidad_codigo`, `tipo_consulta` (nombre del campo, **nunca** el documento) |
+| `consulta_impuesto_resultado` | responde la consulta | `municipio_id`, `impuesto_id`, `resultado` (`encontrado` / `sin_deuda` / `error`); con `encontrado`: `cantidad` y `valor_total` (COP adeudados); con `error`: `motivo` |
+| `pasarela_abierta` | se abre la URL de la pasarela («Procesando tu pago») | `municipio_id`, `origen`², `url_dominio` (solo el dominio: la URL trae el token), `impuesto_id` (si se conoce) |
+| `pago_verificado` | estado del pago tras sincronizarlo con la pasarela | `municipio_id`, `resultado`³, `estado_id`, `pantalla` (`procesamiento` = botón «Verificar estado»; `historial` = deslizar para refrescar), `valor` (monto del historial), `origen`² (solo desde procesamiento) |
+| `purchase` (estándar GA4) | el **backend** confirma el pago aprobado | `value` (monto del historial), `currency: COP`, `transaction_id: hist_<id del historial>`, `municipio_id`, `impuesto_id` |
+| `pago_error` | falla algún paso | `municipio_id`, `origen`², `etapa`⁴, `motivo`⁵ |
+
+² `origen`: `consulta_impuesto`, `psv` (pago sin validación) o `certificado`.
+
+³ `resultado` según `idStatusType` del historial (tabla `Availibity` de la API, la misma que
+lee `HistoryPayScreen.kt`): 1 APROBADA → `aprobado`, 2 COMENZADA → `pendiente`, 3 FALLIDA y
+4 EXPIRADA → `rechazado`; cualquier otro → `desconocido`.
+
+⁴ `etapa`: `registro_historial` (`POST api/PaymentHistory/` rechazado o caído, o faltan datos
+para hacerlo), `transaccion` (crear la transacción en la pasarela), `sin_url` (la pasarela
+respondió sin URL) o `verificacion` (la sincronización falló o el historial llegó vacío).
+
+⁵ `motivo` es un código corto, nunca el mensaje del error (el de Dio incluye la URL, que lleva el
+documento consultado): `timeout`, `sin_conexion`, `http_<código>`, `red`, `cancelado`,
+`rechazado_<codeStatus>`, `faltan_datos`, `url_vacia`, `historial_vacio` o el tipo del error.
+
+### Reglas de `purchase`
+
+- **Solo cuando el backend lo confirma.** Nunca al abrir la pasarela ni al volver de ella.
+- **Solo en la transición a aprobado:** se manda si el pago estaba en otro estado antes de esta
+  sincronización. Si «Verificar estado» encuentra que el último pago ya estaba aprobado (un pago
+  viejo, o el registro del nuevo falló), no cuenta una compra.
+- **Sin duplicados:** `transaction_id` es el id del historial; GA4 descarta un segundo `purchase`
+  con el mismo id. Los pagos que en «Verificar estado» seguían pendientes se cuentan después, al
+  refrescar el Historial (`pantalla: historial`).
+- Lo que el contribuyente **paga fuera de la app** (portales externos) no aparece aquí: es la
+  Fase 2.
+
+### Para los informes
+
+- Registrar como **dimensiones personalizadas de evento**: `resultado`, `origen`, `etapa`,
+  `motivo`, `pantalla`, `tipo_consulta`, `entidad_codigo`. Como **métricas**: `valor_total`,
+  `valor`, `cantidad`.
+- Los ingresos de `purchase` salen solos en *Monetización* (GA4 entiende `value` + `currency`).
+- Embudo sugerido (Explorar → Exploración de embudo): `consulta_impuesto_enviada` →
+  `consulta_impuesto_resultado` (`resultado = encontrado`) → `pasarela_abierta` → `purchase`,
+  desglosado por `municipio`.
+
+### Verificación en dispositivo
+
+Ver la sección al final del PR / de este archivo (se completa al probar en el celular contra el
+servidor de pruebas).
+
 ## Próximas fases (propuesta)
 
-- **Fase 1 — embudo de pago integrado:** consulta enviada → resultado (encontrado / sin deuda /
-  error) → pasarela abierta → verificación → estado final; `purchase` con `value` en COP cuando
-  el backend confirma aprobado.
 - **Fase 2 — portales externos:** detectar el regreso a la app (tiempo fuera) y microencuesta de
   1 toque ("¿Pudiste pagar?").

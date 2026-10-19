@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tramiapp_flutter/core/analytics/analytics_service.dart';
 import 'package:tramiapp_flutter/core/router/app_routes.dart';
 import 'package:tramiapp_flutter/core/router/safe_pop.dart';
 import 'package:tramiapp_flutter/core/theme/app_colors.dart';
@@ -55,7 +56,10 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
   @override
   void initState() {
     super.initState();
-    _param = CertificatesFamilyParam(certificate: widget.certificate);
+    _param = CertificatesFamilyParam(
+      certificate: widget.certificate,
+      municipalityId: widget.municipalityId,
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -153,7 +157,10 @@ class _CertificatesWizardState extends ConsumerState<CertificatesWizard> {
             AppRoutes.pagosProcessingPath(widget.municipalityId),
             // Antes mandaba `'url'` y la ruta lee `'paymentUrl'`: la pasarela
             // nunca abría.
-            extra: AppRoutes.pagosProcessingExtra(next.urlTransaction),
+            extra: AppRoutes.pagosProcessingExtra(
+              next.urlTransaction,
+              origin: PaymentOrigin.certificate,
+            ),
           );
         } else if (next is CertificatesResponseError) {
           notifier.resetSubmission();

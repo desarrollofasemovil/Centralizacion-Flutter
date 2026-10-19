@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/telemetry/non_fatal_reporter.dart';
 import '../../pagos/application/payment_history_registration.dart';
 import '../domain/tax.dart';
@@ -85,18 +88,47 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
             municipalityId: municipalityId,
             integrationType: integrationType,
           );
+      if (paymentInfo.url.trim().isEmpty) {
+        // La pantalla ignora una URL vacía: sin este evento el pago se
+        // quedaba en nada sin dejar rastro.
+        _logPaymentError(
+          municipalityId,
+          PaymentStage.noUrl,
+          reason: 'url_vacia',
+        );
+      }
       state = state.copyWith(
         isLoading: false,
         loadingMessage: 'Cargando...',
         paymentUrl: paymentInfo.url,
       );
     } catch (e) {
+      _logPaymentError(municipalityId, PaymentStage.transaction, error: e);
       state = state.copyWith(
         isLoading: false,
         loadingMessage: 'Cargando...',
         error: e.toString(),
       );
     }
+  }
+
+  void _logPaymentError(
+    int municipalityId,
+    PaymentStage stage, {
+    Object? error,
+    String? reason,
+  }) {
+    unawaited(
+      ref
+          .read(analyticsServiceProvider)
+          .logPaymentError(
+            municipalityId: municipalityId,
+            origin: PaymentOrigin.taxQuery,
+            stage: stage,
+            error: error,
+            reason: reason,
+          ),
+    );
   }
 
   /// "Pagar por PSE": un solo flujo secuencial, como el del pago sin
@@ -136,9 +168,16 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
           'tieneCodigoEntidad': tax.entityCode.isNotEmpty,
         },
       );
+      _logPaymentError(
+        municipalityId,
+        PaymentStage.historyRegistration,
+        reason: 'faltan_datos',
+      );
     } else {
       await registerPaymentHistory(
         ref,
+        municipalityId: municipalityId,
+        origin: PaymentOrigin.taxQuery,
         amount: tax.value,
         idImpuesto: tax.taxId.toString(),
         factura: tax.invoice,

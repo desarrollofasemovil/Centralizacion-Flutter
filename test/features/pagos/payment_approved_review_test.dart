@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tramiapp_flutter/core/analytics/analytics_service.dart';
 import 'package:tramiapp_flutter/core/api/services/api_providers.dart';
 import 'package:tramiapp_flutter/core/api/services/payment_history_api_service.dart';
 import 'package:tramiapp_flutter/core/models/document_type_dto.dart';
@@ -117,7 +118,10 @@ void main() {
       await tester.pump(const Duration(seconds: 31)); // cuenta regresiva
       final navigate = await container
           .read(paymentProcessingNotifierProvider.notifier)
-          .onCheckStatusClick();
+          .onCheckStatusClick(
+            municipalityId: 1,
+            origin: PaymentOrigin.taxQuery,
+          );
       expect(navigate, isTrue);
       await tester.pump();
       return spy;
@@ -138,7 +142,10 @@ void main() {
       unawaited(
         container
             .read(paymentProcessingNotifierProvider.notifier)
-            .onCheckStatusClick()
+            .onCheckStatusClick(
+            municipalityId: 1,
+            origin: PaymentOrigin.taxQuery,
+          )
             .then((v) => navigated = v),
       );
       await tester.pump();

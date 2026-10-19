@@ -1,3 +1,5 @@
+import '../analytics/analytics_service.dart';
+
 /// Rutas de la app (go_router). Datos largos (URLs de políticas, JSON de
 /// queryFields) NO viajan por la ruta: usar `extra`/estado (CONVENCIONES §7).
 class AppRoutes {
@@ -49,8 +51,22 @@ class AppRoutes {
 
   /// Clave de la URL de la pasarela en el `extra` de [pagosProcessing].
   static const pagosProcessingUrlKey = 'paymentUrl';
-  static Map<String, Object> pagosProcessingExtra(String paymentUrl) =>
-      {pagosProcessingUrlKey: paymentUrl};
+
+  /// Claves de analítica en el `extra` de [pagosProcessing]: de qué flujo viene
+  /// el pago ([PaymentOrigin]) y el impuesto, para `pasarela_abierta` y
+  /// `pago_verificado`.
+  static const pagosProcessingOriginKey = 'origen';
+  static const pagosProcessingTaxIdKey = 'impuestoId';
+
+  static Map<String, Object> pagosProcessingExtra(
+    String paymentUrl, {
+    PaymentOrigin? origin,
+    int? taxId,
+  }) => {
+    pagosProcessingUrlKey: paymentUrl,
+    pagosProcessingOriginKey: ?origin,
+    pagosProcessingTaxIdKey: ?taxId,
+  };
   static String pagosHistoryPath(int id) => '/municipality/$id/pagos/history';
   static String cursosPath(int id) => '/municipality/$id/cursos';
   static String venuesPath(int id) => '/municipality/$id/venues';
