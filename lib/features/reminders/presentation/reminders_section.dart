@@ -65,18 +65,8 @@ class _RemindersSectionState extends ConsumerState<RemindersSection> {
     final state = ref.watch(remindersNotifierProvider);
     final isLoggedIn = ref.watch(sessionProvider) != null;
 
-    // Toast de un solo uso (equivalente al Channel<ReminderEvent>).
-    ref.listen<String?>(
-      remindersNotifierProvider.select((s) => s.toastMessage),
-      (_, next) {
-        if (next != null && next.isNotEmpty) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(next)));
-          ref.read(remindersNotifierProvider.notifier).consumeToast();
-        }
-      },
-    );
+    // Los avisos (toasts) los muestra `ReminderToastListener`, que envuelve
+    // esta sección en la Home y también las pantallas que crean recordatorios.
 
     final reminders = state.sortedReminders;
 

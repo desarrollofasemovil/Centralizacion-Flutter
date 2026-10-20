@@ -18,6 +18,28 @@ enum ReminderOffset {
   final Duration before;
 }
 
+/// Antelación por defecto del recordatorio de una factura: 1 día antes de
+/// [target]; si ese momento ya pasó (vence mañana temprano), a la hora del
+/// evento para no programar un aviso en el pasado.
+ReminderOffset defaultInvoiceReminderOffset(
+  DateTime target, {
+  required DateTime now,
+}) {
+  final dayBefore = target.subtract(ReminderOffset.oneDay.before);
+  return dayBefore.isAfter(now) ? ReminderOffset.oneDay : ReminderOffset.none;
+}
+
+/// Desde dónde se creó un recordatorio: la sección general (Home) o el botón
+/// "Recordarme" de una factura. `value` es el que va a la analítica.
+enum ReminderOrigin {
+  general('general'),
+  invoice('factura');
+
+  const ReminderOrigin(this.value);
+
+  final String value;
+}
+
 /// Estado del formulario de creación (bottom sheet). Equivalente a
 /// `CreateReminderState`.
 @immutable
@@ -31,6 +53,7 @@ class CreateReminderState {
   final bool addToCalendar;
   final String? formError;
   final ReminderOffset offset;
+  final ReminderOrigin origin;
 
   const CreateReminderState({
     this.isModalVisible = false,
@@ -42,6 +65,7 @@ class CreateReminderState {
     this.addToCalendar = false,
     this.formError,
     this.offset = ReminderOffset.none,
+    this.origin = ReminderOrigin.general,
   });
 
   CreateReminderState copyWith({
@@ -54,6 +78,7 @@ class CreateReminderState {
     bool? addToCalendar,
     String? formError,
     ReminderOffset? offset,
+    ReminderOrigin? origin,
     bool clearFormError = false,
   }) {
     return CreateReminderState(
@@ -66,6 +91,7 @@ class CreateReminderState {
       addToCalendar: addToCalendar ?? this.addToCalendar,
       formError: clearFormError ? null : (formError ?? this.formError),
       offset: offset ?? this.offset,
+      origin: origin ?? this.origin,
     );
   }
 }

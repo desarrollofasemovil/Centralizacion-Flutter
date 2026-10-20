@@ -86,10 +86,17 @@ class ConfirmationDialog extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                // `OverflowBar` y no `Row`: en un teléfono de 360 dp dos textos
+                // de botón algo largos ("Iniciar sesión" + "Ahora no") no caben
+                // en una fila y el `Row` se desbordaba. Si caben se ven igual
+                // que antes; si no, se apilan alineados al final.
+                OverflowBar(
+                  alignment: MainAxisAlignment.end,
+                  overflowAlignment: OverflowBarAlignment.end,
+                  spacing: 8,
+                  overflowSpacing: 4,
                   children: [
-                    if (dismissButtonText != null) ...[
+                    if (dismissButtonText != null)
                       TextButton(
                         onPressed: onDismiss,
                         child: Text(
@@ -97,8 +104,6 @@ class ConfirmationDialog extends StatelessWidget {
                           style: buttonText.copyWith(color: scheme.onSurface),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                    ],
                     if (confirmButtonText != null)
                       // `Button` de M3 = botón relleno sin elevación.
                       FilledButton(

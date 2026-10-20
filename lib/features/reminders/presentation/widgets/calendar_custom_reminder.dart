@@ -75,10 +75,17 @@ class _CalendarCustomReminderState extends State<CalendarCustomReminder> {
                   onPressed: () => _changeMonth(-1),
                   icon: const Icon(Icons.keyboard_arrow_left),
                 ),
-                Text(
-                  '${_months[_viewMonth.month - 1]} ${_viewMonth.year}',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                // Con letra grande (accesibilidad) "Septiembre 2026" no cabe
+                // entre las flechas: se encoge en vez de desbordar la fila.
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '${_months[_viewMonth.month - 1]} ${_viewMonth.year}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
                 IconButton(

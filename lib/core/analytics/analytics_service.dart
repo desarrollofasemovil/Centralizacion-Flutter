@@ -3,6 +3,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/portal_externo/domain/portal_visit.dart';
+import '../../features/reminders/domain/reminders_state.dart';
 import '../../features/tramites/domain/info_tramite.dart';
 import '../models/payment_history_dto.dart';
 
@@ -377,6 +378,42 @@ class AnalyticsService {
     await logEvent(
       'encuesta_portal_descartada',
       parameters: {..._portalParams(visit), 'paso': step.value},
+    );
+  }
+
+  // ── Recordatorios ──────────────────────────────────────────────────────
+
+  /// Toque en una entrada para crear un recordatorio. `sesion` dice si ya
+  /// tenía cuenta iniciada (sin ella se le pide iniciar sesión primero).
+  Future<void> logReminderStarted({
+    required int municipalityId,
+    required ReminderOrigin origin,
+    required bool hasSession,
+  }) async {
+    await logEvent(
+      'recordatorio_iniciado',
+      parameters: {
+        'municipio_id': municipalityId,
+        'origen': origin.value,
+        'sesion': hasSession ? 'si' : 'no',
+      },
+    );
+  }
+
+  /// Recordatorio guardado en el backend. `antelacion` es cuánto antes de la
+  /// fecha se programó el aviso.
+  Future<void> logReminderCreated({
+    required ReminderOrigin origin,
+    required String offset,
+    int? municipalityId,
+  }) async {
+    await logEvent(
+      'recordatorio_creado',
+      parameters: {
+        'municipio_id': ?municipalityId,
+        'origen': origin.value,
+        'antelacion': offset,
+      },
     );
   }
 

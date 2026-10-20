@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/municipality_procedure.dart';
 import '../../../../core/widgets/enter_transition.dart';
 import '../../application/reminders_notifier.dart';
+import '../../domain/reminders_state.dart';
 import 'calendar_custom_reminder.dart';
 
 /// Muestra el bottom sheet de creación de recordatorio. Port de
@@ -67,7 +68,10 @@ class _CreateReminderSheet extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(12),
                   children: [
-                    TextField(
+                    // `initialValue`: el nombre puede venir precargado (p. ej.
+                    // "Pagar Predial" desde una factura).
+                    TextFormField(
+                      initialValue: form.customName,
                       textInputAction: TextInputAction.next,
                       style: theme.textTheme.titleSmall,
                       onChanged: notifier.updateFormName,
@@ -108,6 +112,28 @@ class _CreateReminderSheet extends ConsumerWidget {
                       time: form.selectedTime,
                       onSelected: notifier.updateFormTime,
                     ),
+                    // La antelación no se elige en este modal (aún): si viene
+                    // puesta, se dice cuándo llegará el aviso.
+                    if (form.offset != ReminderOffset.none)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.notifications_active_outlined,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Te avisaremos ${form.offset.label}.',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     if (form.formError != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
