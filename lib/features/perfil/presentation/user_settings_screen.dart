@@ -7,6 +7,7 @@ import '../../../core/theme/theme_mode_provider.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../application/user_settings_notifier.dart';
+import 'widgets/additional_settings_sheet.dart';
 import 'widgets/change_password_sheet.dart';
 import 'widgets/notifications_config_sheet.dart';
 import '../../../core/widgets/app_top_bar.dart';
@@ -65,9 +66,10 @@ class UserSettingsScreen extends ConsumerWidget {
     }
 
     return Scaffold(
+      backgroundColor: theme.colorScheme.surfaceContainerLowest,
       appBar: AppTopBar(
         title: 'Configuración',
-        backgroundColor: theme.colorScheme.surface,
+        backgroundColor: theme.colorScheme.surfaceContainerLowest,
         onBack: () => context.pop(),
       ),
       body: SafeArea(
@@ -75,33 +77,23 @@ class UserSettingsScreen extends ConsumerWidget {
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.person,
-                  size: 64,
-                  color: theme.colorScheme.surface,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                (user != null && user.loginStatus)
-                    ? '${user.firstName} ${user.lastName}'
-                    : 'Invitado',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onSurface,
-                ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: _rowPadding),
+                child: isLoggedIn
+                    ? _Greeting(firstName: user.firstName)
+                    : Text(
+                        'Invitado',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
               ),
               const SizedBox(height: 16),
-              // Modo oscuro
+
               _DarkModeRow(
                 value: isDark,
                 onChanged: (_) =>
@@ -135,14 +127,10 @@ class UserSettingsScreen extends ConsumerWidget {
                   interactionColor: theme.colorScheme.error,
                   onTap: notifier.logout,
                 ),
-                const SizedBox(height: 15),
-                TextButton.icon(
-                  onPressed: () => _confirmDeleteAccount(context, notifier),
-                  style: TextButton.styleFrom(
-                    foregroundColor: theme.colorScheme.error,
-                  ),
-                  icon: const Icon(Icons.warning_amber_rounded, size: 24),
-                  label: const Text('Eliminar mi cuenta'),
+                _SettingItem(
+                  icon: Icons.tune,
+                  title: 'Configuración adicional',
+                  onTap: () => _openAdditionalSettings(context, notifier),
                 ),
               ] else
                 _SettingItem(
@@ -171,6 +159,26 @@ class UserSettingsScreen extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => const NotificationsConfigSheet(),
+    );
+  }
+
+  void _openAdditionalSettings(
+    BuildContext context,
+    UserSettingsNotifier notifier,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => AdditionalSettingsSheet(
+        onDeleteAccount: () {
+          Navigator.of(sheetContext).pop();
+          _confirmDeleteAccount(context, notifier);
+        },
+      ),
     );
   }
 
@@ -236,6 +244,47 @@ class UserSettingsScreen extends ConsumerWidget {
 // =============================================================================
 // Widgets
 // =============================================================================
+/// Saludo de la cabecera: "Hola," y el primer nombre del usuario.
+class _Greeting extends StatelessWidget {
+  const _Greeting({required this.firstName});
+
+  final String firstName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // `firstName` puede traer varios nombres ("Brayan Andrés"): solo el primero.
+    final name = firstName.trim().split(RegExp(r'\s+')).first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hola,',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        if (name.isNotEmpty)
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Padding horizontal común de las filas: el divisor arranca en el borde del
+/// icono y termina en el borde derecho de la fila, usando este mismo valor.
+const double _rowPadding = 10;
+
+/// Fila de modo oscuro: idéntica a los demás items, con el icono sol/luna
+/// animado y una píldora sol | luna en lugar de la flecha.
 class _DarkModeRow extends StatelessWidget {
   const _DarkModeRow({required this.value, required this.onChanged});
 
@@ -244,40 +293,98 @@ class _DarkModeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(
-            left: 16,
-            top: 14,
-            right: 10,
-            bottom: 6,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  _IconBubble(icon: Icons.dark_mode_outlined),
-                  const SizedBox(width: 15),
-                  Text(
-                    'Modo oscuro',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ],
+    return _SettingItem(
+      icon: value ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+      title: 'Modo oscuro',
+      onTap: () => onChanged(!value),
+      trailing: _ThemePill(isDark: value),
+    );
+  }
+}
+
+class _ThemePill extends StatelessWidget {
+  const _ThemePill({required this.isDark});
+
+  final bool isDark;
+
+  static const _duration = Duration(milliseconds: 220);
+  static const _thumb = 28.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final inactive = scheme.onSurface.withValues(alpha: 0.5);
+    return Semantics(
+      toggled: isDark,
+      label: 'Modo oscuro',
+      excludeSemantics: true,
+      child: Container(
+        width: _thumb * 2 + 4,
+        height: _thumb + 4,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: scheme.onSurface.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular((_thumb + 4) / 2),
+        ),
+        child: Stack(
+          children: [
+            AnimatedAlign(
+              duration: _duration,
+              curve: Curves.easeOutCubic,
+              alignment: isDark ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                width: _thumb,
+                height: _thumb,
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  shape: BoxShape.circle,
+                ),
               ),
-              Switch(value: value, onChanged: onChanged),
-            ],
-          ),
+            ),
+            Row(
+              children: [
+                _PillIcon(
+                  icon: Icons.light_mode_outlined,
+                  color: isDark ? inactive : scheme.onPrimary,
+                  duration: _duration,
+                ),
+                _PillIcon(
+                  icon: Icons.dark_mode_outlined,
+                  color: isDark ? scheme.onPrimary : inactive,
+                  duration: _duration,
+                ),
+              ],
+            ),
+          ],
         ),
-        Divider(
-          indent: 72,
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+      ),
+    );
+  }
+}
+
+class _PillIcon extends StatelessWidget {
+  const _PillIcon({
+    required this.icon,
+    required this.color,
+    required this.duration,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _ThemePill._thumb,
+      height: _ThemePill._thumb,
+      child: Center(
+        child: TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: color),
+          duration: duration,
+          builder: (_, value, _) => Icon(icon, size: 16, color: value),
         ),
-      ],
+      ),
     );
   }
 }
@@ -288,12 +395,16 @@ class _SettingItem extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.interactionColor,
+    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final VoidCallback onTap;
   final Color? interactionColor;
+
+  /// Reemplaza la flecha final (p. ej. la píldora de modo oscuro).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +415,10 @@ class _SettingItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: _rowPadding,
+              vertical: 12,
+            ),
             child: Row(
               children: [
                 _IconBubble(icon: icon),
@@ -317,20 +431,36 @@ class _SettingItem extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 14,
-                  color: theme.colorScheme.onSurface,
-                ),
+                trailing ??
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: theme.colorScheme.onSurface,
+                    ),
               ],
             ),
           ),
         ),
-        Divider(
-          indent: 72,
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-        ),
+        const _RowDivider(),
       ],
+    );
+  }
+}
+
+/// Divisor mínimo entre filas: del borde del icono al borde derecho.
+class _RowDivider extends StatelessWidget {
+  const _RowDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 0.5,
+      indent: _rowPadding,
+      endIndent: _rowPadding,
+      color: Theme.of(
+        context,
+      ).colorScheme.outlineVariant.withValues(alpha: 0.08),
     );
   }
 }
@@ -349,7 +479,19 @@ class _IconBubble extends StatelessWidget {
         color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
         shape: BoxShape.circle,
       ),
-      child: Icon(icon, size: 22, color: theme.colorScheme.primary),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        transitionBuilder: (child, anim) => RotationTransition(
+          turns: Tween(begin: 0.85, end: 1.0).animate(anim),
+          child: FadeTransition(opacity: anim, child: child),
+        ),
+        child: Icon(
+          icon,
+          key: ValueKey(icon),
+          size: 22,
+          color: theme.colorScheme.primary,
+        ),
+      ),
     );
   }
 }

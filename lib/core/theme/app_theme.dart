@@ -48,14 +48,14 @@ final ColorScheme _brandLight = const ColorScheme.light().copyWith(
 final ColorScheme _brandDark = const ColorScheme.dark().copyWith(
   primary: _brandPrimary,
   onPrimary: _white,
-  primaryContainer: _gray900,
+  primaryContainer: _gray1000,
   secondary: _gray100,
   onSecondary: _gray600,
   surface: _gray900,
   onSurface: _white,
   onSurfaceVariant: _gray100,
   surfaceContainerLowest: _gray1000, // Compose `background`
-  surfaceContainer: _gray600, // Compose `surfaceContainer`
+  surfaceContainer: _gray900, // Compose `surfaceContainer`
   error: _lightRed,
   onError: _black,
 );
