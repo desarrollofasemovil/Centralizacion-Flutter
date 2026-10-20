@@ -112,7 +112,8 @@ class PqrdsChoiceScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final asyncMun = ref.watch(municipalityProvider(municipalityId));
 
     return asyncMun.maybeWhen(
@@ -149,10 +150,12 @@ class PqrdsChoiceScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Puedes registrar una solicitud identificada para realizar seguimiento, o una anónima.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurface,
+                    ),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 32),
                   // Tarjeta PQRSDF Identificada
