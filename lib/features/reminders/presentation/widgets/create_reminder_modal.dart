@@ -89,28 +89,58 @@ class _CreateReminderSheet extends ConsumerWidget {
                       onSelected: notifier.updateFormProcedure,
                     ),
                     const SizedBox(height: 4),
-                    Material(
-                      elevation: 1,
-                      borderRadius: BorderRadius.circular(12),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CalendarCustomReminder(
-                          selectedDate: initialDate,
-                          onDateSelected: (date) {
-                            final millis = DateTime.utc(
-                              date.year,
-                              date.month,
-                              date.day,
-                            ).millisecondsSinceEpoch;
-                            notifier.updateFormDate(millis);
-                          },
+                    // Fecha y hora como campos (no el calendario completo
+                    // embebido): ocupan una fila y abren su selector al tocar.
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: _PickerField(
+                            label: 'Fecha',
+                            icon: Icons.calendar_today_outlined,
+                            value: _formatDate(initialDate),
+                            onTap: () async {
+                              final date = await _pickDate(
+                                context,
+                                initialDate,
+                              );
+                              if (date == null) return;
+                              notifier.updateFormDate(
+                                DateTime.utc(
+                                  date.year,
+                                  date.month,
+                                  date.day,
+                                ).millisecondsSinceEpoch,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _TimePickerField(
-                      time: form.selectedTime,
-                      onSelected: notifier.updateFormTime,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: _PickerField(
+                            label: 'Hora',
+                            icon: Icons.schedule,
+                            value: _formatTime(form.selectedTime),
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: form.selectedTime,
+                                builder: (ctx, child) => MediaQuery(
+                                  data: MediaQuery.of(
+                                    ctx,
+                                  ).copyWith(alwaysUse24HourFormat: true),
+                                  child: child!,
+                                ),
+                              );
+                              if (picked != null) {
+                                notifier.updateFormTime(picked);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     // Cuándo llega la notificación respecto a la fecha y hora.
@@ -225,56 +255,59 @@ class _ToggleRow extends StatelessWidget {
   }
 }
 
-class _TimePickerField extends StatelessWidget {
-  const _TimePickerField({required this.time, required this.onSelected});
+String _two(int n) => n.toString().padLeft(2, '0');
 
-  final TimeOfDay time;
-  final ValueChanged<TimeOfDay> onSelected;
+String _formatDate(DateTime d) => '${_two(d.day)}/${_two(d.month)}/${d.year}';
+
+String _formatTime(TimeOfDay t) => '${_two(t.hour)}:${_two(t.minute)}';
+
+/// Abre el calendario en un diálogo y devuelve el día elegido (`null` si se
+/// cierra sin elegir). Se reutiliza [CalendarCustomReminder] y no el
+/// `showDatePicker` de Material porque la app no carga las traducciones de
+/// Material: ese saldría en inglés.
+Future<DateTime?> _pickDate(BuildContext context, DateTime initial) {
+  return showDialog<DateTime>(
+    context: context,
+    builder: (ctx) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias,
+      child: CalendarCustomReminder(
+        selectedDate: initial,
+        onDateSelected: (date) => Navigator.of(ctx).pop(date),
+      ),
+    ),
+  );
+}
+
+/// Campo de solo lectura con el mismo borde que "Nombre del recordatorio";
+/// al tocarlo abre su selector (fecha u hora).
+class _PickerField extends StatelessWidget {
+  const _PickerField({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final String value;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final label =
-        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Hora',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface,
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        const SizedBox(height: 3),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: theme.colorScheme.surfaceContainerHighest
-                  .withValues(alpha: 0.5),
-              foregroundColor: theme.colorScheme.onSurface,
-              padding: const EdgeInsets.all(12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () async {
-              final picked = await showTimePicker(
-                context: context,
-                initialTime: time,
-                builder: (ctx, child) => MediaQuery(
-                  data: MediaQuery.of(
-                    ctx,
-                  ).copyWith(alwaysUse24HourFormat: true),
-                  child: child!,
-                ),
-              );
-              if (picked != null) onSelected(picked);
-            },
-            child: Text(label, style: theme.textTheme.bodyMedium),
-          ),
-        ),
-      ],
+        child: Text(value, style: theme.textTheme.titleSmall),
+      ),
     );
   }
 }

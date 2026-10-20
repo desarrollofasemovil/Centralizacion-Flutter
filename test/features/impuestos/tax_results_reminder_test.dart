@@ -202,6 +202,15 @@ void main() {
     expect(find.text('Impuesto Predial Unificado'), findsOneWidget);
     // Antelación precargada en el selector "Avisarme".
     expect(find.text('1 día antes'), findsOneWidget);
+    // Fecha límite en el campo "Fecha" (ya no hay calendario embebido).
+    final due = DateTime.now().add(const Duration(days: 30));
+    expect(find.text(DateFormat('dd/MM/yyyy').format(due)), findsOneWidget);
+    expect(find.text('08:00'), findsOneWidget);
+
+    // Al tocar la fecha se abre el calendario en un diálogo.
+    await tester.tap(find.text('Fecha'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
     expect(analytics.single('recordatorio_iniciado')!['sesion'], 'si');
   });
 }
