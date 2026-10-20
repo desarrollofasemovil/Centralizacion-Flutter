@@ -200,7 +200,8 @@ void main() {
     expect(find.text('Añadir recordatorio'), findsOneWidget);
     expect(find.text('Pagar Predial'), findsOneWidget);
     expect(find.text('Impuesto Predial Unificado'), findsOneWidget);
-    expect(find.text('Te avisaremos 1 día antes.'), findsOneWidget);
+    // Antelación precargada en el selector "Avisarme".
+    expect(find.text('1 día antes'), findsOneWidget);
     expect(analytics.single('recordatorio_iniciado')!['sesion'], 'si');
   });
 }

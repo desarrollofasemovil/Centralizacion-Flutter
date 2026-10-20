@@ -35,6 +35,7 @@ class AppRoutes {
   static const venues = '/municipality/:id/venues';
   static const help = '/municipality/:id/help';
   static const settings = '/municipality/:id/settings';
+  static const reminders = '/municipality/:id/reminders';
   static const editProfile = '/municipality/:id/edit-profile';
 
   static String selectMunicipalityPath(int departmentId) =>
@@ -72,6 +73,7 @@ class AppRoutes {
   static String venuesPath(int id) => '/municipality/$id/venues';
   static String helpPath(int id) => '/municipality/$id/help';
   static String settingsPath(int id) => '/municipality/$id/settings';
+  static String remindersPath(int id) => '/municipality/$id/reminders';
   static String editProfilePath(int id) => '/municipality/$id/edit-profile';
 }
 

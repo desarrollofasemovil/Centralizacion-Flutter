@@ -5,6 +5,7 @@ class MainSideMenuOptions extends StatelessWidget {
   final UserDTO? user;
   final VoidCallback onLoginSuccess;
   final VoidCallback goToSettingsUser;
+  final VoidCallback goToReminders;
   final VoidCallback onTermsClick;
   final VoidCallback goToHelp;
   final VoidCallback onLogoutSuccess;
@@ -14,6 +15,7 @@ class MainSideMenuOptions extends StatelessWidget {
     required this.user,
     required this.onLoginSuccess,
     required this.goToSettingsUser,
+    required this.goToReminders,
     required this.onTermsClick,
     required this.goToHelp,
     required this.onLogoutSuccess,
@@ -49,6 +51,13 @@ class MainSideMenuOptions extends StatelessWidget {
                     color: onColor,
                     onTap: onLoginSuccess,
                   ),
+                const SizedBox(height: 10),
+                _MenuItem(
+                  text: "Mis recordatorios",
+                  icon: Icons.notifications_active_outlined,
+                  color: onColor,
+                  onTap: goToReminders,
+                ),
                 const SizedBox(height: 10),
                 _MenuItem(
                   text: "Configuraciones",

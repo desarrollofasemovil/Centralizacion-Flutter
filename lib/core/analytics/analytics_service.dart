@@ -400,6 +400,17 @@ class AnalyticsService {
     );
   }
 
+  /// Abre "Mis recordatorios" desde el menú lateral o el aviso de la Home.
+  Future<void> logRemindersOpened({
+    required int municipalityId,
+    required RemindersEntry entry,
+  }) async {
+    await logEvent(
+      'recordatorios_abiertos',
+      parameters: {'municipio_id': municipalityId, 'entrada': entry.value},
+    );
+  }
+
   /// Recordatorio guardado en el backend. `antelacion` es cuánto antes de la
   /// fecha se programó el aviso.
   Future<void> logReminderCreated({

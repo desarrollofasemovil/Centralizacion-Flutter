@@ -65,6 +65,7 @@ import '../../features/perfil/presentation/edit_profile_screen.dart';
 
 // Historial Pagos
 import '../../features/historial_pagos/presentation/history_pay_screen.dart';
+import '../../features/reminders/presentation/reminders_screen.dart';
 
 /// Decide la pantalla inicial (FRONTEND §1.1 / BACKEND §7.2):
 /// - flavor individual (Manizales) → directo a su municipio fijo;
@@ -410,6 +411,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return UserSettingsScreen(municipalityId: id);
+            },
+          ),
+          _route(
+            path: AppRoutes.reminders,
+            builder: (context, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+              return RemindersScreen(municipalityId: id);
             },
           ),
           _route(

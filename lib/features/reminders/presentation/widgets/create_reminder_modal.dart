@@ -112,28 +112,36 @@ class _CreateReminderSheet extends ConsumerWidget {
                       time: form.selectedTime,
                       onSelected: notifier.updateFormTime,
                     ),
-                    // La antelación no se elige en este modal (aún): si viene
-                    // puesta, se dice cuándo llegará el aviso.
-                    if (form.offset != ReminderOffset.none)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.notifications_active_outlined,
-                              size: 18,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Te avisaremos ${form.offset.label}.',
-                                style: theme.textTheme.bodySmall,
-                              ),
-                            ),
-                          ],
+                    const SizedBox(height: 8),
+                    // Cuándo llega la notificación respecto a la fecha y hora.
+                    // Desde una factura viene puesta en "1 día antes".
+                    DropdownButtonFormField<ReminderOffset>(
+                      initialValue: form.offset,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Avisarme',
+                        prefixIcon: Icon(
+                          Icons.notifications_active_outlined,
+                          color: theme.colorScheme.primary,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                      items: [
+                        for (final offset in ReminderOffset.values)
+                          DropdownMenuItem(
+                            value: offset,
+                            child: Text(
+                              offset.label,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                      ],
+                      onChanged: (offset) {
+                        if (offset != null) notifier.updateFormOffset(offset);
+                      },
+                    ),
                     if (form.formError != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
