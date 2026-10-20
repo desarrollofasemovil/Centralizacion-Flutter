@@ -25,12 +25,16 @@ class TaxResultsScreen extends ConsumerStatefulWidget {
     required this.municipalityId,
     required this.taxes,
     required this.email,
+    this.phone = '',
     super.key,
   });
 
   final int municipalityId;
   final List<Tax> taxes;
   final String email;
+
+  /// Celular opcional que dio el usuario al consultar; se envía a la pasarela.
+  final String phone;
 
   @override
   ConsumerState<TaxResultsScreen> createState() => _TaxResultsScreenState();
@@ -65,6 +69,7 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
           municipalityId: widget.municipalityId,
           integrationType: matched?.integrationType ?? '0',
           municipalityProceduresId: matched?.id,
+          phone: widget.phone,
         );
   }
 

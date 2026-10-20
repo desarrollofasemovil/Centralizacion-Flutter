@@ -59,6 +59,7 @@ class _Repo implements TaxRepository {
     required String bankName,
     required int municipalityId,
     required String integrationType,
+    String phone = '',
   }) async {
     _calls.add('transaccion');
     return const PaymentGatewayInfo(url: 'https://pasarela.test/pago');

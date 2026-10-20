@@ -222,10 +222,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               final extra = state.extra as Map<String, dynamic>?;
               final taxes = extra?['taxes'] as List<Tax>? ?? [];
               final email = extra?['email'] as String? ?? '';
+              final phone = extra?['phone'] as String? ?? '';
               return TaxResultsScreen(
                 municipalityId: id,
                 taxes: taxes,
                 email: email,
+                phone: phone,
               );
             },
           ),
