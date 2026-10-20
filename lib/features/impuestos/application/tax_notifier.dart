@@ -16,14 +16,18 @@ final taxRepositoryProvider = Provider<TaxRepository>((ref) {
   );
 });
 
+final _tenDigits = RegExp(r'^\d{10}$');
+
 /// Puerto de `TaxQueryUiState` (TaxQueryViewModel.kt).
 class TaxQueryState {
   final QueryField? selectedQueryField;
   final String documentNumber;
   final String email;
+
+  /// Opcional: viaja a la pasarela con el resto de los datos del pagador.
+  final String phone;
   final bool acceptsPolicies;
   final bool acceptsConditions;
-  final bool isDropdownVisible;
   final bool isLoading;
   final String? queryError;
   final List<Tax>? querySuccess;
@@ -33,21 +37,27 @@ class TaxQueryState {
     this.selectedQueryField,
     this.documentNumber = '',
     this.email = '',
+    this.phone = '',
     this.acceptsPolicies = false,
     this.acceptsConditions = false,
-    this.isDropdownVisible = false,
     this.isLoading = false,
     this.queryError,
     this.querySuccess,
     this.showNoResultsDialog = false,
   });
 
+  /// El teléfono es opcional: vacío vale; si se escribe, 10 dígitos (la misma
+  /// regla del celular de Certificados).
+  bool get isPhoneValid => phone.isEmpty || _tenDigits.hasMatch(phone);
+
   /// Misma regla de `validateInputs()` del original: tipo de consulta
-  /// seleccionado, documento no vacío, email válido y ambas políticas.
+  /// seleccionado, documento no vacío, email válido y ambas políticas; más el
+  /// teléfono, que solo se valida si se escribió.
   bool get isQueryButtonEnabled =>
       selectedQueryField != null &&
       documentNumber.trim().isNotEmpty &&
       isValidEmail(email) &&
+      isPhoneValid &&
       acceptsPolicies &&
       acceptsConditions;
 
@@ -55,9 +65,9 @@ class TaxQueryState {
     QueryField? selectedQueryField,
     String? documentNumber,
     String? email,
+    String? phone,
     bool? acceptsPolicies,
     bool? acceptsConditions,
-    bool? isDropdownVisible,
     bool? isLoading,
     String? queryError,
     List<Tax>? querySuccess,
@@ -69,9 +79,9 @@ class TaxQueryState {
       selectedQueryField: selectedQueryField ?? this.selectedQueryField,
       documentNumber: documentNumber ?? this.documentNumber,
       email: email ?? this.email,
+      phone: phone ?? this.phone,
       acceptsPolicies: acceptsPolicies ?? this.acceptsPolicies,
       acceptsConditions: acceptsConditions ?? this.acceptsConditions,
-      isDropdownVisible: isDropdownVisible ?? this.isDropdownVisible,
       isLoading: isLoading ?? this.isLoading,
       queryError: clearQueryError ? null : (queryError ?? this.queryError),
       querySuccess: clearQuerySuccess
@@ -89,19 +99,26 @@ class TaxQueryNotifier extends Notifier<TaxQueryState> {
 
   TaxRepository get _repository => ref.read(taxRepositoryProvider);
 
-  void prefill({String? documentNumber, String? email}) {
+  /// El celular del perfil se precarga solo si ya cumple la regla de 10
+  /// dígitos: un valor con otro formato dejaría el botón deshabilitado por un
+  /// campo que es opcional.
+  void prefill({String? documentNumber, String? email, String? phone}) {
     state = state.copyWith(
       documentNumber: documentNumber ?? state.documentNumber,
       email: email ?? state.email,
+      phone: phone != null && _tenDigits.hasMatch(phone) ? phone : null,
     );
   }
 
-  void onDropdownVisibilityChanged(bool isVisible) {
-    state = state.copyWith(isDropdownVisible: isVisible);
+  /// Deja seleccionado el primer tipo de documento que trae la API, sin pisar
+  /// una elección ya hecha. Casi siempre hay uno solo.
+  void preselectQueryField(List<QueryField> options) {
+    if (state.selectedQueryField != null || options.isEmpty) return;
+    state = state.copyWith(selectedQueryField: options.first);
   }
 
   void onDocumentTypeChanged(QueryField value) {
-    state = state.copyWith(selectedQueryField: value, isDropdownVisible: false);
+    state = state.copyWith(selectedQueryField: value);
   }
 
   void onDocumentNumberChanged(String value) {
@@ -110,6 +127,10 @@ class TaxQueryNotifier extends Notifier<TaxQueryState> {
 
   void onEmailChanged(String value) {
     state = state.copyWith(email: value);
+  }
+
+  void onPhoneChanged(String value) {
+    state = state.copyWith(phone: value);
   }
 
   void onAcceptsPoliciesChanged(bool accepted) {

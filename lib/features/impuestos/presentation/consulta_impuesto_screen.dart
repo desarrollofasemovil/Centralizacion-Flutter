@@ -1,16 +1,51 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/models/query_field.dart';
 import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/validators.dart';
+import '../../../core/widgets/dialog_typography.dart';
 import '../../../core/widgets/important_alert_dialog.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../../core/widgets/outlined_form_field.dart';
 import '../../../core/widgets/policy_checkboxes.dart';
+import '../../../core/widgets/pqrd_dropdown.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../application/tax_notifier.dart';
-import 'widgets/styled_dropdown_menu.dart';
 import '../../../core/widgets/app_top_bar.dart';
+
+/// Textos de bienvenida de la consulta. Se alternan en cada entrada a la
+/// pantalla ([TaxIntroRotation]) para que la vista se sienta cercana.
+const taxIntroTexts = [
+  'Consulta tus facturas de forma rápida y segura. Revisa lo que debes y '
+      'paga en línea, sin filas ni desplazamientos.',
+  'Consulta aquí tu factura directamente desde tu alcaldía. Tus datos están '
+      'protegidos y tu pago se realiza por canales seguros.',
+  'Ten tus impuestos al día en pocos pasos. Consulta tu factura, revisa el '
+      'valor y paga desde donde estés.',
+];
+
+/// Elige el texto de bienvenida: avanza uno en cada entrada, así nunca se
+/// repite el mismo dos veces seguidas. Vive en memoria: al reabrir la app
+/// arranca en una posición al azar.
+abstract final class TaxIntroRotation {
+  static int? _next;
+
+  static String next() {
+    final index = _next ?? Random().nextInt(taxIntroTexts.length);
+    _next = (index + 1) % taxIntroTexts.length;
+    return taxIntroTexts[index];
+  }
+
+  @visibleForTesting
+  static void resetTo(int? index) => _next = index;
+}
 
 /// Puerto de `TaxQueryScreen` (ConsultaImpuestoScreen.kt): formulario de
 /// consulta de impuestos. Toda la lógica vive en [TaxQueryNotifier].
@@ -37,17 +72,35 @@ class ConsultaImpuestoScreen extends ConsumerStatefulWidget {
 
 class _ConsultaImpuestoScreenState
     extends ConsumerState<ConsultaImpuestoScreen> {
+  /// Se elige una vez por entrada a la pantalla (no en cada `build`).
+  final String _introText = TaxIntroRotation.next();
+
   @override
   void initState() {
     super.initState();
-    // Mejora sobre el original: precarga documento y correo del usuario
-    // logueado para no re-digitarlos.
+    // Mejora sobre el original: precarga documento, correo y celular del
+    // usuario logueado para no re-digitarlos.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // El municipio puede tardar en llegar: se preselecciona el tipo de
+      // documento ahora o cuando carguen sus datos.
+      ref.listenManual(municipalityProvider(widget.municipalityId), (_, next) {
+        final queryFields = next.value?.queryFields;
+        if (queryFields != null) {
+          ref
+              .read(taxQueryNotifierProvider.notifier)
+              .preselectQueryField(queryFields);
+        }
+      }, fireImmediately: true);
       final user = ref.read(sessionProvider);
       if (user != null) {
         ref
             .read(taxQueryNotifierProvider.notifier)
-            .prefill(documentNumber: user.nationalId, email: user.email);
+            .prefill(
+              documentNumber: user.nationalId,
+              email: user.email,
+              phone: user.phoneNumber,
+            );
       }
     });
   }
@@ -87,7 +140,11 @@ class _ConsultaImpuestoScreenState
         notifier.onQueryHandled();
         context.push(
           '/municipality/${widget.municipalityId}/taxes/results',
-          extra: {'taxes': taxes, 'email': next.email.trim()},
+          extra: {
+            'taxes': taxes,
+            'email': next.email.trim(),
+            'phone': next.phone.trim(),
+          },
         );
       }
       if (next.showNoResultsDialog && previous?.showNoResultsDialog != true) {
@@ -121,8 +178,7 @@ class _ConsultaImpuestoScreenState
                   Text(
                     widget.title,
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    style: DialogTypography.titleMedium.copyWith(
                       color: scheme.onSecondary,
                     ),
                   ),
@@ -146,42 +202,69 @@ class _ConsultaImpuestoScreenState
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
-                          'Consulta tus facturas y haz el pago de tus impuestos de manera rápida y segura.',
+                          _introText,
                           textAlign: TextAlign.justify,
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                          // `bodyMedium` trae interlineado 1.0 (pensado para
+                          // una sola línea): en un párrafo se vería apretado.
+                          style: DialogTypography.bodyMedium.copyWith(
+                            height: 1.3,
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  StyledDropdownMenu(
-                    selectedValue:
-                        state.selectedQueryField?.queryFieldType ?? '',
-                    placeholderText: 'Selecciona tipo de documento',
-                    isExpanded: state.isDropdownVisible,
-                    onExpandedChange: notifier.onDropdownVisibilityChanged,
-                    options: munDto.queryFields,
-                    onOptionSelected: notifier.onDocumentTypeChanged,
-                    itemToString: (qf) => qf.queryFieldType,
+                  const SizedBox(height: 18),
+                  PqrdDropdown<QueryField>(
+                    // El dropdown toma el valor inicial: se recrea si cambia
+                    // la selección.
+                    key: ValueKey(state.selectedQueryField?.id),
+                    filled: true,
+                    label: 'Tipo de documento*',
+                    hint: '*Tipo de documento',
+                    value: state.selectedQueryField,
+                    items: munDto.queryFields,
+                    itemLabel: (qf) => qf.queryFieldType,
+                    onChanged: (qf) {
+                      if (qf != null) notifier.onDocumentTypeChanged(qf);
+                    },
                   ),
-                  const SizedBox(height: 20),
-                  _CustomTextField(
+                  const SizedBox(height: 8),
+                  OutlinedFormField(
                     value: state.documentNumber,
                     onChanged: notifier.onDocumentNumberChanged,
-                    label: 'Número de documento',
+                    label: 'Número de documento*',
                     textInputAction: TextInputAction.next,
                   ),
-                  const SizedBox(height: 20),
-                  _CustomTextField(
+                  OutlinedFormField(
                     value: state.email,
                     onChanged: notifier.onEmailChanged,
-                    label: 'Correo electrónico',
+                    label: 'Correo electrónico*',
                     keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.done,
+                    textInputAction: TextInputAction.next,
+                    error: state.email.isNotEmpty && !isValidEmail(state.email)
+                        ? 'Ingrese un correo electrónico válido.'
+                        : null,
                   ),
-                  const SizedBox(height: 20),
+                  OutlinedFormField(
+                    value: state.phone,
+                    onChanged: notifier.onPhoneChanged,
+                    label: 'Teléfono celular',
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.done,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    error: state.isPhoneValid
+                        ? null
+                        : 'Ingrese un número de 10 dígitos.',
+                  ),
+                  const Text(
+                    'Los campos con * son obligatorios',
+                    style: DialogTypography.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
                   PolicyCheckboxes(
                     dataPolicyChecked: state.acceptsPolicies,
                     onDataPolicyChange: notifier.onAcceptsPoliciesChanged,
@@ -210,64 +293,39 @@ class _ConsultaImpuestoScreenState
           child: Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () => context.pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4F4F4F),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      'Cancelar',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+                child: _filledButton(
+                  label: 'Cancelar',
+                  background: AppColors.gray600,
+                  foreground: scheme.onPrimary,
+                  onPressed: () => context.pop(),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: SizedBox(
-                  height: 50,
-                  child: asyncMun.maybeWhen(
-                    data: (munDto) => ElevatedButton(
-                      onPressed: state.isQueryButtonEnabled && !state.isLoading
-                          ? () => notifier.onQueryClicked(
-                              municipalityId: widget.municipalityId,
-                              entityCode: munDto.entityCode,
-                              taxId: widget.taxId,
-                            )
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: scheme.primary,
-                        foregroundColor: scheme.onPrimary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: state.isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'Consultar',
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: scheme.onPrimary,
-                              ),
+                child: asyncMun.maybeWhen(
+                  data: (munDto) => _filledButton(
+                    label: 'Consultar',
+                    background: scheme.primary,
+                    foreground: scheme.onPrimary,
+                    onPressed: state.isQueryButtonEnabled && !state.isLoading
+                        ? () => notifier.onQueryClicked(
+                            municipalityId: widget.municipalityId,
+                            entityCode: munDto.entityCode,
+                            taxId: widget.taxId,
+                          )
+                        : null,
+                    child: state.isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
                             ),
-                    ),
-                    orElse: () => const SizedBox.shrink(),
+                          )
+                        : null,
                   ),
+                  orElse: () => const SizedBox.shrink(),
                 ),
               ),
             ],
@@ -276,78 +334,26 @@ class _ConsultaImpuestoScreenState
       ),
     );
   }
-}
 
-/// Puerto del `CustomTextField` del original: relleno `surfaceContainer`,
-/// radio 16 y sin línea indicadora.
-class _CustomTextField extends StatefulWidget {
-  const _CustomTextField({
-    required this.value,
-    required this.onChanged,
-    required this.label,
-    this.keyboardType,
-    this.textInputAction,
-  });
-
-  final String value;
-  final ValueChanged<String> onChanged;
-  final String label;
-  final TextInputType? keyboardType;
-  final TextInputAction? textInputAction;
-
-  @override
-  State<_CustomTextField> createState() => _CustomTextFieldState();
-}
-
-class _CustomTextFieldState extends State<_CustomTextField> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.value,
-  );
-
-  @override
-  void didUpdateWidget(covariant _CustomTextField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.value != _controller.text) {
-      _controller.value = _controller.value.copyWith(text: widget.value);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide.none,
-    );
-    // Tipografía por defecto de Material (no el bodySmall del original de
-    // Compose): en Flutter ese estilo se veía demasiado pequeño; prima la
-    // legibilidad sobre la equivalencia 1:1.
-    return TextField(
-      controller: _controller,
-      onChanged: widget.onChanged,
-      keyboardType: widget.keyboardType,
-      textInputAction: widget.textInputAction,
-      maxLines: 1,
-      decoration: InputDecoration(
-        labelText: widget.label,
-        // La etiqueta flotante (igual que el `label` del `TextField` filled del
-        // original) necesita espacio arriba al subir; con padding simétrico se
-        // encimaba con el texto. Reservamos top para que no se solape.
-        alignLabelWithHint: true,
-        floatingLabelBehavior: FloatingLabelBehavior.auto,
-        filled: true,
-        fillColor: scheme.surfaceContainer,
-        border: border,
-        enabledBorder: border,
-        focusedBorder: border,
-        contentPadding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+  /// Botón de los formularios de Certificados: relleno, sin elevación, padding
+  /// 12/18 y texto `headlineMedium`.
+  Widget _filledButton({
+    required String label,
+    required Color background,
+    required Color foreground,
+    required VoidCallback? onPressed,
+    Widget? child,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        backgroundColor: background,
+        foregroundColor: foreground,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
+        textStyle: DialogTypography.headlineMedium,
       ),
+      child: child ?? Text(label, maxLines: 1, softWrap: false),
     );
   }
 }

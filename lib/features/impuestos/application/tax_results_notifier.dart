@@ -77,6 +77,7 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
     required String bankName,
     required int municipalityId,
     required String integrationType,
+    required String phone,
   }) async {
     try {
       final paymentInfo = await ref
@@ -87,6 +88,7 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
             bankName: bankName,
             municipalityId: municipalityId,
             integrationType: integrationType,
+            phone: phone,
           );
       if (paymentInfo.url.trim().isEmpty) {
         // La pantalla ignora una URL vacía: sin este evento el pago se
@@ -149,6 +151,7 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
     required int municipalityId,
     required String integrationType,
     required int? municipalityProceduresId,
+    String phone = '',
   }) async {
     if (tax.isExpired || state.isLoading) return;
     state = state.copyWith(
@@ -193,6 +196,7 @@ class TaxResultsNotifier extends Notifier<TaxResultsState> {
       bankName: bankName,
       municipalityId: municipalityId,
       integrationType: integrationType,
+      phone: phone,
     );
   }
 

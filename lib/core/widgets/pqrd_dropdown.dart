@@ -20,6 +20,7 @@ class PqrdDropdown<T> extends StatelessWidget {
     this.hint,
     this.enabled = true,
     this.validator,
+    this.filled = false,
   });
 
   final String label;
@@ -30,6 +31,10 @@ class PqrdDropdown<T> extends StatelessWidget {
   final ValueChanged<T?>? onChanged;
   final bool enabled;
   final String? Function(T?)? validator;
+
+  /// Rellena el campo con `surfaceContainerLowest`, el mismo fondo de
+  /// `OutlinedFormField`, para que ambos se vean iguales en un formulario.
+  final bool filled;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +56,8 @@ class PqrdDropdown<T> extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
+          filled: filled,
+          fillColor: filled ? scheme.surfaceContainerLowest : null,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 14,
