@@ -215,6 +215,13 @@ void main() {
 
       expect(find.text('Añadir recordatorio'), findsOneWidget);
       expect(find.text('Avisarme'), findsOneWidget);
+
+      // Con indicador de arrastre y alto según el contenido (antes el 90 %).
+      final sheet = find.byType(BottomSheet);
+      expect(tester.widget<BottomSheet>(sheet).showDragHandle, isTrue);
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      expect(tester.getSize(sheet).height, lessThan(screenHeight * 0.9));
     });
   });
 

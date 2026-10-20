@@ -16,6 +16,9 @@ Future<void> showCreateReminderModal(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    // Indicador de arrastre de Material (como en PQRD): deja claro que el
+    // modal se cierra deslizando hacia abajo.
+    showDragHandle: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -50,175 +53,171 @@ class _CreateReminderSheet extends ConsumerWidget {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(bottom: bottomInset),
-        child: FractionallySizedBox(
-          heightFactor: 0.9,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Text(
-                'Añadir recordatorio',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+        // Alto según el contenido (antes ocupaba el 90 % de la pantalla); si no
+        // cabe (teclado abierto, lista de trámites desplegada) se desplaza.
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Añadir recordatorio',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 2),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(12),
-                  children: [
-                    // `initialValue`: el nombre puede venir precargado (p. ej.
-                    // "Pagar Predial" desde una factura).
-                    TextFormField(
-                      initialValue: form.customName,
-                      textInputAction: TextInputAction.next,
-                      style: theme.textTheme.titleSmall,
-                      onChanged: notifier.updateFormName,
-                      decoration: InputDecoration(
-                        labelText: 'Nombre del recordatorio',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                children: [
+                  // `initialValue`: el nombre puede venir precargado (p. ej.
+                  // "Pagar Predial" desde una factura).
+                  TextFormField(
+                    initialValue: form.customName,
+                    textInputAction: TextInputAction.next,
+                    style: theme.textTheme.titleSmall,
+                    onChanged: notifier.updateFormName,
+                    decoration: InputDecoration(
+                      labelText: 'Nombre del recordatorio',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _SearchableProcedureDropdown(
+                    procedures: procedures,
+                    selected: form.selectedProcedure,
+                    onSelected: notifier.updateFormProcedure,
+                  ),
+                  const SizedBox(height: 4),
+                  // Fecha y hora como campos (no el calendario completo
+                  // embebido): ocupan una fila y abren su selector al tocar.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _PickerField(
+                          label: 'Fecha',
+                          icon: Icons.calendar_today_outlined,
+                          value: _formatDate(initialDate),
+                          onTap: () async {
+                            final date = await _pickDate(context, initialDate);
+                            if (date == null) return;
+                            notifier.updateFormDate(
+                              DateTime.utc(
+                                date.year,
+                                date.month,
+                                date.day,
+                              ).millisecondsSinceEpoch,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: _PickerField(
+                          label: 'Hora',
+                          icon: Icons.schedule,
+                          value: _formatTime(form.selectedTime),
+                          onTap: () async {
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime: form.selectedTime,
+                              builder: (ctx, child) => MediaQuery(
+                                data: MediaQuery.of(
+                                  ctx,
+                                ).copyWith(alwaysUse24HourFormat: true),
+                                child: child!,
+                              ),
+                            );
+                            if (picked != null) {
+                              notifier.updateFormTime(picked);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Cuándo llega la notificación respecto a la fecha y hora.
+                  // Desde una factura viene puesta en "1 día antes".
+                  DropdownButtonFormField<ReminderOffset>(
+                    initialValue: form.offset,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Avisarme',
+                      prefixIcon: Icon(
+                        Icons.notifications_active_outlined,
+                        color: theme.colorScheme.primary,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: [
+                      for (final offset in ReminderOffset.values)
+                        DropdownMenuItem(
+                          value: offset,
+                          child: Text(
+                            offset.label,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                    ],
+                    onChanged: (offset) {
+                      if (offset != null) notifier.updateFormOffset(offset);
+                    },
+                  ),
+                  if (form.formError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        form.formError!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    _SearchableProcedureDropdown(
-                      procedures: procedures,
-                      selected: form.selectedProcedure,
-                      onSelected: notifier.updateFormProcedure,
-                    ),
-                    const SizedBox(height: 4),
-                    // Fecha y hora como campos (no el calendario completo
-                    // embebido): ocupan una fila y abren su selector al tocar.
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: _PickerField(
-                            label: 'Fecha',
-                            icon: Icons.calendar_today_outlined,
-                            value: _formatDate(initialDate),
-                            onTap: () async {
-                              final date = await _pickDate(
-                                context,
-                                initialDate,
-                              );
-                              if (date == null) return;
-                              notifier.updateFormDate(
-                                DateTime.utc(
-                                  date.year,
-                                  date.month,
-                                  date.day,
-                                ).millisecondsSinceEpoch,
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          flex: 2,
-                          child: _PickerField(
-                            label: 'Hora',
-                            icon: Icons.schedule,
-                            value: _formatTime(form.selectedTime),
-                            onTap: () async {
-                              final picked = await showTimePicker(
-                                context: context,
-                                initialTime: form.selectedTime,
-                                builder: (ctx, child) => MediaQuery(
-                                  data: MediaQuery.of(
-                                    ctx,
-                                  ).copyWith(alwaysUse24HourFormat: true),
-                                  child: child!,
-                                ),
-                              );
-                              if (picked != null) {
-                                notifier.updateFormTime(picked);
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    // Cuándo llega la notificación respecto a la fecha y hora.
-                    // Desde una factura viene puesta en "1 día antes".
-                    DropdownButtonFormField<ReminderOffset>(
-                      initialValue: form.offset,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        labelText: 'Avisarme',
-                        prefixIcon: Icon(
-                          Icons.notifications_active_outlined,
-                          color: theme.colorScheme.primary,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      items: [
-                        for (final offset in ReminderOffset.values)
-                          DropdownMenuItem(
-                            value: offset,
-                            child: Text(
-                              offset.label,
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                          ),
-                      ],
-                      onChanged: (offset) {
-                        if (offset != null) notifier.updateFormOffset(offset);
-                      },
-                    ),
-                    if (form.formError != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          form.formError!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.error,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
+                  const SizedBox(height: 8),
+                  _ToggleRow(
+                    icon: Icons.calendar_month,
+                    label: 'Agregar a Google Calendar',
+                    value: form.addToCalendar,
+                    onChanged: notifier.updateFormAddToCalendarToggle,
+                  ),
+                  if (form.addToCalendar)
                     _ToggleRow(
-                      icon: Icons.calendar_month,
-                      label: 'Agregar a Google Calendar',
-                      value: form.addToCalendar,
-                      onChanged: notifier.updateFormAddToCalendarToggle,
+                      icon: Icons.email_outlined,
+                      label: 'Recordatorio por correo',
+                      value: form.sendEmail,
+                      onChanged: notifier.updateFormEmailToggle,
                     ),
-                    if (form.addToCalendar)
-                      _ToggleRow(
-                        icon: Icons.email_outlined,
-                        label: 'Recordatorio por correo',
-                        value: form.sendEmail,
-                        onChanged: notifier.updateFormEmailToggle,
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.all(12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
-                        padding: const EdgeInsets.all(12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () async {
-                        final navigator = Navigator.of(context);
-                        final ok = await notifier.validateAndSubmit();
-                        if (ok) navigator.pop();
-                      },
-                      child: const Text('Crear recordatorio'),
                     ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
+                    onPressed: () async {
+                      final navigator = Navigator.of(context);
+                      final ok = await notifier.validateAndSubmit();
+                      if (ok) navigator.pop();
+                    },
+                    child: const Text('Crear recordatorio'),
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
