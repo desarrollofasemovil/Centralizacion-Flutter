@@ -35,6 +35,7 @@ class TopBarNavigationScaffold extends StatelessWidget {
     this.onBack,
     this.bottomBar,
     this.onRefresh,
+    this.collapseOnlyWhenContentOverflows = false,
   });
 
   /// Ruta del asset SVG del ícono del trámite (se tinta con el color primario).
@@ -55,6 +56,16 @@ class TopBarNavigationScaffold extends StatelessWidget {
   /// Si se pasa, envuelve el scroll en un `RefreshIndicator` (equivalente al
   /// `PullToRefreshBox` que el original usa en Historial de pagos).
   final Future<void> Function()? onRefresh;
+
+  /// Por defecto el cuerpo mide al menos "pantalla menos cabecera recogida", así
+  /// que SIEMPRE hay recorrido para recoger la cabecera, aunque el contenido
+  /// sea corto (como el `LargeTopAppBar` del original).
+  ///
+  /// Con `true` el cuerpo solo se estira hasta llenar la pantalla con la
+  /// cabecera desplegada: si el contenido cabe (p. ej. una lista vacía) no hay
+  /// scroll y la cabecera no se recoge. Si el contenido es más alto, se
+  /// desplaza y recoge como siempre.
+  final bool collapseOnlyWhenContentOverflows;
 
   @override
   Widget build(BuildContext context) {
@@ -101,10 +112,12 @@ class TopBarNavigationScaffold extends StatelessWidget {
                   // Garantiza que el cuerpo blanco llegue al fondo aunque el
                   // contenido sea corto, y deja margen de scroll para colapsar.
                   constraints: BoxConstraints(
-                    minHeight: (viewportHeight - delegate.minExtent).clamp(
-                      0.0,
-                      double.infinity,
-                    ),
+                    minHeight:
+                        (viewportHeight -
+                                (collapseOnlyWhenContentOverflows
+                                    ? delegate.maxExtent
+                                    : delegate.minExtent))
+                            .clamp(0.0, double.infinity),
                   ),
                   child: Container(
                     width: double.infinity,

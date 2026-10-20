@@ -31,6 +31,9 @@ class HistoryPayScreen extends ConsumerWidget {
           description:
               'Desliza hacia abajo y actualiza el estado de tus transacciones.',
           onRefresh: user == null ? null : () => _refresh(ref),
+          // Con el historial vacío (o sin sesión) no hay nada que desplazar: la
+          // cabecera se queda desplegada en vez de recogerse sin motivo.
+          collapseOnlyWhenContentOverflows: true,
           body: _Frame(
             child: user == null
                 ? _SessionCheckMessage(

@@ -10,6 +10,52 @@ Color getAdaptiveColor(
   return backgroundColor.computeLuminance() > 0.5 ? darkColor : lightColor;
 }
 
+/// Escudo del municipio en su recuadro blanco (`onPrimary`). Se escala con
+/// [size] (el padding y el ícono de respaldo van proporcionales) para usarlo
+/// grande en la Home y pequeño en la barra recogida.
+class MunicipalityShield extends StatelessWidget {
+  const MunicipalityShield({
+    super.key,
+    required this.url,
+    this.size = 100,
+    this.radius = 12,
+  });
+
+  final String url;
+  final double size;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = Icon(
+      Icons.location_city,
+      size: size * 0.4,
+      color: Colors.grey,
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: Container(
+        color: Theme.of(context).colorScheme.onPrimary,
+        width: size,
+        height: size,
+        padding: EdgeInsets.all(size * 0.1),
+        // Municipio sin escudo (`idShield` nulo): el mismo ícono que cuando la
+        // imagen falla, sin intentar cargar una URL vacía.
+        child: url.trim().isEmpty
+            ? fallback
+            : CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.contain,
+                placeholder: (context, url) => const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                errorWidget: (context, url, error) => fallback,
+              ),
+      ),
+    );
+  }
+}
+
 class MainHeader extends StatelessWidget {
   final Design design;
   final String? departamento;
@@ -68,31 +114,7 @@ class MainHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              color: theme.colorScheme.onPrimary,
-              width: 100,
-              height: 100,
-              padding: const EdgeInsets.all(10),
-              // Municipio sin escudo (`idShield` nulo): el mismo ícono que
-              // cuando la imagen falla, sin intentar cargar una URL vacía.
-              child: design.escudoUrl.trim().isEmpty
-                  ? const Icon(Icons.location_city, size: 40, color: Colors.grey)
-                  : CachedNetworkImage(
-                      imageUrl: design.escudoUrl,
-                      fit: BoxFit.contain,
-                      placeholder: (context, url) => const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      errorWidget: (context, url, error) => const Icon(
-                        Icons.location_city,
-                        size: 40,
-                        color: Colors.grey,
-                      ),
-                    ),
-            ),
-          ),
+          MunicipalityShield(url: design.escudoUrl),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
             child: Text(
