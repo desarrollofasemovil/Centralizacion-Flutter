@@ -14,6 +14,7 @@ import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../portal_externo/application/portal_visit_tracker.dart';
 import '../../portal_externo/presentation/portal_survey_sheet.dart';
+import '../../reminders/presentation/reminder_toast_listener.dart';
 import '../../reminders/presentation/reminders_section.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../../tramites/domain/info_tramite.dart';
@@ -535,10 +536,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                                         .read(userPreferencesProvider)
                                         .remindersIsVisible()) ...[
                                       AnimatedSection(
-                                        child: RemindersSection(
-                                          procedures: widget
-                                              .municipality
-                                              .municipalityProcedures,
+                                        child: ReminderToastListener(
+                                          child: RemindersSection(
+                                            procedures: widget
+                                                .municipality
+                                                .municipalityProcedures,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 10),

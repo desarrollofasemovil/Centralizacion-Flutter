@@ -7,10 +7,18 @@ import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/analytics/analytics_service.dart';
+import '../../../core/models/municipality_procedure.dart';
 import '../../../core/municipality/municipality_repository.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/review/review_prompt_service.dart';
 import '../../../core/utils/url_opener.dart';
+import '../../../core/widgets/confirmation_dialog.dart';
+import '../../auth/application/auth_providers.dart';
+import '../../auth/presentation/login_bottom_sheet.dart';
+import '../../reminders/application/reminders_notifier.dart';
+import '../../reminders/domain/reminders_state.dart';
+import '../../reminders/presentation/reminder_toast_listener.dart';
+import '../../reminders/presentation/widgets/create_reminder_modal.dart';
 import '../application/tax_results_notifier.dart';
 import '../domain/tax.dart';
 import 'widgets/tax_card.dart';
@@ -71,6 +79,66 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
           municipalityProceduresId: matched?.id,
           phone: widget.phone,
         );
+  }
+
+  /// Trámite del municipio al que corresponde [tax] (el backend del
+  /// recordatorio lo exige). `null` si el municipio aún no carga o no hay.
+  MunicipalityProcedure? _procedureFor(Tax tax) {
+    final mun = ref.read(municipalityProvider(widget.municipalityId)).value;
+    if (mun == null) return null;
+    return findTaxProcedureByExternalId(mun.municipalityProcedures, tax.taxId);
+  }
+
+  /// "Recordarme antes del vencimiento". Los recordatorios se guardan en la
+  /// cuenta del usuario, así que sin sesión (o como invitado) primero se
+  /// explica y se ofrece iniciar sesión; al volver con sesión sigue directo al
+  /// modal, ya lleno: el ciudadano solo confirma.
+  Future<void> _remind(Tax tax) async {
+    final procedure = _procedureFor(tax);
+    final dueDate = Tax.parseDueDate(tax.dueDate);
+    final mun = ref.read(municipalityProvider(widget.municipalityId)).value;
+    if (procedure == null || dueDate == null || mun == null) return;
+
+    bool hasSession() => ref.read(sessionProvider)?.loginStatus == true;
+    unawaited(
+      ref
+          .read(analyticsServiceProvider)
+          .logReminderStarted(
+            municipalityId: widget.municipalityId,
+            origin: ReminderOrigin.invoice,
+            hasSession: hasSession(),
+          ),
+    );
+
+    if (!hasSession()) {
+      final wantsLogin = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => ConfirmationDialog(
+          title: 'Inicia sesión para recordarte',
+          message:
+              'Guardamos tus recordatorios en tu cuenta para avisarte antes de '
+              'que venza tu factura.',
+          icon: Icons.notifications_active_outlined,
+          confirmButtonText: 'Iniciar sesión',
+          dismissButtonText: 'Ahora no',
+          onConfirm: () => Navigator.of(ctx).pop(true),
+          onDismiss: () => Navigator.of(ctx).pop(false),
+        ),
+      );
+      if (wantsLogin != true || !mounted) return;
+      await showLoginBottomSheet(context);
+      if (!mounted || !hasSession()) return;
+    }
+
+    final notifier = ref.read(remindersNotifierProvider.notifier);
+    notifier.prefillFromInvoice(
+      procedure: procedure,
+      name: 'Pagar ${tax.taxName}'.trim(),
+      dueDate: dueDate,
+    );
+    notifier.toggleModal(true);
+    await showCreateReminderModal(context, mun.municipalityProcedures);
+    notifier.toggleModal(false);
   }
 
   Future<void> _openPdf(String path) async {
@@ -141,47 +209,57 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
           );
         }
       },
-      child: Scaffold(
-        backgroundColor: scheme.surface,
-        appBar: AppTopBar(
-          title: 'Facturas Encontradas',
-          backgroundColor: Colors.transparent,
-          centerTitle: true,
-          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-          onBack: () => context.pop(),
-        ),
-        body: Stack(
-          children: [
-            if (asyncMun.isLoading)
-              const Center(child: CircularProgressIndicator.adaptive())
-            else if (asyncMun.hasError)
-              const Center(
-                child: Text('Error al cargar los datos del municipio.'),
-              ),
-            ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: widget.taxes.length,
-              itemBuilder: (context, index) {
-                final tax = widget.taxes[index];
-                return _AnimatedEntry(
-                  delay: Duration(milliseconds: index * 100),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: TaxCard(
-                      tax: tax,
-                      isLoading: state.isLoading,
-                      onPayClick: _handlePay,
-                      onPdfClick: notifier.onOpenPdfClicked,
-                      onShareClick: notifier.onSharePdfClicked,
+      // Avisos de "recordatorio creado" (botón "Recordarme" de cada factura).
+      child: ReminderToastListener(
+        child: Scaffold(
+          backgroundColor: scheme.surface,
+          appBar: AppTopBar(
+            title: 'Facturas Encontradas',
+            backgroundColor: Colors.transparent,
+            centerTitle: true,
+            titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+            onBack: () => context.pop(),
+          ),
+          body: Stack(
+            children: [
+              if (asyncMun.isLoading)
+                const Center(child: CircularProgressIndicator.adaptive())
+              else if (asyncMun.hasError)
+                const Center(
+                  child: Text('Error al cargar los datos del municipio.'),
+                ),
+              ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                itemCount: widget.taxes.length,
+                itemBuilder: (context, index) {
+                  final tax = widget.taxes[index];
+                  return _AnimatedEntry(
+                    delay: Duration(milliseconds: index * 100),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: TaxCard(
+                        tax: tax,
+                        isLoading: state.isLoading,
+                        onPayClick: _handlePay,
+                        onPdfClick: notifier.onOpenPdfClicked,
+                        onShareClick: notifier.onSharePdfClicked,
+                        onRemindClick:
+                            tax.isReminderEligible && _procedureFor(tax) != null
+                            ? _remind
+                            : null,
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-            // Diálogo modal de carga (DownloadingDialog del original).
-            if (state.isLoading)
-              _DownloadingDialog(message: state.loadingMessage),
-          ],
+                  );
+                },
+              ),
+              // Diálogo modal de carga (DownloadingDialog del original).
+              if (state.isLoading)
+                _DownloadingDialog(message: state.loadingMessage),
+            ],
+          ),
         ),
       ),
     );

@@ -211,6 +211,25 @@ encuesta respondida (`problema` → `pagina_fallo`), y proceso matado con la Cus
 (`am kill`): al volver a la Home llegó `portal_externo_regreso` con `app_reiniciada = si` y salió
 la encuesta; cerrarla con la X registró `encuesta_portal_descartada` (`paso = pregunta`).
 
+## Fase 3 — recordatorios (2026-10-20)
+
+Hasta ahora no se medía nada de Recordatorios y el uso se percibe casi nulo. Estos eventos acompañan
+el botón **"Recordarme antes del vencimiento"** de cada factura (plan:
+[`superpowers/plans/2026-10-20-recordatorios-fuera-de-home.md`](superpowers/plans/2026-10-20-recordatorios-fuera-de-home.md)).
+
+### Eventos
+
+| Evento | Cuándo | Parámetros |
+|---|---|---|
+| `recordatorio_iniciado` | toca "Recordarme" en una factura | `municipio_id`, `origen` (`factura`), `sesion` (`si`/`no`) |
+| `recordatorio_creado` | el backend guardó el recordatorio (desde cualquier entrada) | `municipio_id` (si el trámite lo trae), `origen` (`factura`/`general`), `antelacion` (`none`, `oneDay`, …) |
+
+### Para los informes
+
+- **Dimensiones de evento:** `origen`, `sesion`, `antelacion`.
+- **Conversión del botón** = `recordatorio_creado` (`origen = factura`) / `recordatorio_iniciado`.
+- `sesion = no` seguido de `login` muestra cuántos inician sesión para poder crear el recordatorio.
+
 ## BigQuery (vinculado el 2026-10-19)
 
 Exportación **diaria** de Google Analytics desde Firebase al proyecto `betaappcentralizate`, en

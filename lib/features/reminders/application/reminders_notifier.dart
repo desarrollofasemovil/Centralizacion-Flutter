@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/api/services/api_providers.dart';
 import '../../../core/api/services/emails_api_service.dart';
 import '../../../core/models/create_reminders_by_user_dto.dart';
@@ -103,6 +104,39 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
     }
   }
 
+  /// Deja el formulario listo para un recordatorio de pago de factura: el
+  /// ciudadano solo confirma. Fecha = la fecha límite a las 8:00 y aviso 1 día
+  /// antes ([defaultInvoiceReminderOffset]). Llamar antes de `toggleModal(true)`
+  /// (que conserva la fecha ya puesta).
+  void prefillFromInvoice({
+    required MunicipalityProcedure procedure,
+    required String name,
+    required DateTime dueDate,
+  }) {
+    const time = TimeOfDay(hour: 8, minute: 0);
+    final target = DateTime(
+      dueDate.year,
+      dueDate.month,
+      dueDate.day,
+      time.hour,
+      time.minute,
+    );
+    state = state.copyWith(
+      formState: CreateReminderState(
+        customName: name,
+        selectedProcedure: procedure,
+        selectedDateMillis: DateTime.utc(
+          dueDate.year,
+          dueDate.month,
+          dueDate.day,
+        ).millisecondsSinceEpoch,
+        selectedTime: time,
+        offset: defaultInvoiceReminderOffset(target, now: DateTime.now()),
+        origin: ReminderOrigin.invoice,
+      ),
+    );
+  }
+
   void updateFormName(String name) => state = state.copyWith(
         formState: state.formState.copyWith(customName: name),
       );
@@ -176,6 +210,7 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
       offset: form.offset,
       sendEmail: form.sendEmail,
       addToCalendar: form.addToCalendar,
+      origin: form.origin,
     );
     return true;
   }
@@ -187,6 +222,7 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
     required ReminderOffset offset,
     required bool sendEmail,
     required bool addToCalendar,
+    required ReminderOrigin origin,
   }) async {
     final userId = _user?.id;
     if (userId == null) return;
@@ -218,6 +254,14 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
         _toast('Guardado, pero no se pudo programar la notificación…');
         return;
       }
+
+      unawaited(
+        ref.read(analyticsServiceProvider).logReminderCreated(
+              origin: origin,
+              offset: offset.name,
+              municipalityId: procedure.municipality?.id,
+            ),
+      );
 
       // Enriquecemos con el trámite seleccionado (el backend no lo devuelve).
       final enriched = _withNavigation(created, procedure);

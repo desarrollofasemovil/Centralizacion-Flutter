@@ -39,6 +39,16 @@ class Tax {
     return parsedDate.isBefore(today);
   }
 
+  /// Se puede programar un recordatorio: la fecha límite se entiende y es
+  /// posterior a hoy (si vence hoy ya no hay margen para avisar antes).
+  bool get isReminderEligible {
+    final parsedDate = parseDueDate(dueDate);
+    if (parsedDate == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return parsedDate.isAfter(today);
+  }
+
   /// Puerto de `parseDueDate` de `Tax.kt`: los mismos formatos y en el mismo
   /// orden. Tiene que ser `parseStrict`: `DateFormat.parse` es tolerante y
   /// desborda días y meses en vez de fallar, así que `yyyy/dd/MM` (el primero)
