@@ -92,6 +92,33 @@ class _CreateReminderSheet extends ConsumerWidget {
                     onSelected: notifier.updateFormProcedure,
                   ),
                   const SizedBox(height: 12),
+                  // Desde un pago del Historial: no se sabe cada cuánto vence
+                  // el impuesto, así que el ciudadano elige y la fecha se
+                  // calcula desde el pago (puede ajustarla en "Fecha").
+                  if (form.paidOn != null) ...[
+                    Text(
+                      '¿Cuándo vuelve a vencer?',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        for (final months in paymentRecurrenceMonths)
+                          ChoiceChip(
+                            label: Text(
+                              months == 12 ? 'En 1 año' : 'En $months meses',
+                            ),
+                            selected: form.recurrenceMonths == months,
+                            onSelected: (_) =>
+                                notifier.selectRecurrence(months),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   // Fecha y hora como campos (no el calendario completo
                   // embebido): ocupan una fila y abren su selector al tocar.
                   Row(

@@ -41,7 +41,7 @@ En los resultados de la consulta de impuesto, cada factura vigente ofrece
 - Analítica nueva (`recordatorio_iniciado`, `recordatorio_creado`) para medir por
   fin el uso. Ver `docs/ANALITICA_EVENTOS.md`.
 
-### Paso 2 — Pantalla "Mis recordatorios" y fuera de la Home ✅ (en revisión)
+### Paso 2 — Pantalla "Mis recordatorios" y fuera de la Home ✅ (PR #40)
 
 - Pantalla propia (`RemindersScreen`, ruta `/municipality/:id/reminders`) con la
   lista: próximos primero, cuándo vencen ("mañana", "en 4 días"), vencidos al
@@ -58,15 +58,26 @@ En los resultados de la consulta de impuesto, cada factura vigente ofrece
 - El modal tiene selector de antelación ("Avisarme").
 - Analítica: `recordatorios_abiertos` (`entrada`) y el origen `pantalla`.
 
-### Paso 3 — Ofrecerlo después de pagar
+### Paso 3 — Ofrecerlo después de pagar ✅ (en revisión)
 
-- En la pantalla de pago aprobado: "¿Quieres que te avisemos cuando vuelva a vencer?".
-- **Pendiente de confirmar:** la periodicidad. No hay una única nacional: el predial
-  es anual y cada municipio fija su calendario (muchos permiten cuotas), y el ICA
-  puede ser anual o bimestral según el acuerdo municipal. Confirmar con el área
-  tributaria antes de fijar reglas.
-- Propuesta mientras tanto: que el ciudadano elija ("en 3 meses", "en 6 meses",
-  "en 1 año") en vez de suponer la periodicidad.
+No existe una pantalla de "pago aprobado": "Verificar estado" lleva al Historial y la
+aprobación se detecta en segundo plano (donde además se pide la reseña de la tienda).
+Decisión de Brayan (2026-10-21):
+
+- **Dónde:** botón **"Recordarme el próximo pago"** en las tarjetas del Historial, solo
+  en pagos **APROBADOS** de un impuesto del municipio actual (no certificados ni pagos
+  de otra alcaldía: el `idimpuesto` se repite entre municipios). Siempre disponible,
+  no compite con la reseña y sirve también para pagos viejos.
+- **Fecha:** no hay una periodicidad única (el predial es anual con cuotas según el
+  municipio; el ICA, anual o bimestral según el acuerdo), así que el modal ofrece
+  **"¿Cuándo vuelve a vencer?" → En 3 meses / En 6 meses / En 1 año**, contado desde
+  la fecha del pago (desde hoy si esa fecha ya pasó). Viene en 1 año y con aviso
+  **1 semana antes**, porque la fecha es una estimación; el ciudadano puede ajustarla
+  en "Fecha".
+- Sin sesión: el mismo diálogo de la factura (`ensureReminderSession`).
+- Analítica: origen `pago`.
+- Sigue pendiente confirmar la periodicidad con el área tributaria: si se conoce por
+  impuesto, la opción por defecto podría venir de ahí.
 
 ### Descartado
 
