@@ -33,10 +33,14 @@ class TaxRepository {
     if (infoList == null) return [];
 
     return infoList.map((dto) {
+      // Hay facturas que llegan con `Documento` vacío, y la pasarela de
+      // Bancolombia no carga ningún dato del pagador si falta uno: se usa el
+      // documento consultado.
+      final document = dto.document?.trim() ?? '';
       return Tax(
         entity: dto.entity ?? '',
         entityCode: dto.entityCode ?? '',
-        document: dto.document ?? '',
+        document: document.isNotEmpty ? document : queryData,
         name: dto.name ?? '',
         taxName: dto.taxName ?? '',
         taxId: dto.taxId ?? 0,
