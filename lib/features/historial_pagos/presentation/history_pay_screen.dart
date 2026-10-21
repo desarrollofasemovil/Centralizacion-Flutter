@@ -1,7 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/analytics/analytics_service.dart';
+import '../../../core/models/municipality_dto.dart';
+import '../../../core/models/municipality_procedure.dart';
 import '../../../core/models/payment_history_dto.dart';
+import '../../../core/municipality/municipality_repository.dart';
+import '../../../core/utils/validators.dart';
+import '../../reminders/application/reminders_notifier.dart';
+import '../../reminders/domain/reminders_state.dart';
+import '../../reminders/presentation/reminder_session_gate.dart';
+import '../../reminders/presentation/reminder_toast_listener.dart';
+import '../../reminders/presentation/widgets/create_reminder_modal.dart';
+import '../../tramites/domain/procedure_identity.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../home/presentation/widgets/main_header.dart'
@@ -19,6 +32,7 @@ class HistoryPayScreen extends ConsumerWidget {
     final user = ref.watch(sessionProvider);
     final historyAsync = ref.watch(historyPayNotifierProvider);
     final syncingIds = ref.watch(historySyncingIdsProvider);
+    final municipality = ref.watch(municipalityProvider(municipalityId)).value;
 
     // Cabecera compartida `TopbarNavigation` + adorno de circulos, igual que
     // `HistoryPayScreen.kt`. Ese original NO tiene barra inferior: la barra de
@@ -50,10 +64,23 @@ class HistoryPayScreen extends ConsumerWidget {
                         separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final item = list[index];
+                          final procedure = _nextPaymentProcedure(
+                            item,
+                            municipality,
+                          );
                           final card = _HistoryCard(
                             item: item,
                             dateText: _formatDate(item.paymentDate),
                             isSyncing: syncingIds.contains(item.id),
+                            onRemind: procedure == null
+                                ? null
+                                : () => _remindNextPayment(
+                                    context,
+                                    ref,
+                                    item,
+                                    procedure,
+                                    municipality!.municipalityProcedures,
+                                  ),
                           );
                           // Solo los pagos FALLIDA se pueden ocultar deslizando
                           // de derecha a izquierda.
@@ -107,8 +134,69 @@ class HistoryPayScreen extends ConsumerWidget {
           ),
         ),
         const CirclesDecoration.branded(),
+        // Avisos de "recordatorio creado" ("Recordarme el próximo pago").
+        const ReminderToastListener(child: SizedBox.shrink()),
       ],
     );
+  }
+
+  /// Trámite de impuesto del municipio actual al que corresponde un pago
+  /// APROBADO, para ofrecer "Recordarme el próximo pago". `null` si no aplica:
+  /// pago no aprobado, de otra alcaldía (el `idimpuesto` se repite entre
+  /// municipios) o que no es un impuesto (p. ej. un certificado).
+  MunicipalityProcedure? _nextPaymentProcedure(
+    PaymentHistoryDTO item,
+    MunicipalityDTO? municipality,
+  ) {
+    if (municipality == null || !item.isApproved) return null;
+    if (normalizeForMatch(item.alcaldia) !=
+        normalizeForMatch(municipality.name)) {
+      return null;
+    }
+    final taxId = int.tryParse(item.idimpuesto.trim());
+    if (taxId == null) return null;
+    return findTaxProcedureByExternalId(
+      municipality.municipalityProcedures,
+      taxId,
+    );
+  }
+
+  /// Modal de recordatorio ya lleno para el próximo pago del impuesto, con
+  /// "¿Cuándo vuelve a vencer?" (3, 6 meses o 1 año desde el pago).
+  Future<void> _remindNextPayment(
+    BuildContext context,
+    WidgetRef ref,
+    PaymentHistoryDTO item,
+    MunicipalityProcedure procedure,
+    List<MunicipalityProcedure> procedures,
+  ) async {
+    unawaited(
+      ref
+          .read(analyticsServiceProvider)
+          .logReminderStarted(
+            municipalityId: municipalityId,
+            origin: ReminderOrigin.payment,
+            hasSession: hasReminderSession(ref),
+          ),
+    );
+    final ready = await ensureReminderSession(
+      context,
+      ref,
+      message:
+          'Guardamos tus recordatorios en tu cuenta para avisarte cuando '
+          'vuelva a vencer este impuesto.',
+    );
+    if (!ready || !context.mounted) return;
+
+    final notifier = ref.read(remindersNotifierProvider.notifier);
+    notifier.prefillFromPayment(
+      procedure: procedure,
+      name: 'Pagar ${procedure.procedures.name}'.trim(),
+      paidOn: DateTime.tryParse(item.paymentDate) ?? DateTime.now(),
+    );
+    notifier.toggleModal(true);
+    await showCreateReminderModal(context, procedures);
+    if (context.mounted) notifier.toggleModal(false);
   }
 
   /// Pull-to-refresh: sincroniza con el proveedor los pagos en curso (antes
@@ -275,6 +363,7 @@ class _HistoryCard extends StatelessWidget {
     required this.item,
     required this.dateText,
     this.isSyncing = false,
+    this.onRemind,
   });
   final PaymentHistoryDTO item;
   final String dateText;
@@ -282,6 +371,10 @@ class _HistoryCard extends StatelessWidget {
   /// Se está consultando su estado en la pasarela: el ícono y el texto del
   /// estado se reemplazan por un indicador de carga.
   final bool isSyncing;
+
+  /// "Recordarme el próximo pago" (solo pagos aprobados de un impuesto del
+  /// municipio). `null` = sin botón.
+  final VoidCallback? onRemind;
 
   @override
   Widget build(BuildContext context) {
@@ -304,81 +397,98 @@ class _HistoryCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _orLoading(item.procedureName),
-                    style: theme.primaryTextTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  Text(
-                    'Alcaldía de ${_orLoading(item.alcaldia)}',
-                    style: theme.primaryTextTheme.bodyLarge?.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Column(
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 4,
                     children: [
                       Text(
-                        '👤 ${_orLoading(item.userFirtName)}',
-                      style: theme.primaryTextTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurface,
-                    ),
-                      ),
-                      Text(
-                        '💰 ${_money(item.amount)}',
-                        style: theme.primaryTextTheme.bodyMedium?.copyWith(
+                        _orLoading(item.procedureName),
+                        style: theme.primaryTextTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
                           color: scheme.onSurface,
                         ),
                       ),
                       Text(
-                        '📅 ${_orLoading(dateText)}',
-                        style: theme.primaryTextTheme.bodyMedium?.copyWith(
+                        'Alcaldía de ${_orLoading(item.alcaldia)}',
+                        style: theme.primaryTextTheme.bodyLarge?.copyWith(
                           color: scheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 4,
+                        children: [
+                          Text(
+                            '👤 ${_orLoading(item.userFirtName)}',
+                            style: theme.primaryTextTheme.bodyMedium?.copyWith(
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            '💰 ${_money(item.amount)}',
+                            style: theme.primaryTextTheme.bodyMedium?.copyWith(
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            '📅 ${_orLoading(dateText)}',
+                            style: theme.primaryTextTheme.bodyMedium?.copyWith(
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSyncing)
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: color,
+                        semanticsLabel: 'Verificando el estado del pago',
+                      ),
+                    ),
+                  )
+                else
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, color: color, size: 40),
+                      const SizedBox(height: 5),
+                      Text(
+                        estado,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+              ],
             ),
-            if (isSyncing)
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    color: color,
-                    semanticsLabel: 'Verificando el estado del pago',
-                  ),
+            if (onRemind != null) ...[
+              const Divider(height: 20),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: onRemind,
+                  style: TextButton.styleFrom(foregroundColor: scheme.primary),
+                  icon: const Icon(Icons.notifications_active_outlined),
+                  label: const Text('Recordarme el próximo pago'),
                 ),
-              )
-            else
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, color: color, size: 40),
-                  const SizedBox(height: 5),
-                  Text(
-                    estado,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
               ),
+            ],
           ],
         ),
       ),

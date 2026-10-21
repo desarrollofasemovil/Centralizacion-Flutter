@@ -144,6 +144,48 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
     );
   }
 
+  /// "Recordarme el próximo pago" desde un pago aprobado del Historial. No se
+  /// sabe cada cuánto vence el impuesto: se sugiere 1 año desde el pago (el
+  /// ciudadano cambia a 3 o 6 meses en el modal) y se avisa 1 semana antes,
+  /// porque la fecha es una estimación.
+  void prefillFromPayment({
+    required MunicipalityProcedure procedure,
+    required String name,
+    required DateTime paidOn,
+  }) {
+    const months = 12;
+    state = state.copyWith(
+      formState: CreateReminderState(
+        customName: name,
+        selectedProcedure: procedure,
+        selectedDateMillis: _utcDayMillis(
+          suggestedNextDue(paidOn, months, now: DateTime.now()),
+        ),
+        offset: ReminderOffset.oneWeek,
+        origin: ReminderOrigin.payment,
+        paidOn: paidOn,
+        recurrenceMonths: months,
+      ),
+    );
+  }
+
+  /// Opción rápida de "¿Cuándo vuelve a vencer?": recalcula la fecha.
+  void selectRecurrence(int months) {
+    final paidOn = state.formState.paidOn;
+    if (paidOn == null) return;
+    state = state.copyWith(
+      formState: state.formState.copyWith(
+        recurrenceMonths: months,
+        selectedDateMillis: _utcDayMillis(
+          suggestedNextDue(paidOn, months, now: DateTime.now()),
+        ),
+      ),
+    );
+  }
+
+  int _utcDayMillis(DateTime d) =>
+      DateTime.utc(d.year, d.month, d.day).millisecondsSinceEpoch;
+
   void updateFormName(String name) => state = state.copyWith(
         formState: state.formState.copyWith(customName: name),
       );
@@ -153,8 +195,12 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
         formState: state.formState.copyWith(selectedProcedure: procedure),
       );
 
+  /// Fecha elegida a mano: deja de coincidir con la opción rápida.
   void updateFormDate(int? millis) => state = state.copyWith(
-        formState: state.formState.copyWith(selectedDateMillis: millis),
+        formState: state.formState.copyWith(
+          selectedDateMillis: millis,
+          clearRecurrence: true,
+        ),
       );
 
   void updateFormTime(TimeOfDay time) => state = state.copyWith(

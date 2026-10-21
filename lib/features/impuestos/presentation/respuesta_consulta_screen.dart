@@ -12,11 +12,9 @@ import '../../../core/municipality/municipality_repository.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/review/review_prompt_service.dart';
 import '../../../core/utils/url_opener.dart';
-import '../../../core/widgets/confirmation_dialog.dart';
-import '../../auth/application/auth_providers.dart';
-import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../reminders/application/reminders_notifier.dart';
 import '../../reminders/domain/reminders_state.dart';
+import '../../reminders/presentation/reminder_session_gate.dart';
 import '../../reminders/presentation/reminder_toast_listener.dart';
 import '../../reminders/presentation/widgets/create_reminder_modal.dart';
 import '../application/tax_results_notifier.dart';
@@ -99,36 +97,24 @@ class _TaxResultsScreenState extends ConsumerState<TaxResultsScreen> {
     final mun = ref.read(municipalityProvider(widget.municipalityId)).value;
     if (procedure == null || dueDate == null || mun == null) return;
 
-    bool hasSession() => ref.read(sessionProvider)?.loginStatus == true;
     unawaited(
       ref
           .read(analyticsServiceProvider)
           .logReminderStarted(
             municipalityId: widget.municipalityId,
             origin: ReminderOrigin.invoice,
-            hasSession: hasSession(),
+            hasSession: hasReminderSession(ref),
           ),
     );
 
-    if (!hasSession()) {
-      final wantsLogin = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => ConfirmationDialog(
-          title: 'Inicia sesión para recordarte',
-          message:
-              'Guardamos tus recordatorios en tu cuenta para avisarte antes de '
-              'que venza tu factura.',
-          icon: Icons.notifications_active_outlined,
-          confirmButtonText: 'Iniciar sesión',
-          dismissButtonText: 'Ahora no',
-          onConfirm: () => Navigator.of(ctx).pop(true),
-          onDismiss: () => Navigator.of(ctx).pop(false),
-        ),
-      );
-      if (wantsLogin != true || !mounted) return;
-      await showLoginBottomSheet(context);
-      if (!mounted || !hasSession()) return;
-    }
+    final ready = await ensureReminderSession(
+      context,
+      ref,
+      message:
+          'Guardamos tus recordatorios en tu cuenta para avisarte antes de '
+          'que venza tu factura.',
+    );
+    if (!ready || !mounted) return;
 
     final notifier = ref.read(remindersNotifierProvider.notifier);
     notifier.prefillFromInvoice(

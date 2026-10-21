@@ -29,11 +29,45 @@ ReminderOffset defaultInvoiceReminderOffset(
   return dayBefore.isAfter(now) ? ReminderOffset.oneDay : ReminderOffset.none;
 }
 
-/// Desde dónde se creó un recordatorio: la pantalla "Mis recordatorios" o el
-/// botón "Recordarme" de una factura. `value` es el que va a la analítica.
+/// Opciones de "¿Cuándo vuelve a vencer?" al recordar el próximo pago, en
+/// meses. No hay una periodicidad única por impuesto ni por municipio: el
+/// ciudadano elige.
+const paymentRecurrenceMonths = [3, 6, 12];
+
+/// Suma [months] meses a [date] conservando el día; si ese día no existe en el
+/// mes destino (30 nov + 3 meses), se usa el último día del mes.
+DateTime addMonths(DateTime date, int months) {
+  final firstOfTarget = DateTime(date.year, date.month + months);
+  final lastDay = DateTime(firstOfTarget.year, firstOfTarget.month + 1, 0).day;
+  return DateTime(
+    firstOfTarget.year,
+    firstOfTarget.month,
+    date.day > lastDay ? lastDay : date.day,
+  );
+}
+
+/// Próximo vencimiento sugerido: [months] después del pago. Si esa fecha ya
+/// pasó (un pago viejo del historial), [months] después de hoy.
+DateTime suggestedNextDue(
+  DateTime paidOn,
+  int months, {
+  required DateTime now,
+}) {
+  final today = DateTime(now.year, now.month, now.day);
+  final fromPayment = addMonths(
+    DateTime(paidOn.year, paidOn.month, paidOn.day),
+    months,
+  );
+  return fromPayment.isAfter(today) ? fromPayment : addMonths(today, months);
+}
+
+/// Desde dónde se creó un recordatorio: la pantalla "Mis recordatorios", el
+/// botón "Recordarme" de una factura o un pago aprobado del Historial.
+/// `value` es el que va a la analítica.
 enum ReminderOrigin {
   screen('pantalla'),
-  invoice('factura');
+  invoice('factura'),
+  payment('pago');
 
   const ReminderOrigin(this.value);
 
@@ -65,6 +99,14 @@ class CreateReminderState {
   final ReminderOffset offset;
   final ReminderOrigin origin;
 
+  /// Fecha del pago del que sale el recordatorio ("Recordarme el próximo
+  /// pago"). Si no es `null`, el modal ofrece "¿Cuándo vuelve a vencer?".
+  final DateTime? paidOn;
+
+  /// Opción elegida (3, 6 o 12 meses). `null` si el ciudadano cambió la fecha
+  /// a mano.
+  final int? recurrenceMonths;
+
   const CreateReminderState({
     this.isModalVisible = false,
     this.customName = '',
@@ -76,6 +118,8 @@ class CreateReminderState {
     this.formError,
     this.offset = ReminderOffset.none,
     this.origin = ReminderOrigin.screen,
+    this.paidOn,
+    this.recurrenceMonths,
   });
 
   CreateReminderState copyWith({
@@ -89,7 +133,9 @@ class CreateReminderState {
     String? formError,
     ReminderOffset? offset,
     ReminderOrigin? origin,
+    int? recurrenceMonths,
     bool clearFormError = false,
+    bool clearRecurrence = false,
   }) {
     return CreateReminderState(
       isModalVisible: isModalVisible ?? this.isModalVisible,
@@ -102,6 +148,10 @@ class CreateReminderState {
       formError: clearFormError ? null : (formError ?? this.formError),
       offset: offset ?? this.offset,
       origin: origin ?? this.origin,
+      paidOn: paidOn,
+      recurrenceMonths: clearRecurrence
+          ? null
+          : (recurrenceMonths ?? this.recurrenceMonths),
     );
   }
 }

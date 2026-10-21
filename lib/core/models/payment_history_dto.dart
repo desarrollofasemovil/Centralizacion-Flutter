@@ -92,4 +92,7 @@ extension PaymentHistoryStatus on PaymentHistoryDTO {
 
   /// Pago fallido: el único que se puede ocultar deslizando.
   bool get isFailed => statusType.trim().toUpperCase() == 'FALLIDA';
+
+  /// Pago aprobado: el único desde el que se ofrece recordar el próximo.
+  bool get isApproved => statusType.trim().toUpperCase() == 'APROBADA';
 }
