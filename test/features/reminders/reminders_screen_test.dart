@@ -215,6 +215,9 @@ void main() {
 
       expect(find.text('Añadir recordatorio'), findsOneWidget);
       expect(find.text('Avisarme'), findsOneWidget);
+      expect(find.text('Trámite'), findsOneWidget);
+      // El correo se ofrece siempre, no solo con Google Calendar activo.
+      expect(find.text('Recordatorio por correo'), findsOneWidget);
 
       // Con indicador de arrastre y alto según el contenido (antes el 90 %).
       final sheet = find.byType(BottomSheet);

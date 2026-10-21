@@ -66,7 +66,10 @@ class _CalendarCustomReminderState extends State<CalendarCustomReminder> {
       child: Container(
         color: theme.colorScheme.surface,
         padding: const EdgeInsets.all(8),
+        // `min`: en un diálogo, una columna `max` se estira a todo el alto de
+        // la pantalla (embebido en el modal no se notaba: allí el alto es libre).
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -137,6 +140,7 @@ class _CalendarGrid extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [

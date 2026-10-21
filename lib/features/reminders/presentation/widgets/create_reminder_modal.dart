@@ -85,13 +85,13 @@ class _CreateReminderSheet extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   _SearchableProcedureDropdown(
                     procedures: procedures,
                     selected: form.selectedProcedure,
                     onSelected: notifier.updateFormProcedure,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 12),
                   // Fecha y hora como campos (no el calendario completo
                   // embebido): ocupan una fila y abren su selector al tocar.
                   Row(
@@ -142,7 +142,7 @@ class _CreateReminderSheet extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   // Cuándo llega la notificación respecto a la fecha y hora.
                   // Desde una factura viene puesta en "1 día antes".
                   DropdownButtonFormField<ReminderOffset>(
@@ -174,7 +174,7 @@ class _CreateReminderSheet extends ConsumerWidget {
                   ),
                   if (form.formError != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         form.formError!,
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -189,13 +189,13 @@ class _CreateReminderSheet extends ConsumerWidget {
                     value: form.addToCalendar,
                     onChanged: notifier.updateFormAddToCalendarToggle,
                   ),
-                  if (form.addToCalendar)
-                    _ToggleRow(
-                      icon: Icons.email_outlined,
-                      label: 'Recordatorio por correo',
-                      value: form.sendEmail,
-                      onChanged: notifier.updateFormEmailToggle,
-                    ),
+                  // Siempre visible (antes solo con Google Calendar activo).
+                  _ToggleRow(
+                    icon: Icons.email_outlined,
+                    label: 'Recordatorio por correo',
+                    value: form.sendEmail,
+                    onChanged: notifier.updateFormEmailToggle,
+                  ),
                   const SizedBox(height: 12),
                   FilledButton(
                     style: FilledButton.styleFrom(
@@ -358,100 +358,97 @@ class _SearchableProcedureDropdownState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fill = theme.colorScheme.surfaceContainerHighest.withValues(
-      alpha: 0.5,
-    );
-    return Container(
-      decoration: BoxDecoration(
-        color: fill,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          EnterTransition(
-            offsetDp: -30,
-            child: TextField(
-              controller: _controller,
-              onChanged: (_) => setState(() => _expanded = true),
-              onTap: () => setState(() => _expanded = true),
-              style: theme.textTheme.bodyMedium,
-              decoration: InputDecoration(
-                hintText: 'Selecciona un trámite',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: widget.procedures.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(14),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator.adaptive(
-                            strokeWidth: 2,
-                          ),
+    final scheme = theme.colorScheme;
+    final radius = BorderRadius.circular(12);
+    // Mismo estilo que "Avisarme": borde de 12, etiqueta flotante e ícono en
+    // el color primario. La lista se despliega debajo en un recuadro igual.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EnterTransition(
+          offsetDp: -30,
+          child: TextField(
+            controller: _controller,
+            onChanged: (_) => setState(() => _expanded = true),
+            onTap: () => setState(() => _expanded = true),
+            style: theme.textTheme.bodyMedium,
+            decoration: InputDecoration(
+              labelText: 'Trámite',
+              hintText: 'Busca o selecciona un trámite',
+              prefixIcon: Icon(Icons.search, color: scheme.primary),
+              suffixIcon: widget.procedures.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
                         ),
-                      )
-                    : IconButton(
-                        icon: Icon(
-                          _expanded
-                              ? Icons.arrow_drop_up
-                              : Icons.arrow_drop_down,
-                        ),
-                        onPressed: () => setState(() => _expanded = !_expanded),
                       ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 14,
-                ),
-              ),
-            ),
-          ),
-          // fadeIn() + expandVertically() / fadeOut() + shrinkVertically()
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.fastOutSlowIn,
-            alignment: Alignment.topCenter,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: !_expanded
-                  ? const SizedBox(width: double.infinity)
-                  : ConstrainedBox(
-                      key: const ValueKey('procedures'),
-                      constraints: const BoxConstraints(maxHeight: 180),
-                      child: _filtered.isEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Text(
-                                'No se encontraron trámites',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodySmall,
-                              ),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: _filtered.length,
-                              itemBuilder: (_, i) {
-                                final p = _filtered[i];
-                                return ListTile(
-                                  dense: true,
-                                  title: Text(
-                                    p.procedures.name,
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                  onTap: () {
-                                    _controller.text = p.procedures.name;
-                                    FocusScope.of(context).unfocus();
-                                    setState(() => _expanded = false);
-                                    widget.onSelected(p);
-                                  },
-                                );
-                              },
-                            ),
+                    )
+                  : IconButton(
+                      icon: Icon(
+                        _expanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                      ),
+                      onPressed: () => setState(() => _expanded = !_expanded),
                     ),
+              border: OutlineInputBorder(borderRadius: radius),
             ),
           ),
-        ],
-      ),
+        ),
+        // fadeIn() + expandVertically() / fadeOut() + shrinkVertically()
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.fastOutSlowIn,
+          alignment: Alignment.topCenter,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: !_expanded
+                ? const SizedBox(width: double.infinity)
+                : Container(
+                    key: const ValueKey('procedures'),
+                    margin: const EdgeInsets.only(top: 4),
+                    constraints: const BoxConstraints(maxHeight: 180),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: scheme.outline),
+                      borderRadius: radius,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: _filtered.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Text(
+                              'No se encontraron trámites',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            itemCount: _filtered.length,
+                            itemBuilder: (_, i) {
+                              final p = _filtered[i];
+                              return ListTile(
+                                dense: true,
+                                title: Text(
+                                  p.procedures.name,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                                onTap: () {
+                                  _controller.text = p.procedures.name;
+                                  FocusScope.of(context).unfocus();
+                                  setState(() => _expanded = false);
+                                  widget.onSelected(p);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }
