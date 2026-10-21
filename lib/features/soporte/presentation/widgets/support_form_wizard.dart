@@ -8,6 +8,10 @@ import '../../domain/support_enums.dart';
 import 'support_form_inputs.dart';
 import '../../../../core/widgets/app_back_button.dart';
 
+/// Separación entre campos: con menos, la etiqueta flotante de un campo se
+/// cruza con el texto (o el error) del anterior.
+const double _fieldGap = 16;
+
 /// Wizard del formulario de soporte técnico. Port de `SupportFormWizard.kt`.
 /// Router entre el paso de selección de categoría y el de detalles, con una
 /// transición horizontal (memoria espacial del flujo adelante/atrás).
@@ -204,12 +208,12 @@ class _DetailsStep extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 12),
 
         // Campos específicos por categoría.
         _CategoryFields(data: form.categoryData, notifier: notifier),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: _fieldGap),
 
         // Descripción libre (al final).
         _SupportTextField(
@@ -323,7 +327,7 @@ class _PaymentIssueFields extends StatelessWidget {
           errorText: data.taxConceptError,
           onSelected: notifier.setPaymentIssueTaxConcept,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         EnumDropdown<PaymentIssueType>(
           label: 'Tipo de problema *',
           options: PaymentIssueType.values,
@@ -332,7 +336,7 @@ class _PaymentIssueFields extends StatelessWidget {
           errorText: data.issueTypeError,
           onSelected: notifier.setPaymentIssueType,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         EnumDropdown<PaymentMethod>(
           label: '¿Cómo realizaste el pago? *',
           options: PaymentMethod.values,
@@ -341,7 +345,7 @@ class _PaymentIssueFields extends StatelessWidget {
           errorText: data.paymentMethodError,
           onSelected: notifier.setPaymentIssueMethod,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         DatePickerField(
           value: data.paymentDate,
           label: 'Fecha del pago *',
@@ -349,7 +353,7 @@ class _PaymentIssueFields extends StatelessWidget {
           errorText: data.paymentDateError,
           onDateSelected: notifier.setPaymentIssueDate,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         MoneyTextField(
           value: data.amountPaid,
           label: 'Monto pagado *',
@@ -357,7 +361,7 @@ class _PaymentIssueFields extends StatelessWidget {
           errorText: data.amountPaidError,
           onValueChanged: notifier.setPaymentIssueAmount,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         _SupportTextField(
           key: const ValueKey('voucher'),
           initialValue: data.voucherReference,
@@ -390,7 +394,7 @@ class _PaymentInquiryFields extends StatelessWidget {
           errorText: data.taxConceptError,
           onSelected: notifier.setPaymentInquiryTaxConcept,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         _SupportTextField(
           // Se recrea al cambiar el impuesto para refrescar la etiqueta dinámica.
           key: ValueKey('entity_${data.taxConcept?.code ?? 'none'}'),
@@ -401,14 +405,14 @@ class _PaymentInquiryFields extends StatelessWidget {
           enabled: data.taxConcept != null,
           onChanged: notifier.setPaymentInquiryEntityId,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         FiscalYearDropdown(
           value: data.fiscalYear,
           label: 'Vigencia (año) *',
           errorText: data.fiscalYearError,
           onValueChanged: notifier.setPaymentInquiryFiscalYear,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         EnumDropdown<InquiryType>(
           label: '¿Qué duda tienes específicamente? *',
           options: InquiryType.values,
@@ -440,7 +444,7 @@ class _TechnicalErrorFields extends StatelessWidget {
           errorText: data.screenNameError,
           onChanged: notifier.setTechnicalScreenName,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         _SupportTextField(
           key: const ValueKey('attempted_action'),
           initialValue: data.attemptedAction,
@@ -451,7 +455,7 @@ class _TechnicalErrorFields extends StatelessWidget {
           maxLines: 4,
           onChanged: notifier.setTechnicalAttemptedAction,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         EnumDropdown<ErrorFrequency>(
           label: '¿Con qué frecuencia ocurre? *',
           options: ErrorFrequency.values,
@@ -460,7 +464,7 @@ class _TechnicalErrorFields extends StatelessWidget {
           errorText: data.frequencyError,
           onSelected: notifier.setTechnicalFrequency,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         _SupportTextField(
           key: const ValueKey('error_message'),
           initialValue: data.errorMessage,
@@ -493,7 +497,7 @@ class _InformationRequestFields extends StatelessWidget {
           errorText: data.requestTypeError,
           onSelected: notifier.setInformationRequestType,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: _fieldGap),
         EnumDropdown<TaxConcept>(
           label: 'Impuesto relacionado (opcional)',
           options: TaxConcept.values,

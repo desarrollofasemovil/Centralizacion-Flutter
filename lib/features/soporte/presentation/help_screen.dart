@@ -55,43 +55,53 @@ class HelpScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _HelpCategorySection(
-                title: 'Sobre mis Impuestos',
-                children: [
-                  const _GlossarySection(),
-                  const SizedBox(height: 12),
-                  const _ExpandableInfoCard(
-                    icon: Icons.schedule,
-                    title: 'Tiempos de Compensación',
-                    body: _paymentTimingText,
-                  ),
-                  const SizedBox(height: 12),
-                  const _ExpandableInfoCard(
-                    icon: Icons.lock,
-                    title: 'Tratamiento de Datos',
-                    body: _privacyText,
-                  ),
-                  const SizedBox(height: 12),
-                  _OfficialPortalButton(portal: portal),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _HelpCategorySection(
-                title: 'Soporte Técnico',
-                children: [
-                  if (uiState is HelpUnauthenticated)
-                    const _UnauthenticatedSupportState()
-                  else
-                    SupportFormWizard(municipality: municipality),
-                ],
-              ),
-              const SizedBox(height: 24),
-            ],
+        // Todo el contenido 2 sp más grande (también etiquetas, hints y
+        // errores de los campos). Los diálogos y el login se abren con el
+        // `context` de la pantalla, por fuera, y conservan su tamaño.
+        child: Theme(
+          data: theme.copyWith(
+            textTheme: theme.textTheme.apply(fontSizeDelta: 2),
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _HelpCategorySection(
+                  title: 'Sobre mis Impuestos',
+                  children: [
+                    const _GlossarySection(),
+                    const SizedBox(height: 12),
+                    const _ExpandableInfoCard(
+                      icon: Icons.schedule,
+                      title: 'Tiempos de Compensación',
+                      body: _paymentTimingText,
+                    ),
+                    const SizedBox(height: 12),
+                    const _ExpandableInfoCard(
+                      icon: Icons.lock,
+                      title: 'Tratamiento de Datos',
+                      body: _privacyText,
+                    ),
+                    const SizedBox(height: 12),
+                    _OfficialPortalButton(portal: portal),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _HelpCategorySection(
+                  title: 'Soporte Técnico',
+                  children: [
+                    if (uiState is HelpUnauthenticated)
+                      _UnauthenticatedSupportState(
+                        onLogin: () => showLoginBottomSheet(context),
+                      )
+                    else
+                      SupportFormWizard(municipality: municipality),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
@@ -378,7 +388,9 @@ class _OfficialPortalButton extends StatelessWidget {
 // Categoría 2 — estado no autenticado
 // =============================================================================
 class _UnauthenticatedSupportState extends StatelessWidget {
-  const _UnauthenticatedSupportState();
+  const _UnauthenticatedSupportState({required this.onLogin});
+
+  final VoidCallback onLogin;
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +422,7 @@ class _UnauthenticatedSupportState extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: FilledButton(
-            onPressed: () => showLoginBottomSheet(context),
+            onPressed: onLogin,
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(50),
               shape: RoundedRectangleBorder(
