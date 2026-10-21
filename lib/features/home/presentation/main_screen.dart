@@ -442,6 +442,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       },
       child: Scaffold(
         key: _scaffoldKey,
+        // Como `ModalNavigationDrawer`: se abre deslizando a la derecha desde
+        // cualquier punto, no solo desde el borde (que con navegación por
+        // gestos se lo queda el "atrás" del sistema).
+        drawerEdgeDragWidth: MediaQuery.sizeOf(context).width,
         drawer: Drawer(
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.horizontal(right: Radius.circular(35)),

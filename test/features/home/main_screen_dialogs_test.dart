@@ -129,4 +129,18 @@ void main() {
 
     await _unmount(tester);
   });
+
+  testWidgets('el menú lateral se abre deslizando a la derecha desde el '
+      'centro, no solo desde el borde', (tester) async {
+    await _pumpHome(tester);
+    final scaffold = tester.state<ScaffoldState>(find.byType(Scaffold).first);
+    expect(scaffold.isDrawerOpen, isFalse);
+
+    final center = tester.getCenter(find.byType(MainScreen));
+    await tester.dragFrom(center, const Offset(250, 0));
+    await tester.pumpAndSettle();
+    expect(scaffold.isDrawerOpen, isTrue);
+
+    await _unmount(tester);
+  });
 }
