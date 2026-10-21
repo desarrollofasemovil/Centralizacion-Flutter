@@ -221,12 +221,13 @@ el botón **"Recordarme antes del vencimiento"** de cada factura (plan:
 
 | Evento | Cuándo | Parámetros |
 |---|---|---|
-| `recordatorio_iniciado` | toca "Recordarme" en una factura | `municipio_id`, `origen` (`factura`), `sesion` (`si`/`no`) |
-| `recordatorio_creado` | el backend guardó el recordatorio (desde cualquier entrada) | `municipio_id` (si el trámite lo trae), `origen` (`factura`/`general`), `antelacion` (`none`, `oneDay`, …) |
+| `recordatorios_abiertos` | abre "Mis recordatorios" | `municipio_id`, `entrada` (`menu` / `aviso_inicio`) |
+| `recordatorio_iniciado` | toca "Recordarme" en una factura o "Crear recordatorio" en la pantalla | `municipio_id`, `origen` (`factura` / `pantalla`), `sesion` (`si`/`no`) |
+| `recordatorio_creado` | el backend guardó el recordatorio (desde cualquier entrada) | `municipio_id` (si el trámite lo trae), `origen` (`factura` / `pantalla`), `antelacion` (`none`, `oneDay`, …) |
 
 ### Para los informes
 
-- **Dimensiones de evento:** `origen`, `sesion`, `antelacion`.
+- **Dimensiones de evento:** `origen`, `sesion`, `antelacion`, `entrada`.
 - **Conversión del botón** = `recordatorio_creado` (`origen = factura`) / `recordatorio_iniciado`.
 - `sesion = no` seguido de `login` muestra cuántos inician sesión para poder crear el recordatorio.
 

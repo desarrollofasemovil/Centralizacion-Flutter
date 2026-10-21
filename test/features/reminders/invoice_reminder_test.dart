@@ -155,7 +155,7 @@ void main() {
       expect(form.isModalVisible, isTrue);
     });
 
-    test('al cerrar el modal el formulario vuelve al de la Home', () {
+    test('al cerrar el modal el formulario vuelve al de por defecto', () {
       final notifier = container.read(remindersNotifierProvider.notifier);
       notifier.prefillFromInvoice(
         procedure: _procedure,
@@ -166,7 +166,7 @@ void main() {
       notifier.toggleModal(false);
 
       final form = container.read(remindersNotifierProvider).formState;
-      expect(form.origin, ReminderOrigin.general);
+      expect(form.origin, ReminderOrigin.screen);
       expect(form.offset, ReminderOffset.none);
       expect(form.customName, isEmpty);
     });

@@ -82,6 +82,13 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
     }
   }
 
+  /// Vuelve a pedir la lista al backend ("desliza para actualizar").
+  Future<void> reload() async {
+    final user = _user;
+    if (user == null || !user.loginStatus) return;
+    await _loadReminders(user);
+  }
+
   // ---------------------------------------------------------------------------
   // Formulario
   // ---------------------------------------------------------------------------
@@ -152,6 +159,10 @@ class RemindersNotifier extends Notifier<RemindersUiState> {
 
   void updateFormTime(TimeOfDay time) => state = state.copyWith(
         formState: state.formState.copyWith(selectedTime: time),
+      );
+
+  void updateFormOffset(ReminderOffset offset) => state = state.copyWith(
+        formState: state.formState.copyWith(offset: offset),
       );
 
   void updateFormEmailToggle(bool enabled) => state = state.copyWith(

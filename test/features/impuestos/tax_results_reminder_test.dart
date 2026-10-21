@@ -20,6 +20,7 @@ import 'package:tramiapp_flutter/features/auth/application/auth_providers.dart';
 import 'package:tramiapp_flutter/features/impuestos/domain/tax.dart';
 import 'package:tramiapp_flutter/features/impuestos/presentation/respuesta_consulta_screen.dart';
 import 'package:tramiapp_flutter/features/reminders/data/reminders_repository.dart';
+import 'package:tramiapp_flutter/features/reminders/presentation/widgets/calendar_custom_reminder.dart';
 
 import '../../helpers/fake_local_reminder_scheduler.dart';
 import '../../support/recording_analytics.dart';
@@ -200,7 +201,33 @@ void main() {
     expect(find.text('Añadir recordatorio'), findsOneWidget);
     expect(find.text('Pagar Predial'), findsOneWidget);
     expect(find.text('Impuesto Predial Unificado'), findsOneWidget);
-    expect(find.text('Te avisaremos 1 día antes.'), findsOneWidget);
+    // Antelación precargada en el selector "Avisarme".
+    expect(find.text('1 día antes'), findsOneWidget);
+    // Fecha límite en el campo "Fecha" (ya no hay calendario embebido).
+    final due = DateTime.now().add(const Duration(days: 30));
+    expect(find.text(DateFormat('dd/MM/yyyy').format(due)), findsOneWidget);
+    expect(find.text('08:00'), findsOneWidget);
+
+    // Al tocar la fecha se abre el calendario en un diálogo.
+    await tester.tap(find.text('Fecha'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
+    // El diálogo mide lo que el calendario, no todo el alto de la pantalla.
+    final screenHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(
+      // `Dialog` incluye su margen y su alineación (ocupa toda la pantalla):
+      // se mide el calendario que va dentro.
+      tester
+          .getSize(
+            find.descendant(
+              of: find.byType(Dialog),
+              matching: find.byType(CalendarCustomReminder),
+            ),
+          )
+          .height,
+      lessThan(screenHeight * 0.7),
+    );
     expect(analytics.single('recordatorio_iniciado')!['sesion'], 'si');
   });
 }

@@ -29,13 +29,23 @@ ReminderOffset defaultInvoiceReminderOffset(
   return dayBefore.isAfter(now) ? ReminderOffset.oneDay : ReminderOffset.none;
 }
 
-/// Desde dónde se creó un recordatorio: la sección general (Home) o el botón
-/// "Recordarme" de una factura. `value` es el que va a la analítica.
+/// Desde dónde se creó un recordatorio: la pantalla "Mis recordatorios" o el
+/// botón "Recordarme" de una factura. `value` es el que va a la analítica.
 enum ReminderOrigin {
-  general('general'),
+  screen('pantalla'),
   invoice('factura');
 
   const ReminderOrigin(this.value);
+
+  final String value;
+}
+
+/// Por dónde se llegó a "Mis recordatorios" (para la analítica).
+enum RemindersEntry {
+  menu('menu'),
+  homeNotice('aviso_inicio');
+
+  const RemindersEntry(this.value);
 
   final String value;
 }
@@ -65,7 +75,7 @@ class CreateReminderState {
     this.addToCalendar = false,
     this.formError,
     this.offset = ReminderOffset.none,
-    this.origin = ReminderOrigin.general,
+    this.origin = ReminderOrigin.screen,
   });
 
   CreateReminderState copyWith({

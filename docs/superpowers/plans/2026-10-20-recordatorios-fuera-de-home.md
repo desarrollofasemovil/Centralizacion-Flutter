@@ -24,7 +24,7 @@ Los recordatorios se guardan en el backend **por usuario** (`api/Reminders`, con
 
 ## Pasos
 
-### Paso 1 — "Recordarme" en cada factura ✅ (este cambio)
+### Paso 1 — "Recordarme" en cada factura ✅ (PR #39)
 
 En los resultados de la consulta de impuesto, cada factura vigente ofrece
 **"Recordarme antes del vencimiento"**.
@@ -41,17 +41,22 @@ En los resultados de la consulta de impuesto, cada factura vigente ofrece
 - Analítica nueva (`recordatorio_iniciado`, `recordatorio_creado`) para medir por
   fin el uso. Ver `docs/ANALITICA_EVENTOS.md`.
 
-### Paso 2 — Pantalla "Mis recordatorios" y fuera de la Home
+### Paso 2 — Pantalla "Mis recordatorios" y fuera de la Home ✅ (en revisión)
 
-- Pantalla propia con la lista (tarjetas actuales), crear y eliminar.
-- Entrada desde el menú lateral (y evaluar un acceso desde Historial).
-- Quitar `RemindersSection` de la Home. En su lugar, solo un aviso breve cuando hay
-  un recordatorio próximo ("Tienes un recordatorio mañana"); nada si no hay.
-- Sin sesión: la pantalla explica el beneficio y ofrece iniciar sesión (reemplaza el
-  "+" deshabilitado).
-- Decidir qué pasa con la preferencia `remindersIsVisible` (hoy oculta la sección).
-- Añadir al modal un selector de antelación (hoy el `offset` existe en el estado pero
-  no en la UI).
+- Pantalla propia (`RemindersScreen`, ruta `/municipality/:id/reminders`) con la
+  lista: próximos primero, cuándo vencen ("mañana", "en 4 días"), vencidos al
+  final; crear (botón fijo abajo) y eliminar con confirmación; desliza para
+  actualizar.
+- Entrada desde el menú lateral ("Mis recordatorios"). El acceso desde Historial
+  queda descartado por ahora.
+- `RemindersSection` sale de la Home (se borra junto con `SwipeUpDismissBox`, que
+  solo usaba ella). En su lugar, `UpcomingReminderBanner`: aviso breve si hay un
+  recordatorio en los próximos 7 días; nada si no hay. Al tocarlo abre la pantalla.
+- Sin sesión o invitado: tarjeta que explica el beneficio y ofrece iniciar sesión.
+- Preferencia `remindersIsVisible` ("Recordatorios Push" en Configuración): ahora
+  apaga el aviso de la Home.
+- El modal tiene selector de antelación ("Avisarme").
+- Analítica: `recordatorios_abiertos` (`entrada`) y el origen `pantalla`.
 
 ### Paso 3 — Ofrecerlo después de pagar
 

@@ -14,8 +14,8 @@ import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../portal_externo/application/portal_visit_tracker.dart';
 import '../../portal_externo/presentation/portal_survey_sheet.dart';
-import '../../reminders/presentation/reminder_toast_listener.dart';
-import '../../reminders/presentation/reminders_section.dart';
+import '../../reminders/domain/reminders_state.dart';
+import '../../reminders/presentation/upcoming_reminder_banner.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../../tramites/domain/info_tramite.dart';
 import '../application/main_viewmodel.dart';
@@ -103,6 +103,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           id: widget.municipality.id,
           name: widget.municipality.name,
         );
+  }
+
+  void _openReminders(RemindersEntry entry) {
+    ref
+        .read(analyticsServiceProvider)
+        .logRemindersOpened(
+          municipalityId: widget.municipality.id,
+          entry: entry,
+        );
+    context.push(AppRoutes.remindersPath(widget.municipality.id));
   }
 
   void _logBottomNav(BottomNavDestination destination) {
@@ -446,6 +456,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               Navigator.pop(context);
               context.push(AppRoutes.settingsPath(widget.municipality.id));
             },
+            goToReminders: () {
+              Navigator.pop(context); // Cerrar drawer
+              _openReminders(RemindersEntry.menu);
+            },
             onTermsClick: () async {
               Navigator.pop(context);
               final url =
@@ -532,20 +546,20 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                                 child: Column(
                                   children: [
                                     const MaintenanceInfoCard(),
+                                    // Solo un aviso si hay un recordatorio
+                                    // próximo; la lista completa vive en
+                                    // "Mis recordatorios". La preferencia
+                                    // "Recordatorios Push" lo apaga.
                                     if (ref
                                         .read(userPreferencesProvider)
-                                        .remindersIsVisible()) ...[
+                                        .remindersIsVisible())
                                       AnimatedSection(
-                                        child: ReminderToastListener(
-                                          child: RemindersSection(
-                                            procedures: widget
-                                                .municipality
-                                                .municipalityProcedures,
+                                        child: UpcomingReminderBanner(
+                                          onTap: () => _openReminders(
+                                            RemindersEntry.homeNotice,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 10),
-                                    ],
                                     if (domainModel
                                             .tramitesPrincipales
                                             .isNotEmpty ||
