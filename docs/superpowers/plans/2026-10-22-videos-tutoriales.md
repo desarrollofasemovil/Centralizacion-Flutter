@@ -14,7 +14,7 @@ cómo se hace, sin salir de la app. Complementa el tutorial de primer uso
 |---|---|
 | Material | Los dos videos ya publicados en el canal de 1cero1 (lista «Tutoriales TramiApp», 2026-01-13), grabados con la app Kotlin; los pasos coinciden con Flutter salvo los recordatorios. |
 | Reproductor | Dentro de la app, con el reproductor oficial de YouTube en un WebView (`youtube_player_iframe` 6.0.2). Sin enviar a la app de YouTube. |
-| Pagos (`S8lCwQrrcZo`) | Los 3 métodos (consulta en la app, PSV y portal externo). En Bienvenida («¿Primera vez? Mira cómo pagar») y en Ayuda y Soporte. |
+| Pagos (`8K_o2pC19qY`, narrado; antes `S8lCwQrrcZo`) | Los 3 métodos (consulta en la app, PSV y portal externo). En Bienvenida (signo `?` blanco, sin círculo, fijo arriba a la derecha, con punto de notificación y latido hasta que se abre el video; al lado, el globo «¿Necesitas ayuda? Mira un video tutorial» se ve 5 s y se va solo, y deja de salir al cerrarlo con la × o al abrir el video) y en Ayuda y Soporte. Sin «Iniciar sesión» en Bienvenida. |
 | Trámites (`YQQfugIjP6U`) | Cursos y reserva de espacios. Solo en Ayuda y solo si la alcaldía tiene cursos o reservas: su parte de PQRSD muestra solo la anónima, así que no se ofrece por tener PQRSDF. |
 | Configuración | Remote Config `tutorial_videos` (interruptor y lista), con estos dos como valor por defecto. Un video nuevo (p. ej. PQRSDF) se agrega sin sacar versión. |
 | Reproducción | No arranca sola; subtítulos e interfaz en español; al terminar, solo videos del canal. Girar el celular lo pone en pantalla completa (Android). |

@@ -48,6 +48,10 @@ class UserPreferences {
   static const _kReviewLoginCount = 'in_app_review_login_count';
   // Tutorial de primer uso: una vez por instalación, no por municipio.
   static const _kTutorialSeen = 'tutorial_primer_uso_visto';
+  // Botón de ayuda de Bienvenida: deja de resaltar al abrir el video.
+  static const _kWelcomeVideoSeen = 'video_tutorial_bienvenida_visto';
+  // Globo «¿Necesitas ayuda?» junto al botón: se cierra con la ×.
+  static const _kWelcomeHintDismissed = 'aviso_video_bienvenida_cerrado';
 
   // ── Ubicación ──────────────────────────────────────────────────────────────
   SavedLocation getSavedLocation() => SavedLocation(
@@ -152,6 +156,18 @@ class UserPreferences {
   bool tutorialSeen() => _prefs.getBool(_kTutorialSeen) ?? false;
 
   Future<void> markTutorialSeen() => _prefs.setBool(_kTutorialSeen, true);
+
+  // ── Video tutorial desde Bienvenida ─────────────────────────────────────────
+  bool welcomeVideoSeen() => _prefs.getBool(_kWelcomeVideoSeen) ?? false;
+
+  Future<void> markWelcomeVideoSeen() =>
+      _prefs.setBool(_kWelcomeVideoSeen, true);
+
+  bool welcomeHintDismissed() =>
+      _prefs.getBool(_kWelcomeHintDismissed) ?? false;
+
+  Future<void> markWelcomeHintDismissed() =>
+      _prefs.setBool(_kWelcomeHintDismissed, true);
 }
 
 /// Instancia de [SharedPreferences]. **Se sobreescribe en `bootstrap`** tras

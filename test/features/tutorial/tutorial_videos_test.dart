@@ -80,7 +80,7 @@ void main() {
   test('los ids de YouTube por defecto son los de la lista del canal', () {
     expect(
       {for (final v in TutorialVideosConfig.defaults) v.id: v.youtubeId},
-      {'pagos': 'S8lCwQrrcZo', 'tramites': 'YQQfugIjP6U'},
+      {'pagos': '8K_o2pC19qY', 'tramites': 'YQQfugIjP6U'},
     );
   });
 

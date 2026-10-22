@@ -396,7 +396,7 @@ Configuración: `minimumFetchIntervalInSeconds = 120` (comentario dice "1 hora" 
 > Código: `lib/features/tutorial/domain/tutorial_config.dart`.
 >
 > **Solo Flutter — `tutorial_videos`** (videos tutoriales, 2026-10-22): `{"enabled": true, "videos": [{"id":
-> "pagos", "title": "…", "youtubeId": "S8lCwQrrcZo", "places": ["welcome", "ayuda"], "requires": []}, …]}`.
+> "pagos", "title": "…", "youtubeId": "8K_o2pC19qY", "places": ["welcome", "ayuda"], "requires": []}, …]}`.
 > Si no viene `videos`, la app usa sus dos videos por defecto; si viene, reemplaza la lista completa.
 > `places`: `welcome` / `ayuda`. `requires` (opcional): tipos de trámite del API (`COURSES`, `VENUES`,
 > `PQRSDF`…); el video sale solo si la alcaldía tiene alguno activo, y nunca en Bienvenida.

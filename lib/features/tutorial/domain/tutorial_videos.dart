@@ -95,7 +95,7 @@ class TutorialVideo {
 /// {
 ///   "enabled": true,
 ///   "videos": [
-///     { "id": "pagos", "title": "…", "youtubeId": "S8lCwQrrcZo",
+///     { "id": "pagos", "title": "…", "youtubeId": "8K_o2pC19qY",
 ///       "places": ["welcome", "ayuda"] },
 ///     { "id": "tramites", "title": "…", "youtubeId": "YQQfugIjP6U",
 ///       "places": ["ayuda"], "requires": ["COURSES", "VENUES"] }
@@ -111,12 +111,14 @@ class TutorialVideosConfig {
   static const unavailable = TutorialVideosConfig(enabled: false, videos: []);
 
   /// Videos del canal de 1cero1 (lista «Tutoriales TramiApp», 2026-01-13).
-  /// Están grabados con la app Kotlin; los pasos coinciden con esta.
+  /// Están grabados con la app Kotlin; los pasos coinciden con esta. El de
+  /// pagos es la versión narrada (2026-10-22); el original sin voz era
+  /// `S8lCwQrrcZo`.
   static const defaults = [
     TutorialVideo(
       id: 'pagos',
       title: 'Cómo pagar tus impuestos',
-      youtubeId: 'S8lCwQrrcZo',
+      youtubeId: '8K_o2pC19qY',
       places: {VideoPlace.welcome, VideoPlace.help},
     ),
     // Cursos y reserva de espacios. Al final muestra la PQRSDF anónima, pero
