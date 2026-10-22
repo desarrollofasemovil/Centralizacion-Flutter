@@ -7,11 +7,16 @@ import 'package:go_router/go_router.dart';
 import '../../../core/utils/url_opener.dart';
 
 import '../../../core/models/department.dart';
+import '../../../core/models/user_dto.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/storage/user_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/application/auth_providers.dart';
-import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../../core/widgets/footer_sponsors.dart';
+import '../../tutorial/application/tutorial_providers.dart';
+import '../../tutorial/domain/tutorial_videos.dart';
+import '../../tutorial/presentation/video_tutorial_launcher.dart';
+import '../../tutorial/presentation/widgets/tutorial_help_button.dart';
 import '../application/welcome_controller.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -32,6 +37,9 @@ const _kDotInactive = Color(0xFFE0E0E0); // Gray300
 // búsqueda/anuncios).
 const _kChoreographyDuration = Duration(milliseconds: 1600);
 
+// Cuánto se ve el globo «¿Necesitas ayuda?» después de entrar.
+const _kHelpHintDuration = Duration(seconds: 5);
+
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
@@ -40,6 +48,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   int _currentPage = 0;
   Timer? _timer;
   bool _searchFocused = false;
+
+  /// El botón de ayuda resalta (late, con punto) hasta que se abre el video.
+  late bool _helpHighlighted = !ref
+      .read(userPreferencesProvider)
+      .welcomeVideoSeen();
+
+  /// El globo «¿Necesitas ayuda?» sale mientras no se haya abierto el video
+  /// ni se haya cerrado con la ×.
+  late bool _showHelpHint =
+      _helpHighlighted &&
+      !ref.read(userPreferencesProvider).welcomeHintDismissed();
+  Timer? _helpHintTimer;
 
   late final AnimationController _entrance;
 
@@ -55,6 +75,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   // Carrusel de anuncios: fadeIn(tween(800, delay=100)) + scaleIn(800, delay=100)
   // + slideInVertically(800, delay=800, initialOffsetY={ -it }) — entra desde arriba.
+  // Globo de ayuda: entra al final, cuando ya se ve el resto de la pantalla.
+  late final Animation<double> _hintFade;
+
   late final Animation<double> _carouselFade;
   late final Animation<double> _carouselScale;
   late final Animation<Offset> _carouselSlide;
@@ -90,6 +113,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       end: Offset.zero,
     ).animate(_searchFade);
 
+    _hintFade = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(1100 / 1600, 1.0, curve: Curves.easeOut),
+    );
+
     _carouselFade = CurvedAnimation(
       parent: _entrance,
       curve: const Interval(100 / 1600, 900 / 1600, curve: Curves.easeOut),
@@ -106,6 +134,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           ),
         );
 
+    // El globo de ayuda se queda [_kHelpHintDuration] desde que terminó de
+    // entrar y se va solo (vuelve en la próxima visita si no lo cerró).
+    _entrance.addStatusListener((status) {
+      if (status == AnimationStatus.completed && _showHelpHint) {
+        _helpHintTimer = Timer(_kHelpHintDuration, () {
+          if (mounted) setState(() => _showHelpHint = false);
+        });
+      }
+    });
+
     // Port de triggerAnimations() en WelcomeViewModel: delay antes de
     // arrancar la coreografía.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -118,6 +156,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   @override
   void dispose() {
     _timer?.cancel();
+    _helpHintTimer?.cancel();
     _entrance.dispose();
     _pageController.dispose();
     _searchController.dispose();
@@ -138,6 +177,24 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     });
   }
 
+  void _openWelcomeVideo(TutorialVideo video) {
+    _helpHintTimer?.cancel();
+    if (_helpHighlighted) {
+      setState(() {
+        _helpHighlighted = false;
+        _showHelpHint = false;
+      });
+      unawaited(ref.read(userPreferencesProvider).markWelcomeVideoSeen());
+    }
+    openTutorialVideo(context, video: video, origin: VideoPlace.welcome);
+  }
+
+  void _closeHelpHint() {
+    _helpHintTimer?.cancel();
+    setState(() => _showHelpHint = false);
+    unawaited(ref.read(userPreferencesProvider).markWelcomeHintDismissed());
+  }
+
   void _onDepartmentSelected(Department dep) {
     _searchController.text = dep.name;
     _searchFocus.unfocus();
@@ -151,123 +208,164 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     final user = ref.watch(sessionProvider);
     final filtered = welcome.filteredDepartments;
     final carouselHeight = MediaQuery.of(context).size.width - 44;
+    // Video de cómo pagar: no es del original Kotlin, es una ayuda para quien
+    // llega por primera vez (sobre todo adultos mayores). Se abre con el botón
+    // de ayuda fijo arriba a la derecha.
+    final welcomeVideos = ref
+        .watch(tutorialVideosConfigProvider)
+        .videosFor(VideoPlace.welcome);
 
     return Scaffold(
       backgroundColor: scheme.primary,
       body: SafeArea(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => _searchFocus.unfocus(),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 56),
-                // ── Header (HeaderWelcome: fadeIn + slideInVertically, sin delay) ──
-                FadeTransition(
-                  opacity: _headerFade,
-                  child: SlideTransition(
-                    position: _headerSlide,
-                    child: Column(
-                      children: [
-                        Text(
-                          '¡Bienvenido!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: scheme.onPrimary,
-                            fontSize: 40,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        // Si hay sesión, mostrar el nombre del usuario (port del
-                        // header de WelcomeScreen.kt).
-                        if (user != null) ...[
-                          const SizedBox(height: 5),
-                          Text(
-                            '${user.firstName} ${user.lastName}',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: scheme.onPrimary,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w500,
+        child: Stack(
+          children: [
+            _buildContent(scheme, welcome, user, filtered, carouselHeight),
+            if (welcomeVideos.isNotEmpty)
+              Positioned(
+                top: 4,
+                right: 12,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      child: !_showHelpHint
+                          ? const SizedBox.shrink()
+                          : FadeTransition(
+                              key: const ValueKey('help-hint'),
+                              opacity: _hintFade,
+                              child: TutorialHelpHint(
+                                background: scheme.onPrimary,
+                                foreground: scheme.primary,
+                                onPressed: () =>
+                                    _openWelcomeVideo(welcomeVideos.first),
+                                onClose: _closeHelpHint,
+                              ),
                             ),
-                          ),
-                        ],
-                        const SizedBox(height: 10),
-                        Text(
-                          'Vamos a configurar tu aplicación\nElige tu departamento',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: scheme.onPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // ── Buscador de departamento + dropdown inline ───────────
-                // fadeIn + slideInVertically(delay=600), entra desde abajo.
-                FadeTransition(
-                  opacity: _searchFade,
-                  child: SlideTransition(
-                    position: _searchSlide,
-                    child: _DepartmentSearch(
-                      controller: _searchController,
-                      focusNode: _searchFocus,
-                      onChanged: ref
-                          .read(welcomeControllerProvider.notifier)
-                          .onQueryChanged,
-                      showDropdown: _searchFocused && filtered.isNotEmpty,
-                      departments: filtered,
-                      onSelected: _onDepartmentSelected,
-                      textColor: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // ── Carrusel de anuncios ─────────────────────────────────
-                // fadeIn(delay=100) + scaleIn(delay=100) + slideInVertically
-                // (delay=800), entra desde arriba.
-                FadeTransition(
-                  opacity: _carouselFade,
-                  child: SlideTransition(
-                    position: _carouselSlide,
-                    child: ScaleTransition(
-                      scale: _carouselScale,
-                      child: _Carousel(
-                        items: welcome.carouselImages,
-                        height: carouselHeight,
-                        controller: _pageController,
-                        currentPage: _currentPage,
-                        onPageChanged: (p) => setState(() => _currentPage = p),
+                    FadeTransition(
+                      opacity: _headerFade,
+                      child: TutorialHelpButton(
+                        color: scheme.onPrimary,
+                        highlighted: _helpHighlighted,
+                        onPressed: () => _openWelcomeVideo(welcomeVideos.first),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                // ── Footer patrocinadores ────────────────────────────────
-                FooterSponsors(color: scheme.onPrimary),
-                const SizedBox(height: 8),
-                // ── Enlace discreto de login ─────────────────────────────
-                TextButton(
-                  onPressed: () => showLoginBottomSheet(context),
-                  child: Text(
-                    'Iniciar sesión',
-                    style: TextStyle(
-                      color: scheme.onPrimary,
-                      decoration: TextDecoration.underline,
-                      decorationColor: scheme.onPrimary,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    ColorScheme scheme,
+    WelcomeState welcome,
+    UserDTO? user,
+    List<Department> filtered,
+    double carouselHeight,
+  ) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _searchFocus.unfocus(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 56),
+            // ── Header (HeaderWelcome: fadeIn + slideInVertically, sin delay) ──
+            FadeTransition(
+              opacity: _headerFade,
+              child: SlideTransition(
+                position: _headerSlide,
+                child: Column(
+                  children: [
+                    Text(
+                      '¡Bienvenido!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: scheme.onPrimary,
+                        fontSize: 40,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                    // Si hay sesión, mostrar el nombre del usuario (port del
+                    // header de WelcomeScreen.kt).
+                    if (user != null) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        '${user.firstName} ${user.lastName}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: scheme.onPrimary,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Text(
+                      'Vamos a configurar tu aplicación\nElige tu departamento',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: scheme.onPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // ── Buscador de departamento + dropdown inline ───────────
+            // fadeIn + slideInVertically(delay=600), entra desde abajo.
+            FadeTransition(
+              opacity: _searchFade,
+              child: SlideTransition(
+                position: _searchSlide,
+                child: _DepartmentSearch(
+                  controller: _searchController,
+                  focusNode: _searchFocus,
+                  onChanged: ref
+                      .read(welcomeControllerProvider.notifier)
+                      .onQueryChanged,
+                  showDropdown: _searchFocused && filtered.isNotEmpty,
+                  departments: filtered,
+                  onSelected: _onDepartmentSelected,
+                  textColor: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // ── Carrusel de anuncios ─────────────────────────────────
+            // fadeIn(delay=100) + scaleIn(delay=100) + slideInVertically
+            // (delay=800), entra desde arriba.
+            FadeTransition(
+              opacity: _carouselFade,
+              child: SlideTransition(
+                position: _carouselSlide,
+                child: ScaleTransition(
+                  scale: _carouselScale,
+                  child: _Carousel(
+                    items: welcome.carouselImages,
+                    height: carouselHeight,
+                    controller: _pageController,
+                    currentPage: _currentPage,
+                    onPageChanged: (p) => setState(() => _currentPage = p),
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(height: 24),
+            // ── Footer patrocinadores ────────────────────────────────
+            FooterSponsors(color: scheme.onPrimary),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );

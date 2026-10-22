@@ -264,6 +264,26 @@ recordatorios · `4` trámites · `5` guía de PQRSDF · `6A`/`6B` historial · 
 - **Efecto en recordatorios** (la meta del tutorial): `recordatorio_iniciado` / `recordatorio_creado`
   de usuarios con `tutorial_completado` frente a los que lo omitieron.
 
+## Fase 5 — videos tutoriales (2026-10-22)
+
+Videos de YouTube del canal de 1cero1 que se ven **dentro de la app** (reproductor oficial de YouTube
+en un WebView, `youtube_player_iframe`): «Cómo pagar tus impuestos» en Bienvenida y en Ayuda y
+Soporte; «Cursos y reserva de espacios» solo en Ayuda y solo si la alcaldía tiene cursos o reservas.
+La lista sale de Remote Config `tutorial_videos`. Código: `lib/features/tutorial/`.
+
+### Eventos
+
+| Evento | Cuándo | Parámetros |
+|---|---|---|
+| `video_tutorial_abierto` | abre la pantalla del video | `video` (`pagos` / `tramites` / el `id` de Remote Config), `origen` (`welcome` / `ayuda`), `municipio_id` (no desde Bienvenida) |
+| `video_tutorial_cerrado` | sale de la pantalla | los mismos, `porcentaje` (0–100, hasta dónde llegó) y `completo` (`si`/`no`) |
+
+### Para los informes
+
+- **Dimensiones de evento:** `video`, `origen`, `completo`. **Métrica:** `porcentaje`.
+- **Tasa de finalización** = `video_tutorial_cerrado` con `completo = si` / `video_tutorial_abierto`.
+- `porcentaje` es la posición más lejana a la que llegó, no el tiempo visto: adelantar cuenta.
+
 ## BigQuery (vinculado el 2026-10-19)
 
 Exportación **diaria** de Google Analytics desde Firebase al proyecto `betaappcentralizate`, en
