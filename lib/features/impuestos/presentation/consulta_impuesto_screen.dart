@@ -118,7 +118,7 @@ class _ConsultaImpuestoScreenState
       builder: (dialogContext) => ImportantAlertDialog(
         onDismissRequest: () => Navigator.of(dialogContext).pop(),
         title: 'Consulta sin resultados',
-        message: 'No se encontrarón facturas para este documento.',
+        message: 'No se encontraron facturas para este documento.',
         confirmButtonText: 'Aceptar',
       ),
     ).whenComplete(notifier.onNoResultsDialogDismissed);

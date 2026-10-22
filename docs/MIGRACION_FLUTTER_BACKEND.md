@@ -389,6 +389,12 @@ Configuración: `minimumFetchIntervalInSeconds = 120` (comentario dice "1 hora" 
 
 > **Flutter:** `firebase_remote_config`. Mantener exactamente las mismas keys (`welcome_carousel_images`, `app_status_config`, `send_to_welcome`, `tourism_tax_rates`) porque las define el mismo backoffice de Firebase, compartido entre apps. Cada flavor/app individual usa **su propio proyecto Firebase**, así que estas keys deben existir en cada proyecto.
 
+> **Solo Flutter — `tutorial_config`** (tutorial de primer uso, 2026-10-22): JSON con el interruptor y los
+> textos de las tarjetas, `{"enabled": true, "cards": {"1": {"title": "…", "body": "…"}, …}}`. Si la key
+> no existe, la app usa `{"enabled":true}` y sus textos. Claves de `cards`: `1`, `2A`, `2B`, `3A`, `3B`,
+> `4`, `4_sin_pqrsdf`, `5`, `6A`, `6B`, `7`; `{alcaldia}` se reemplaza por «Alcaldía de {nombre}».
+> Código: `lib/features/tutorial/domain/tutorial_config.dart`.
+
 ---
 
 ## 7. Mecánica multi-municipio / white-label (lado backend/datos)

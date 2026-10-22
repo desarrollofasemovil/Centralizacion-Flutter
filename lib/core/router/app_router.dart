@@ -67,6 +67,9 @@ import '../../features/perfil/presentation/edit_profile_screen.dart';
 import '../../features/historial_pagos/presentation/history_pay_screen.dart';
 import '../../features/reminders/presentation/reminders_screen.dart';
 
+// Tutorial de primer uso
+import '../../features/tutorial/presentation/tutorial_screen.dart';
+
 /// Decide la pantalla inicial (FRONTEND §1.1 / BACKEND §7.2):
 /// - flavor individual (Manizales) → directo a su municipio fijo;
 /// - `send_to_welcome` (Remote Config) → Welcome;
@@ -400,7 +403,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppRoutes.help,
             builder: (context, state) {
               final extra = state.extra as Map<String, dynamic>?;
+              final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return HelpScreen(
+                municipalityId: id,
                 municipality: extra?['municipality'] as String? ?? '',
                 portal: extra?['portal'] as String? ?? '',
               );
@@ -423,6 +428,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           _route(
             path: AppRoutes.editProfile,
             builder: (context, state) => const EditProfileScreen(),
+          ),
+          _route(
+            path: AppRoutes.tutorial,
+            builder: (context, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+              final origin = state.extra is TutorialOrigin
+                  ? state.extra! as TutorialOrigin
+                  : TutorialOrigin.help;
+              return _TutorialScreenContainer(
+                municipalityId: id,
+                origin: origin,
+              );
+            },
           ),
         ],
       ),
@@ -493,6 +511,24 @@ class _MainScreenContainer extends ConsumerWidget {
       data: (dto) => MainScreen(municipality: dto),
       loading: () => const MainScreenSkeleton(),
       error: (_, _) => const LoadingScreen(),
+    );
+  }
+}
+
+class _TutorialScreenContainer extends ConsumerWidget {
+  const _TutorialScreenContainer({
+    required this.municipalityId,
+    required this.origin,
+  });
+  final int municipalityId;
+  final TutorialOrigin origin;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(municipalityProvider(municipalityId));
+    return async.maybeWhen(
+      data: (dto) => TutorialScreen(municipality: dto, origin: origin),
+      orElse: () => const LoadingScreen(),
     );
   }
 }

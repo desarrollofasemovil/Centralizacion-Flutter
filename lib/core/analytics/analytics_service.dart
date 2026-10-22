@@ -428,6 +428,82 @@ class AnalyticsService {
     );
   }
 
+  // ── Tutorial de primer uso ─────────────────────────────────────────────
+
+  /// Se abre el tutorial. `recorrido` son las tarjetas que le tocaron a esta
+  /// alcaldía (p. ej. `1-2A-3A-4-5-6A`).
+  Future<void> logTutorialStarted({
+    required int municipalityId,
+    required TutorialOrigin origin,
+    required String route,
+    required int totalSteps,
+  }) async {
+    await logEvent(
+      'tutorial_iniciado',
+      parameters: {
+        'municipio_id': municipalityId,
+        'origen': origin.value,
+        'recorrido': _truncate(route, _maxParamLength),
+        'pasos': totalSteps,
+      },
+    );
+  }
+
+  /// Llega a una tarjeta (también la primera). `paso` empieza en 1.
+  Future<void> logTutorialStepViewed({
+    required int municipalityId,
+    required TutorialOrigin origin,
+    required int step,
+    required String card,
+  }) async {
+    await logEvent(
+      'tutorial_paso_visto',
+      parameters: {
+        'municipio_id': municipalityId,
+        'origen': origin.value,
+        'paso': step,
+        'tarjeta': card,
+      },
+    );
+  }
+
+  /// Cierra el tutorial desde la última tarjeta: «Empezar» o, en la de
+  /// cuenta, cualquiera de sus tres botones.
+  Future<void> logTutorialCompleted({
+    required int municipalityId,
+    required TutorialOrigin origin,
+    required int totalSteps,
+    required TutorialClose close,
+  }) async {
+    await logEvent(
+      'tutorial_completado',
+      parameters: {
+        'municipio_id': municipalityId,
+        'origen': origin.value,
+        'pasos': totalSteps,
+        'cierre': close.value,
+      },
+    );
+  }
+
+  /// Lo cierra antes del final: «Omitir», o "atrás" en la primera tarjeta.
+  Future<void> logTutorialSkipped({
+    required int municipalityId,
+    required TutorialOrigin origin,
+    required int step,
+    required String card,
+  }) async {
+    await logEvent(
+      'tutorial_omitido',
+      parameters: {
+        'municipio_id': municipalityId,
+        'origen': origin.value,
+        'paso': step,
+        'tarjeta': card,
+      },
+    );
+  }
+
   /// Rango del tiempo fuera, para agrupar en GA4 sin una dimensión por
   /// segundo: `menos_15s`, `15_60s`, `1_3min`, `3_10min`, `mas_10min`.
   static String timeAwayRange(Duration away) {
@@ -568,6 +644,31 @@ enum PortalSurveyStep {
   problem('motivo');
 
   const PortalSurveyStep(this.value);
+
+  final String value;
+}
+
+/// Desde dónde se abrió el tutorial.
+enum TutorialOrigin {
+  /// Solo, la primera vez que llega a la Home.
+  firstUse('primer_uso'),
+
+  /// «Ver tutorial de la app» en Ayuda y Soporte.
+  help('ayuda');
+
+  const TutorialOrigin(this.value);
+
+  final String value;
+}
+
+/// Con qué botón terminó el tutorial (`tutorial_completado`).
+enum TutorialClose {
+  start('empezar'),
+  login('iniciar_sesion'),
+  signUp('crear_cuenta'),
+  later('ahora_no');
+
+  const TutorialClose(this.value);
 
   final String value;
 }

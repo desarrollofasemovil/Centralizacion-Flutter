@@ -478,7 +478,12 @@ class _HistoryCard extends StatelessWidget {
               ],
             ),
             if (onRemind != null) ...[
-              const Divider(height: 20),
+              // Gris suave: el `outlineVariant` por defecto del esquema de la
+              // app es negro y el separador salía como una línea fuerte.
+              Divider(
+                height: 20,
+                color: scheme.onSurface.withValues(alpha: 0.12),
+              ),
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(

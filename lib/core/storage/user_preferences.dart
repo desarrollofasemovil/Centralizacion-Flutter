@@ -46,6 +46,8 @@ class UserPreferences {
   // In-App Review: el Kotlin usaba un archivo aparte (`in_app_review_prefs`);
   // aquí se prefija porque comparte espacio con el resto de preferencias.
   static const _kReviewLoginCount = 'in_app_review_login_count';
+  // Tutorial de primer uso: una vez por instalación, no por municipio.
+  static const _kTutorialSeen = 'tutorial_primer_uso_visto';
 
   // ── Ubicación ──────────────────────────────────────────────────────────────
   SavedLocation getSavedLocation() => SavedLocation(
@@ -145,6 +147,11 @@ class UserPreferences {
 
   Future<void> incrementReviewLoginCount() =>
       _prefs.setInt(_kReviewLoginCount, reviewLoginCount() + 1);
+
+  // ── Tutorial de primer uso ──────────────────────────────────────────────────
+  bool tutorialSeen() => _prefs.getBool(_kTutorialSeen) ?? false;
+
+  Future<void> markTutorialSeen() => _prefs.setBool(_kTutorialSeen, true);
 }
 
 /// Instancia de [SharedPreferences]. **Se sobreescribe en `bootstrap`** tras

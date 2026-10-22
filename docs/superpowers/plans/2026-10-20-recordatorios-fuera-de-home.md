@@ -58,7 +58,7 @@ En los resultados de la consulta de impuesto, cada factura vigente ofrece
 - El modal tiene selector de antelación ("Avisarme").
 - Analítica: `recordatorios_abiertos` (`entrada`) y el origen `pantalla`.
 
-### Paso 3 — Ofrecerlo después de pagar ✅ (en revisión)
+### Paso 3 — Ofrecerlo después de pagar ✅ (PR #41)
 
 No existe una pantalla de "pago aprobado": "Verificar estado" lleva al Historial y la
 aprobación se detecta en segundo plano (donde además se pide la reseña de la tienda).
