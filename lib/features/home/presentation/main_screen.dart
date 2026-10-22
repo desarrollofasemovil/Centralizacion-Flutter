@@ -18,6 +18,8 @@ import '../../reminders/domain/reminders_state.dart';
 import '../../reminders/presentation/upcoming_reminder_banner.dart';
 import '../../tramites/application/tramite_mappers.dart';
 import '../../tramites/domain/info_tramite.dart';
+import '../../tutorial/application/tutorial_providers.dart';
+import '../../tutorial/presentation/tutorial_launcher.dart';
 import '../application/main_viewmodel.dart';
 import 'widgets/animated_section.dart';
 import 'widgets/external_link_dialog.dart';
@@ -59,7 +61,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     // Tras el primer frame, cuando ya escucha la encuesta pendiente: resuelve
     // una visita que quedó abierta si Android cerró la app en el portal.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) tracker.restorePendingVisit();
+      if (!mounted) return;
+      tracker.restorePendingVisit();
+      // Tutorial de primer uso: la primera vez que llega a una Home, ya con el
+      // municipio elegido. Una vez por instalación.
+      if (shouldAutoShowTutorial(ref)) {
+        openTutorial(
+          context,
+          municipalityId: widget.municipality.id,
+          origin: TutorialOrigin.firstUse,
+        );
+      }
     });
   }
 

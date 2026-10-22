@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/widgets/dialog_typography.dart';
 import '../../../core/utils/url_opener.dart';
 
 import '../../auth/presentation/login_bottom_sheet.dart';
+import '../../tutorial/application/tutorial_providers.dart';
+import '../../tutorial/presentation/tutorial_launcher.dart';
 import '../application/help_notifier.dart';
 import '../domain/help_state.dart';
 import 'widgets/support_form_wizard.dart';
@@ -16,9 +19,13 @@ import '../../../core/widgets/app_top_bar.dart';
 class HelpScreen extends ConsumerWidget {
   const HelpScreen({
     super.key,
+    required this.municipalityId,
     required this.municipality,
     required this.portal,
   });
+
+  /// Para abrir el tutorial de esta alcaldía.
+  final int municipalityId;
 
   /// Nombre del municipio (contexto del correo de soporte).
   final String municipality;
@@ -32,6 +39,7 @@ class HelpScreen extends ConsumerWidget {
     final uiState =
         ref.watch(helpNotifierProvider(municipality).select((s) => s.uiState));
     final notifier = ref.read(helpNotifierProvider(municipality).notifier);
+    final tutorialEnabled = ref.watch(tutorialConfigProvider).enabled;
 
     // Diálogos Success / Error.
     ref.listen<HelpUiState>(
@@ -70,6 +78,16 @@ class HelpScreen extends ConsumerWidget {
                 _HelpCategorySection(
                   title: 'Sobre mis Impuestos',
                   children: [
+                    if (tutorialEnabled) ...[
+                      _TutorialButton(
+                        onPressed: () => openTutorial(
+                          context,
+                          municipalityId: municipalityId,
+                          origin: TutorialOrigin.help,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     const _GlossarySection(),
                     const SizedBox(height: 12),
                     const _ExpandableInfoCard(
@@ -380,6 +398,68 @@ class _OfficialPortalButton extends StatelessWidget {
         style: theme.textTheme.titleSmall
             ?.copyWith(color: theme.colorScheme.onSurface),
       ),
+    );
+  }
+}
+
+/// «Ver tutorial de la app»: mismo estilo que «Sitio web oficial», con la
+/// etiqueta «NUEVO» del diseño.
+class _TutorialButton extends StatelessWidget {
+  const _TutorialButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        OutlinedButton.icon(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(50),
+            side: BorderSide(color: scheme.primary),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          icon: Icon(
+            Icons.play_lesson_outlined,
+            size: 20,
+            color: scheme.primary,
+          ),
+          label: Text(
+            'Ver tutorial de la app',
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: scheme.onSurface,
+            ),
+          ),
+        ),
+        Positioned(
+          right: -6,
+          top: -10,
+          child: ExcludeSemantics(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'NUEVO',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .3,
+                  color: scheme.onPrimary,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

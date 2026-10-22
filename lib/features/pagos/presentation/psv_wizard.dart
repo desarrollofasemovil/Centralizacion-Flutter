@@ -54,6 +54,7 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
   bool _isSubmitting = false;
   // Dirección de la transición entre pasos: true = avanzar, false = retroceder.
   bool _isForward = true;
+  final _nestedScrollKey = GlobalKey<NestedScrollViewState>();
 
   // --- Paso 1: datos del ciudadano ---
   int? _documentTypeId;
@@ -173,6 +174,7 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
         _isForward = true;
         _currentStep++;
       });
+      _scrollToTop();
     }
   }
 
@@ -182,6 +184,21 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
         _isForward = false;
         _currentStep--;
       });
+      _scrollToTop();
+    }
+  }
+
+  /// Cada paso empieza arriba y con la barra desplegada. Sin esto, el paso 3
+  /// heredaba el desplazamiento del 2 (que el teclado empuja hacia arriba) y
+  /// los títulos «Paso 1/2/3» quedaban medio tapados bajo la barra.
+  void _scrollToTop() {
+    final nested = _nestedScrollKey.currentState;
+    if (nested == null) return;
+    for (final controller in [
+      nested.innerController,
+      nested.outerController,
+    ]) {
+      if (controller.hasClients) controller.jumpTo(0);
     }
   }
 
@@ -305,6 +322,7 @@ class _PsvWizardState extends ConsumerState<PsvWizard> {
         body: SafeArea(
           bottom: false,
           child: NestedScrollView(
+            key: _nestedScrollKey,
             // El topbar `primary` se colapsa al hacer scroll hacia arriba y
             // vuelve a expandirse al bajar (enterAlwaysScrollBehavior del
             // `LargeTopAppBar` original).

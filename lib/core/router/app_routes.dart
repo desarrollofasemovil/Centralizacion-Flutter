@@ -38,6 +38,9 @@ class AppRoutes {
   static const reminders = '/municipality/:id/reminders';
   static const editProfile = '/municipality/:id/edit-profile';
 
+  /// Tutorial de primer uso. El origen (`TutorialOrigin`) viaja como `extra`.
+  static const tutorial = '/municipality/:id/tutorial';
+
   static String selectMunicipalityPath(int departmentId) =>
       '/select-municipality/$departmentId';
 
@@ -75,6 +78,7 @@ class AppRoutes {
   static String settingsPath(int id) => '/municipality/$id/settings';
   static String remindersPath(int id) => '/municipality/$id/reminders';
   static String editProfilePath(int id) => '/municipality/$id/edit-profile';
+  static String tutorialPath(int id) => '/municipality/$id/tutorial';
 }
 
 

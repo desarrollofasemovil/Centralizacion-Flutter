@@ -34,7 +34,11 @@ Future<ProviderContainer> _pumpHelp(WidgetTester tester) async {
     ProviderScope(
       overrides: [sessionProvider.overrideWith(_Session.new)],
       child: const MaterialApp(
-        home: HelpScreen(municipality: _municipality, portal: 'https://x.co'),
+        home: HelpScreen(
+          municipalityId: 1,
+          municipality: _municipality,
+          portal: 'https://x.co',
+        ),
       ),
     ),
   );

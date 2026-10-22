@@ -231,6 +231,39 @@ el botón **"Recordarme antes del vencimiento"** de cada factura (plan:
 - **Conversión del botón** = `recordatorio_creado` (`origen = factura`) / `recordatorio_iniciado`.
 - `sesion = no` seguido de `login` muestra cuántos inician sesión para poder crear el recordatorio.
 
+## Fase 4 — tutorial de primer uso (2026-10-22)
+
+Carrusel de tarjetas que sale **una vez por instalación** al llegar a la Home, y otra vez desde
+**Ayuda y Soporte → «Ver tutorial de la app»** (plan:
+[`superpowers/plans/2026-10-21-tutorial-primer-uso.md`](superpowers/plans/2026-10-21-tutorial-primer-uso.md)).
+Las tarjetas dependen de la alcaldía y de la sesión, así que cada apertura registra su `recorrido`.
+Código: `lib/features/tutorial/`.
+
+### Eventos
+
+Comunes¹⁰: `municipio_id`, `origen` (`primer_uso` / `ayuda`).
+
+| Evento | Cuándo | Parámetros |
+|---|---|---|
+| `tutorial_iniciado` | se abre | comunes¹⁰, `recorrido` (p. ej. `1-2A-3A-4-5-6A`), `pasos` |
+| `tutorial_paso_visto` | llega a una tarjeta (también la primera) | comunes¹⁰, `paso` (desde 1), `tarjeta`¹¹ |
+| `tutorial_completado` | lo cierra desde la última tarjeta | comunes¹⁰, `pasos`, `cierre` (`empezar` / `iniciar_sesion` / `crear_cuenta` / `ahora_no`) |
+| `tutorial_omitido` | «Omitir», o "atrás" en la primera tarjeta | comunes¹⁰, `paso`, `tarjeta`¹¹ |
+
+¹⁰ `origen = primer_uso` cuando se abrió solo al entrar a la Home; `ayuda` cuando lo pidió desde
+Ayuda y Soporte.
+
+¹¹ `tarjeta`: `1` bienvenida · `2A`/`2B` impuestos (en la app / por portal) · `3A`/`3B`
+recordatorios · `4` trámites · `5` guía de PQRSDF · `6A`/`6B` historial · `7` crea tu cuenta.
+
+### Para los informes
+
+- **Dimensiones de evento:** `origen`, `recorrido`, `tarjeta`, `cierre`. **Métricas:** `paso`, `pasos`.
+- **Tasa de finalización** = `tutorial_completado` / `tutorial_iniciado` (`origen = primer_uso`).
+- **Dónde abandonan** = `tutorial_omitido` por `tarjeta`.
+- **Efecto en recordatorios** (la meta del tutorial): `recordatorio_iniciado` / `recordatorio_creado`
+  de usuarios con `tutorial_completado` frente a los que lo omitieron.
+
 ## BigQuery (vinculado el 2026-10-19)
 
 Exportación **diaria** de Google Analytics desde Firebase al proyecto `betaappcentralizate`, en
