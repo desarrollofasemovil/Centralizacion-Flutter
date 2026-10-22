@@ -504,6 +504,46 @@ class AnalyticsService {
     );
   }
 
+  // ── Videos tutoriales ──────────────────────────────────────────────────
+
+  /// Abre un video tutorial (se ve dentro de la app). `origen`: `welcome` /
+  /// `ayuda`; desde Welcome todavía no hay municipio.
+  Future<void> logTutorialVideoOpened({
+    required String video,
+    required String origin,
+    int? municipalityId,
+  }) async {
+    await logEvent(
+      'video_tutorial_abierto',
+      parameters: {
+        'video': _truncate(video, _maxParamLength),
+        'origen': origin,
+        'municipio_id': ?municipalityId,
+      },
+    );
+  }
+
+  /// Sale de la pantalla del video. `porcentaje` es hasta dónde llegó
+  /// (0–100); `completo` = llegó al final.
+  Future<void> logTutorialVideoClosed({
+    required String video,
+    required String origin,
+    required int percentWatched,
+    required bool completed,
+    int? municipalityId,
+  }) async {
+    await logEvent(
+      'video_tutorial_cerrado',
+      parameters: {
+        'video': _truncate(video, _maxParamLength),
+        'origen': origin,
+        'municipio_id': ?municipalityId,
+        'porcentaje': percentWatched,
+        'completo': completed ? 'si' : 'no',
+      },
+    );
+  }
+
   /// Rango del tiempo fuera, para agrupar en GA4 sin una dimensión por
   /// segundo: `menos_15s`, `15_60s`, `1_3min`, `3_10min`, `mas_10min`.
   static String timeAwayRange(Duration away) {

@@ -69,6 +69,7 @@ import '../../features/reminders/presentation/reminders_screen.dart';
 
 // Tutorial de primer uso
 import '../../features/tutorial/presentation/tutorial_screen.dart';
+import '../../features/tutorial/presentation/video_tutorial_screen.dart';
 
 /// Decide la pantalla inicial (FRONTEND §1.1 / BACKEND §7.2):
 /// - flavor individual (Manizales) → directo a su municipio fijo;
@@ -152,6 +153,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       _route(
         path: AppRoutes.changePasswordReset,
         builder: (_, _) => const ChangePasswordResetScreen(),
+      ),
+      _route(
+        path: AppRoutes.videoTutorial,
+        redirect: _requireVideoArgs,
+        builder: (_, state) =>
+            VideoTutorialScreen(args: state.extra! as VideoTutorialArgs),
       ),
       ShellRoute(
         builder: (context, state, child) {
@@ -430,6 +437,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const EditProfileScreen(),
           ),
           _route(
+            path: AppRoutes.municipalityVideoTutorial,
+            redirect: (context, state) => state.extra is VideoTutorialArgs
+                ? null
+                : AppRoutes.municipalityPath(
+                    int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+                  ),
+            builder: (_, state) =>
+                VideoTutorialScreen(args: state.extra! as VideoTutorialArgs),
+          ),
+          _route(
             path: AppRoutes.tutorial,
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
@@ -447,6 +464,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Sin el video (p. ej. una ruta reconstruida sin `extra`) no hay nada que
+/// mostrar: vuelve al inicio (el de alcaldía redirige a su Home).
+String? _requireVideoArgs(BuildContext context, GoRouterState state) =>
+    state.extra is VideoTutorialArgs ? null : AppRoutes.splash;
 
 /// Pantalla de `errorBuilder`: ruta desconocida o que no matchea.
 class _RouteErrorScreen extends StatelessWidget {

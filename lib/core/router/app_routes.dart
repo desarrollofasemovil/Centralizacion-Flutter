@@ -12,6 +12,10 @@ class AppRoutes {
   static const recoverPassword = '/recover-password';
   static const changePasswordReset = '/recover-password/change';
 
+  /// Video tutorial desde Bienvenida (sin alcaldía). Los datos del video
+  /// (`VideoTutorialArgs`) viajan como `extra`.
+  static const videoTutorial = '/video-tutorial';
+
   /// Home del municipio (orquestador "alcaldías"). `:id` = municipalityId.
   static const municipality = '/municipality/:id';
   
@@ -40,6 +44,9 @@ class AppRoutes {
 
   /// Tutorial de primer uso. El origen (`TutorialOrigin`) viaja como `extra`.
   static const tutorial = '/municipality/:id/tutorial';
+
+  /// Video tutorial desde Ayuda y Soporte: dentro de la alcaldía, con su tema.
+  static const municipalityVideoTutorial = '/municipality/:id/video-tutorial';
 
   static String selectMunicipalityPath(int departmentId) =>
       '/select-municipality/$departmentId';
@@ -79,6 +86,8 @@ class AppRoutes {
   static String remindersPath(int id) => '/municipality/$id/reminders';
   static String editProfilePath(int id) => '/municipality/$id/edit-profile';
   static String tutorialPath(int id) => '/municipality/$id/tutorial';
+  static String municipalityVideoTutorialPath(int id) =>
+      '/municipality/$id/video-tutorial';
 }
 
 

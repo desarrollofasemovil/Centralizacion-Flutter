@@ -9,6 +9,7 @@ import '../models/app_global_config_dto.dart';
 import '../models/welcome_carousel_image_dto.dart';
 import '../models/tourism_contribution_dto.dart';
 import '../../features/tutorial/domain/tutorial_config.dart';
+import '../../features/tutorial/domain/tutorial_videos.dart';
 
 /// Número de build actual de la app, usado por `force_update`.
 /// Lo real lo aporta `AppInfo.buildNumber` (leído del bundle nativo en el
@@ -18,7 +19,8 @@ int get kAppBuildNumber => AppInfo.buildNumber;
 
 /// Lectura de Firebase Remote Config (BACKEND §6.1). Mantiene EXACTAS las 4
 /// keys porque las define el mismo backoffice compartido entre apps.
-/// `tutorial_config` es propia de la app Flutter (tutorial de primer uso).
+/// `tutorial_config` y `tutorial_videos` son propias de la app Flutter
+/// (tutorial de primer uso y videos tutoriales).
 class RemoteConfigService {
   RemoteConfigService(this._rc);
 
@@ -29,6 +31,7 @@ class RemoteConfigService {
   static const keySendToWelcome = 'send_to_welcome';
   static const keyTourismTaxRates = 'tourism_tax_rates';
   static const keyTutorial = 'tutorial_config';
+  static const keyTutorialVideos = 'tutorial_videos';
 
   Future<void> init() async {
     await _rc.setConfigSettings(
@@ -43,6 +46,8 @@ class RemoteConfigService {
       keyWelcomeCarousel: '{"images":[]}',
       keyTourismTaxRates: '{}',
       keyTutorial: '{"enabled":true}',
+      // Sin lista: la app usa sus videos por defecto.
+      keyTutorialVideos: '{"enabled":true}',
     });
     await _rc.fetchAndActivate();
   }
@@ -82,6 +87,10 @@ class RemoteConfigService {
   /// Interruptor y textos del tutorial de primer uso.
   TutorialConfig tutorialConfig() =>
       TutorialConfig.fromJsonString(_rc.getString(keyTutorial));
+
+  /// Interruptor y lista de videos tutoriales.
+  TutorialVideosConfig tutorialVideosConfig() =>
+      TutorialVideosConfig.fromJsonString(_rc.getString(keyTutorialVideos));
 
   /// Traduce el config remoto a un [AppStatus]. Regla de oro (§6.1): primero
   /// `force_update` por versión, luego `maintenance`/`server_error`.

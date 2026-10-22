@@ -6,7 +6,11 @@ import '../../../core/utils/url_opener.dart';
 
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../tutorial/application/tutorial_providers.dart';
+import '../../tutorial/domain/tutorial_videos.dart';
 import '../../tutorial/presentation/tutorial_launcher.dart';
+import '../../tutorial/presentation/video_tutorial_launcher.dart';
+import '../../../core/municipality/municipality_repository.dart';
+import '../../tramites/application/tramite_mappers.dart';
 import '../application/help_notifier.dart';
 import '../domain/help_state.dart';
 import 'widgets/support_form_wizard.dart';
@@ -40,6 +44,7 @@ class HelpScreen extends ConsumerWidget {
         ref.watch(helpNotifierProvider(municipality).select((s) => s.uiState));
     final notifier = ref.read(helpNotifierProvider(municipality).notifier);
     final tutorialEnabled = ref.watch(tutorialConfigProvider).enabled;
+    final videos = _videos(ref);
 
     // Diálogos Success / Error.
     ref.listen<HelpUiState>(
@@ -88,6 +93,19 @@ class HelpScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                     ],
+                    for (final video in videos) ...[
+                      _HelpButton(
+                        icon: Icons.play_circle_outline,
+                        label: 'Video: ${video.title}',
+                        onPressed: () => openTutorialVideo(
+                          context,
+                          video: video,
+                          origin: VideoPlace.help,
+                          municipalityId: municipalityId,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     const _GlossarySection(),
                     const SizedBox(height: 12),
                     const _ExpandableInfoCard(
@@ -124,6 +142,19 @@ class HelpScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Videos tutoriales para esta alcaldía. Los que dependen de sus trámites
+  /// (p. ej. cursos y reservas) esperan a que cargue su información; la
+  /// alcaldía ya está en caché porque se llega desde su Home.
+  List<TutorialVideo> _videos(WidgetRef ref) {
+    final config = ref.watch(tutorialVideosConfigProvider);
+    if (!config.enabled) return const [];
+    final municipality = ref
+        .watch(municipalityProvider(municipalityId))
+        .value
+        ?.toDomainModel();
+    return config.videosFor(VideoPlace.help, municipality: municipality);
   }
 
   // `HandleUiStateDialogs` de `HelpScreen.kt`: el original usa el `AlertDialog`
@@ -411,31 +442,14 @@ class _TutorialButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        OutlinedButton.icon(
+        _HelpButton(
+          icon: Icons.play_lesson_outlined,
+          label: 'Ver tutorial de la app',
           onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(50),
-            side: BorderSide(color: scheme.primary),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          icon: Icon(
-            Icons.play_lesson_outlined,
-            size: 20,
-            color: scheme.primary,
-          ),
-          label: Text(
-            'Ver tutorial de la app',
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: scheme.onSurface,
-            ),
-          ),
         ),
         Positioned(
           right: -6,
@@ -460,6 +474,39 @@ class _TutorialButton extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Botón con contorno del estilo de «Sitio web oficial»: tutorial y videos.
+class _HelpButton extends StatelessWidget {
+  const _HelpButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(50),
+        side: BorderSide(color: scheme.primary),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      icon: Icon(icon, size: 20, color: scheme.primary),
+      label: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.titleSmall?.copyWith(color: scheme.onSurface),
+      ),
     );
   }
 }

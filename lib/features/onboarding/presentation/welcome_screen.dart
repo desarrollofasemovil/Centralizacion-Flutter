@@ -12,6 +12,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/presentation/login_bottom_sheet.dart';
 import '../../../core/widgets/footer_sponsors.dart';
+import '../../tutorial/application/tutorial_providers.dart';
+import '../../tutorial/domain/tutorial_videos.dart';
+import '../../tutorial/presentation/video_tutorial_launcher.dart';
 import '../application/welcome_controller.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -151,6 +154,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     final user = ref.watch(sessionProvider);
     final filtered = welcome.filteredDepartments;
     final carouselHeight = MediaQuery.of(context).size.width - 44;
+    // Video de cómo pagar: no es del original Kotlin, es una ayuda para quien
+    // llega por primera vez (sobre todo adultos mayores).
+    final welcomeVideos = ref
+        .watch(tutorialVideosConfigProvider)
+        .videosFor(VideoPlace.welcome);
 
     return Scaffold(
       backgroundColor: scheme.primary,
@@ -228,6 +236,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     ),
                   ),
                 ),
+                if (welcomeVideos.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  FadeTransition(
+                    opacity: _searchFade,
+                    child: _VideoButton(
+                      color: scheme.onPrimary,
+                      onPressed: () => openTutorialVideo(
+                        context,
+                        video: welcomeVideos.first,
+                        origin: VideoPlace.welcome,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 // ── Carrusel de anuncios ─────────────────────────────────
                 // fadeIn(delay=100) + scaleIn(delay=100) + slideInVertically
@@ -270,6 +292,30 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// «¿Primera vez? Mira cómo pagar»: abre el video tutorial dentro de la app.
+class _VideoButton extends StatelessWidget {
+  const _VideoButton({required this.color, required this.onPressed});
+
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        minimumSize: const Size.fromHeight(52),
+        side: BorderSide(color: color, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+      ),
+      icon: const Icon(Icons.play_circle_outline, size: 26),
+      label: const Text('¿Primera vez? Mira cómo pagar'),
     );
   }
 }

@@ -87,7 +87,7 @@ Componente de carrusel, tarjetas dinámicas por módulo y por canal, marca de
   4, 5 (PQRSDF con la F de felicitaciones), 6A/6B y 7, recorridos para dos
   alcaldías, theming con azul #005B8C y verde #2E7D32, botón en Ayuda y hoja de
   especificaciones.
-- Paso 2 🟨 (2026-10-22, rama `feat/tutorial-primer-uso`): implementado en
+- Paso 2 ✅ (PR #43, 2026-10-22): implementado en
   `lib/features/tutorial/` a partir del diseño (archivos `Tutorial Trami.dc.html` y
   `TarjetaTutorial.dc.html`). Carrusel, tarjetas por módulo y canal, flag
   `tutorial_primer_uso_visto`, Remote Config `tutorial_config`, botón en Ayuda,
@@ -114,5 +114,6 @@ Componente de carrusel, tarjetas dinámicas por módulo y por canal, marca de
 ## Fuera de este plan
 
 - Novedades (siguiente versión).
-- Videos tutoriales de YouTube (pagos; cursos y reservas) en Welcome y Ayuda: plan aparte.
+- Videos tutoriales de YouTube (pagos; cursos y reservas) en Welcome y Ayuda: ver
+  `2026-10-22-videos-tutoriales.md`.
 - Cierre de sesión general y nuevo login con la API nueva (Google, nativo, Apple ID).
